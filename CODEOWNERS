@@ -1,0 +1,18 @@
+# Lane ownership per docs/08-delivery/lanes-and-ownership.md
+# TODO: replace placeholder usernames with the founders' actual GitHub handles.
+
+# Lane A
+/src/features/auth/ @founder-a
+/src/features/academics/ @founder-a
+/src/features/booking/ @founder-a
+
+# Lane B
+/src/features/growth/ @founder-b
+/src/features/ads/ @founder-b
+/src/features/admin/ @founder-b
+
+# Shared (require cross-lane review)
+/src/lib/ @founder-a @founder-b
+/src/components/ @founder-a @founder-b
+/supabase/migrations/ @founder-a @founder-b
+/supabase/functions/ @founder-a @founder-b

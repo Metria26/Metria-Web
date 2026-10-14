@@ -55,7 +55,7 @@ connections; optimize/archive before any capacity change.
 | Node.js LTS (current LTS, major pinned later in `package.json` `engines`) | runtime | `node -v` |
 | pnpm (via `corepack enable`) | package manager (D1) | `pnpm -v` |
 | Git | version control | `git -v` |
-| Docker Desktop (or Docker Engine/WSL2) | local Supabase requires containers | `docker -v` |
+| WSL2 | local Supabase requires containers | `wsl` |
 | Supabase CLI (installed as repo dev dep, see §3) | migrations only (L4) | `pnpm exec supabase --version` |
 | VS Code (or chosen editor) + ESLint/Prettier extensions | editing | — |
 
@@ -492,8 +492,8 @@ Ads without traffic earn ~nothing. Immediately after the ads gate, take traffic 
 
 ## 10. Execution checklist (update as work completes)
 
-- [ ] **Step 0** founder setup (tools, accounts, secrets, `.env.example`)
-- [ ] **Phase 0 init** scaffold + libraries + folder structure + local Supabase + tests + CI (§2)
+- [ ] **Step 0** founder setup (tools, accounts, secrets, `.env.example`) — tools done; accounts pending
+- [x] **Phase 0 init** scaffold + libraries + folder structure + local Supabase + tests + CI (§2)
 - [ ] **Foundation migration** applied, types generated, seeds loaded, pgTAP green (§3 F1–F2)
 - [ ] **Auth** Google login + domain denial + bootstrap admin + app shell (§3 F3–F4)
 - [ ] **Foundation Gate** checklist signed (§3 F5)

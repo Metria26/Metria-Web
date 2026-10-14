@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+      - name: Migration filename lint
+        run: |
+          shopt -s nullglob
+          for f in supabase/migrations/*.sql; do
+            base=$(basename "$f")
+            if ! echo "$base" | grep -Eq '^[0-9]{14}_[sab]_[a-z0-9_]+\.sql$'; then
+              echo "Invalid migration filename: $base (expected <UTCts>_{s|a|b}_<module>_<slug>.sql)"
+              exit 1
+            fi
+          done
+          echo "Migration filenames OK"
+
+      - name: Secret guard
+        run: |
+          if git grep -nE 'eyJ[A-Za-z0-9_-]{30,}\.' -- '.env*' ':(exclude).env.example' ':(exclude)pnpm-lock.yaml'; then
+            echo "Potential secret committed"
+            exit 1
+          fi
+          echo "No leaked secrets found"
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local stack
+        run: supabase start
+
+      - name: Apply migrations (clean)
+        run: supabase db reset
+
+      - name: pgTAP tests
+        run: |
+          if ls supabase/migrations/*.sql 1>/dev/null 2>&1; then
+            supabase test db
+          else
+            echo "No migrations yet - pgTAP starts with the Foundation Gate (F2)"
+          fi
+
+  e2e:
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    needs: ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build
+        run: pnpm build
+
+      - name: Playwright
+        run: pnpm test:e2e
