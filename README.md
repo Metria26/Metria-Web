@@ -84,7 +84,7 @@ wsl -d Ubuntu -- bash -lc "cd /mnt/c/Users/HP/OneDrive/Desktop/Metria-Web && sup
 | `pnpm dev` | Dev server on :3000 (Turbopack, loads `.env.local`) |
 | `pnpm build` / `pnpm start` | Production build / serve |
 | `pnpm lint` | ESLint (flat config; Next 16 removed `next lint`) |
-| `pnpm typecheck` | `tsc --noEmit` |
+| `pnpm typecheck` | `next typegen` (generates `LayoutProps`/route types) then `tsc --noEmit` — needed on clean clones where `.next/` doesn't exist yet |
 | `pnpm test` | Vitest run (`src/**/*.test.ts(x)`) |
 | `pnpm test:e2e` | Playwright (`e2e/`, auto-starts dev server) |
 | `pnpm test:db` | pgTAP via Supabase CLI (run from WSL, see above) |
