@@ -17,7 +17,8 @@ Multi-tenant academic evaluation/coursework platform (launch tenant: FAST-NUCES 
 ## Current status
 
 - **Done:** Step 0 tooling · **Phase 0 init** (scaffold, libs, shadcn, folder structure, test harness, local Supabase, CI, pre-commit) · **Foundation Gate F1+F2+F3+F4** (foundation migration + seeds + generated types, pgTAP 16/16, auth domain allowlist + bootstrap admin + `/auth/*` + proxy gating (pgTAP 13/13, e2e 10/10), app shell + design tokens + next-intl) — verified 2026-10-14.
-- **Remaining before F5 sign-off:** founder adds `http://127.0.0.1:54321/auth/v1/callback` to the Google Console OAuth client (real-login roundtrip); repo owner enables GitHub Actions on `MetriaAdmin123/Metria-Web` (CI has never run there — 0 workflow runs).
+- **Remaining before F5 sign-off:** founder adds `http://127.0.0.1:54321/auth/v1/callback` to the Google Console OAuth client (real-login smoke), then reviews/signs the F5 checklist.
+- **CI:** green on `MetriaAdmin123/Metria-Web` — run `38619640718` (commit `e9cb77f`, F3): `ci` ✅ `e2e` ✅ (e2e job boots Supabase itself with public demo keys). Actions had to be enabled on the new repo first (Settings → Actions → General).
 - **Founder Step 0:** secrets filled into `.env.local` (bootstrap admin email, Google OAuth client ID/secret); cloud Supabase keys in gitignored `.env.cloud`. `Metria_Env.txt` deleted (was committed with secrets — history rewrite deliberately avoided).
 - See `plan.md` §10 for the full MVP checklist.
 
@@ -170,15 +171,16 @@ Pre-commit: husky + lint-staged (eslint --fix + prettier on staged `ts/tsx/mjs`;
 - **App:** `@supabase/ssr` clients (`client.ts`/`server.ts`/`session.ts`); Next 16 **`proxy.ts`** (was middleware) refreshes session cookies and gates `/app/*` → `/auth/sign-in?next=…`; routes: `/auth/sign-in` (Google button, noindex), `/auth/callback` (PKCE exchange), `/auth/access-denied`, `/auth/e2e-session` (404 unless `E2E_MODE=1`); AppLayout does server-side `getUser()` + `await connection()`; sign-out in header + sidebar; `Auth` i18n namespace.
 - **Tests:** pgTAP 13/13 (unknown-domain deny + event, unverified deny + event, student pending membership + profile, bootstrap admin active + platform_admins + zero events, rate-limit cap 5); e2e 10/10 via fixture password user (admin API fires the real triggers) + `/auth/e2e-session` — Google login itself can't be automated. Gates all green: lint · typecheck · vitest · build · pgTAP 29/29 · e2e 10/10.
 - **Next 16 fixes en route:** `searchParams` awaited inside `<Suspense>` (instant-nav validation), `connection()` + `instant = false` on `/app` (supabase-js `getUser()` does `Date.now()` — unstable at prerender), `<Link>` over `<a>` in auth layout, e2e helper hides the `<nextjs-portal>` dev overlay (covers the sidebar in dev even with zero issues).
-- **Remaining external (founder):** add `http://127.0.0.1:54321/auth/v1/callback` to the Google Console OAuth client (JS origin `http://localhost:3000`); enable Actions on `MetriaAdmin123/Metria-Web` then push to trigger CI (e2e job boots Supabase itself with demo keys).
+- **Remaining external (founder):** add `http://127.0.0.1:54321/auth/v1/callback` to the Google Console OAuth client (JS origin `http://localhost:3000`) for the real-login smoke. CI on the new repo: ✅ green (run `38619640718` on `e9cb77f`, both jobs).
 
 ### Next: F5 Foundation Gate sign-off → T-A003
-Sign the **F5 checklist** (`plan.md` §3) once CI runs green on the new repo and the Google Console redirect URI is added (real-login smoke). Then Phase 1 feature cards start with **T-A003** core-academics (A1). `is_offering_staff()`/`is_enrolled()` helpers arrive with A1 (T-A003), noted as a gate deviation.
+CI is green on the new repo ✅. Sign the **F5 checklist** (`plan.md` §3) after the founder adds the Google Console redirect URI and completes a real-login smoke. Then Phase 1 feature cards start with **T-A003** core-academics (A1). `is_offering_staff()`/`is_enrolled()` helpers arrive with A1 (T-A003), noted as a gate deviation.
 
 ## Git workflow
 
 - Trunk-based: short-lived branches, PRs, cross-lane review on shared paths (`CODEOWNERS`).
 - Branch: `hassan-dev` (active dev branch, default on remote) → merge to `main` for stable integration.
+- Remote: `https://github.com/MetriaAdmin123/Metria-Web` (migrated 2026-10-14 from the old `metria1010` repo, which was abandoned; commit authorship preserved). Collaborator pushes via HassanNawaz14 PAT; owner = MetriaAdmin123.
 - Never commit: `.env*` (except `.env.example`), secrets, student data.
 - `CODEOWNERS` currently has placeholder `@founder-a` / `@founder-b` — replace with real GitHub handles.
 
