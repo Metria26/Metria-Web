@@ -495,7 +495,7 @@ Ads without traffic earn ~nothing. Immediately after the ads gate, take traffic 
 - [ ] **Step 0** founder setup (tools, accounts, secrets, `.env.example`) — tools done; accounts pending
 - [x] **Phase 0 init** scaffold + libraries + folder structure + local Supabase + tests + CI (§2)
 - [x] **Foundation migration** applied, types generated, seeds loaded, pgTAP green (§3 F1–F2)
-- [ ] **Auth** Google login + domain denial + bootstrap admin + app shell (§3 F3–F4) — F4 ✅ done; F3 blocked on founder OAuth secrets
+- [x] **Auth** Google login + domain denial + bootstrap admin + app shell (§3 F3–F4) — done 2026-10-14; founder deviation: bootstrap admin email exempt from domain allowlist (D20); real Google roundtrip pending founder Console redirect URI; CI pending Actions enable on new repo
 - [ ] **Foundation Gate** checklist signed (§3 F5)
 - [ ] **T-A003** catalog/enrollment + migration `a_core_academics` (§4 A1)
 - [ ] **T-A004** marks + CSV importer + marksheet (§4 A2)

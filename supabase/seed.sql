@@ -148,3 +148,17 @@ WHERE u.slug = 'fast-nuces-lahore'
     SELECT 1 FROM public.feature_flags ff
     WHERE ff.university_id = u.id AND ff.key = f.key
   );
+
+-- 8) Bootstrap platform-admin email (plan.md F3, D20; founder decision 2026-10-14:
+--    this ONE account is exempt from the university-domain allowlist — any domain).
+--    created_at on this row is the bootstrap audit timestamp. On production, run
+--    this statement ONCE with the operator-recorded BOOTSTRAP_ADMIN_EMAIL value;
+--    keep it identical to the app env var of the same name.
+INSERT INTO public.platform_settings (university_id, key, value)
+SELECT u.id, 'bootstrap_admin_email', '"metria.admin26@gmail.com"'::jsonb
+FROM public.universities u
+WHERE u.slug = 'fast-nuces-lahore'
+  AND NOT EXISTS (
+    SELECT 1 FROM public.platform_settings s
+    WHERE s.key = 'bootstrap_admin_email'
+  );

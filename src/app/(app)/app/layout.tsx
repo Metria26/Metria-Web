@@ -1,13 +1,32 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
+import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/shell/app-header";
 import { AppSidebar } from "@/components/shell/app-sidebar";
 import { BottomNav } from "@/components/shell/bottom-nav";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+// Auth-gated shell: per-user dynamic (Supabase getUser does Date.now() session
+// expiry math — unstable at prerender). connection() forces request-time
+// rendering; instant=false documents that navigations into /app block on auth.
+export const instant = false;
+
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  await connection();
+  // Server-side session check (plan.md F3): UI checks are cosmetic only.
+  // The proxy already gates /app/*; this is the trusted defense in depth.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/auth/sign-in");
+  }
+
   return (
     <div className="flex min-h-dvh w-full">
       <AppSidebar />

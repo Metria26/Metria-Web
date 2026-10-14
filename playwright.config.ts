@@ -19,7 +19,13 @@ export default defineConfig({
   webServer: {
     command: "pnpm dev",
     url: "http://localhost:3000",
-    reuseExistingServer: !process.env.CI,
+    // Always start a dedicated dev server so E2E_MODE=1 is guaranteed;
+    // stop any manually running `pnpm dev` before `pnpm test:e2e`.
+    reuseExistingServer: false,
     timeout: 120_000,
+    env: {
+      ...(process.env as Record<string, string>),
+      E2E_MODE: "1",
+    },
   },
 });

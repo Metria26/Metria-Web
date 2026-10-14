@@ -16,9 +16,9 @@ Multi-tenant academic evaluation/coursework platform (launch tenant: FAST-NUCES 
 
 ## Current status
 
-- **Done:** Step 0 tooling · **Phase 0 init** (scaffold, libs, shadcn, folder structure, test harness, local Supabase, CI, pre-commit) · **Foundation Gate F1+F2+F4** (foundation migration + seeds + generated types, pgTAP 16/16, app shell + design tokens + next-intl) — verified 2026-10-14.
-- **Blocked:** Gate item **F3 (auth)** waits on founder Step 0 (Google OAuth client ID/secret + `BOOTSTRAP_ADMIN_EMAIL` in `.env.local`). Once filled: domain allowlist hook, `/auth/*` routes, bootstrap admin seed. F5 sign-off needs F3.
-- **Founder Step 0 still pending:** Google Cloud OAuth client, `BOOTSTRAP_ADMIN_EMAIL`, GitHub org secrets inventory — fill into `.env.local` when created (exact setup steps were provided 2026-10-14).
+- **Done:** Step 0 tooling · **Phase 0 init** (scaffold, libs, shadcn, folder structure, test harness, local Supabase, CI, pre-commit) · **Foundation Gate F1+F2+F3+F4** (foundation migration + seeds + generated types, pgTAP 16/16, auth domain allowlist + bootstrap admin + `/auth/*` + proxy gating (pgTAP 13/13, e2e 10/10), app shell + design tokens + next-intl) — verified 2026-10-14.
+- **Remaining before F5 sign-off:** founder adds `http://127.0.0.1:54321/auth/v1/callback` to the Google Console OAuth client (real-login roundtrip); repo owner enables GitHub Actions on `MetriaAdmin123/Metria-Web` (CI has never run there — 0 workflow runs).
+- **Founder Step 0:** secrets filled into `.env.local` (bootstrap admin email, Google OAuth client ID/secret); cloud Supabase keys in gitignored `.env.cloud`. `Metria_Env.txt` deleted (was committed with secrets — history rewrite deliberately avoided).
 - See `plan.md` §10 for the full MVP checklist.
 
 ## Tech stack (pinned via lockfile)
@@ -76,7 +76,7 @@ wsl -d Ubuntu -- bash -lc "cd /mnt/c/Users/HP/OneDrive/Desktop/Metria-Web && sup
 - Stack published on `127.0.0.1:54321` (API/Kong), `:54322` (DB), `:54323` (Studio), `:54324` (Mailpit) — reachable from Windows via WSL2 localhost forwarding.
 - First `supabase start` pulls ~10 images (takes >15 min on slow links; resumable — cached layers persist).
 - `db reset` with zero migrations is a clean no-op schema init (skips `.gitkeep` files correctly). With the foundation migration it applies schema + `supabase/seed.sql` (verified 2026-10-14: 1 university, 1 domain, 3 roles, 20 permissions, 23 role↔permission mappings, 22 flags with only `ads.global_kill=true`).
-- pgTAP: **only `supabase/tests/foundation-auth.test.sql` lives here now** (16/16 green). The other 3 module test files were removed from `supabase/tests/` because they assert on tables that don't exist yet — each module card re-copies its own file when its migration lands (docs copies remain authoritative in `docs/03-database/tests/`). CI runs `supabase test db` once `supabase/migrations/*.sql` exist.
+- pgTAP: **`foundation-auth.test.sql` (16/16) + `auth-domain-allowlist.test.sql` (13/13)** live here (both green). The other 3 module test files were removed from `supabase/tests/` because they assert on tables that don't exist yet — each module card re-copies its own file when its migration lands (docs copies remain authoritative in `docs/03-database/tests/`). CI runs `supabase test db` once `supabase/migrations/*.sql` exist.
 
 ## Commands
 
@@ -118,11 +118,11 @@ Pre-commit: husky + lint-staged (eslint --fix + prettier on staged `ts/tsx/mjs`;
 │  └─ lib/                    # supabase clients, env.ts (lazy server env), brand.ts, contracts/, utils.ts
 ├─ supabase/
 │  ├─ config.toml             # local stack config
-│  ├─ migrations/             # ONLY schema authority (CLI, lane-prefixed) — foundation_auth landed
-│  ├─ seed.sql                # idempotent tenant seed (FAST, roles, perms, flags)
-│  ├─ tests/                  # pgTAP (foundation-auth only; module cards copy theirs on arrival)
+│  ├─ migrations/             # ONLY schema authority (CLI, lane-prefixed) — foundation_auth + auth_domain_allowlist landed
+│  ├─ seed.sql                # idempotent tenant seed (FAST, roles, perms, flags, bootstrap admin email)
+│  ├─ tests/                  # pgTAP (foundation-auth + auth-domain-allowlist; module cards copy theirs on arrival)
 │  └─ functions/              # edge functions (later)
-├─ e2e/                       # Playwright specs (smoke + app-shell @360px)
+├─ e2e/                       # Playwright specs (smoke + app-shell @360px + auth)
 ├─ .github/workflows/ci.yml   # PR pipeline (+ placeholder env)
 └─ CODEOWNERS                 # lane ownership (placeholder GitHub handles!)
 ```
@@ -163,8 +163,17 @@ Pre-commit: husky + lint-staged (eslint --fix + prettier on staged `ts/tsx/mjs`;
 - **Verified:** lint ✅ typecheck ✅ vitest ✅ build ✅ (static `/`, `/app`, `/_not-found`) e2e ✅ 4/4 (incl. 3 new 360px tests: no horizontal scroll, bottom nav visible, sidebar hidden, title from env) · local `db reset` + seed counts ✅ · pgTAP 16/16 ✅ · CI run 38581227630 `ci` job green (incl. pgTAP on clean runner).
 - **Deviations/documented choices:** doc `SET search_path=` typo fixed inline; `has_role()` added beyond verbatim files (registry/F5 require it; `is_offering_staff()`/`is_enrolled()` deferred to core-academics where their tables exist); role↔permission matrix derived (no source matrix in docs); role_permissions mapping + seed rows are data, not schema; future-module pgTAP files live in docs only until their cards land; Base UI `nativeButton={false}` for Button-as-Link on the landing CTA; offline banner informs only — mutation blocking lands with forms/PWA (T-A012).
 
-### Next: finish Foundation Gate (F3 → F5) — blocked on founder secrets
-F3: Google OAuth (`@supabase/ssr` session), server-side domain allowlist (Auth hook validating `university_domains` → `/auth/access-denied`), `/auth/*` noindex + zero ads, bootstrap admin one-time seed (`BOOTSTRAP_ADMIN_EMAIL`, D20), profile/membership flow (T-A002). Then sign the **F5 checklist** (`plan.md` §3) — no feature cards until then. `is_offering_staff()`/`is_enrolled()` helpers arrive with A1 (T-A003), noted as a gate deviation.
+### Foundation Gate — F3 auth (2026-10-14) ✅
+- **Migration** `20261014213000_s_auth_domain_allowlist.sql`: BEFORE INSERT trigger on `auth.users` enforces active `university_domains` + verified email (UI checks are cosmetic only). **Founder deviation (D20):** the single bootstrap platform-admin email (`platform_settings.bootstrap_admin_email`, seeded `metria.admin26@gmail.com`) is exempt — any domain, unverified OK; everyone else needs a verified allowed-domain email. AFTER INSERT trigger provisions `profiles` + `university_memberships` (students `pending`, bootstrap admin `active`) + `platform_admins` row. All functions SECURITY DEFINER owned by `service_role` (BYPASSRLS), `search_path = ''`.
+- **Denial audit:** `private.auth_security_events`, rate-limited 5/email/10min, written through a **dblink autonomous connection** so events COMMIT despite the RAISE's transaction rollback; connection errors swallowed — enforcement never depends on audit persistence. **PG17 gotcha:** local `postgres` is NOT superuser and loopback/socket pg_hba is `trust`, which PG17 refuses for non-superusers even with a password in the conn string → dblink reconnects via the server's own TCP address (`inet_server_addr()`, scram) with the password from `private.runtime_config` (local seed `postgres`; **cloud ops must UPDATE that row** with the real password — ops SQL, never committed).
+- **Config/secrets:** `supabase/config.toml` Google provider on (`env()`-interpolated from gitignored `.env`), `/auth/callback` in site_url + redirect allowlist; `.env.local` filled with founder secrets; cloud keys in `.env.cloud`; `.env.example` documents `RESEND_API_KEY` + bootstrap comment; `Metria_Env.txt` deleted.
+- **App:** `@supabase/ssr` clients (`client.ts`/`server.ts`/`session.ts`); Next 16 **`proxy.ts`** (was middleware) refreshes session cookies and gates `/app/*` → `/auth/sign-in?next=…`; routes: `/auth/sign-in` (Google button, noindex), `/auth/callback` (PKCE exchange), `/auth/access-denied`, `/auth/e2e-session` (404 unless `E2E_MODE=1`); AppLayout does server-side `getUser()` + `await connection()`; sign-out in header + sidebar; `Auth` i18n namespace.
+- **Tests:** pgTAP 13/13 (unknown-domain deny + event, unverified deny + event, student pending membership + profile, bootstrap admin active + platform_admins + zero events, rate-limit cap 5); e2e 10/10 via fixture password user (admin API fires the real triggers) + `/auth/e2e-session` — Google login itself can't be automated. Gates all green: lint · typecheck · vitest · build · pgTAP 29/29 · e2e 10/10.
+- **Next 16 fixes en route:** `searchParams` awaited inside `<Suspense>` (instant-nav validation), `connection()` + `instant = false` on `/app` (supabase-js `getUser()` does `Date.now()` — unstable at prerender), `<Link>` over `<a>` in auth layout, e2e helper hides the `<nextjs-portal>` dev overlay (covers the sidebar in dev even with zero issues).
+- **Remaining external (founder):** add `http://127.0.0.1:54321/auth/v1/callback` to the Google Console OAuth client (JS origin `http://localhost:3000`); enable Actions on `MetriaAdmin123/Metria-Web` then push to trigger CI (e2e job boots Supabase itself with demo keys).
+
+### Next: F5 Foundation Gate sign-off → T-A003
+Sign the **F5 checklist** (`plan.md` §3) once CI runs green on the new repo and the Google Console redirect URI is added (real-login smoke). Then Phase 1 feature cards start with **T-A003** core-academics (A1). `is_offering_staff()`/`is_enrolled()` helpers arrive with A1 (T-A003), noted as a gate deviation.
 
 ## Git workflow
 

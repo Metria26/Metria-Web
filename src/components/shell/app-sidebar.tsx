@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { productName } from "@/lib/brand";
 import { cn } from "@/lib/utils";
+import { SignOutButton } from "./sign-out-button";
 import { sidebarNav } from "./nav-items";
 
 /** Compact desktop sidebar (design-system.md L11); mobile uses bottom nav. */
@@ -47,6 +48,9 @@ export function AppSidebar() {
           );
         })}
       </nav>
+      <div className="border-t p-2">
+        <SignOutButton />
+      </div>
     </aside>
   );
 }

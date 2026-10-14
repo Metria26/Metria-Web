@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { ensureE2EUser, signInE2E } from "./helpers/auth";
 
 // Design system: 360 px baseline, no horizontal page scroll (design-system.md L11)
 test.use({ viewport: { width: 360, height: 800 } });
 
 test("app shell renders on mobile with bottom nav and no horizontal scroll", async ({ page }) => {
-  await page.goto("/app");
+  await ensureE2EUser();
+  await signInE2E(page);
 
   await expect(page.getByTestId("bottom-nav")).toBeVisible();
   await expect(page.getByTestId("sidebar")).toBeHidden();

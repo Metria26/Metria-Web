@@ -23,6 +23,21 @@
     "tagline": "Marks, bookings and courses for your university — in one place.",
     "ctaOpenApp": "Open app"
   },
+  "Auth": {
+    "signIn": {
+      "title": "Sign in",
+      "subtitle": "Continue with your university Google account.",
+      "continueWithGoogle": "Continue with Google",
+      "failed": "Sign-in could not be started. You can try again."
+    },
+    "accessDenied": {
+      "title": "Access not granted",
+      "body": "This email domain is not allowed on Metria. Use your university account to sign in, or contact the platform administrator.",
+      "backToSignIn": "Back to sign in",
+      "home": "Go to home"
+    },
+    "signOut": "Sign out"
+  },
   "Dashboard": {
     "title": "Dashboard",
     "body": "Your courses, marks and bookings will appear here once they are set up.",
