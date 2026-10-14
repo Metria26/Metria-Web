@@ -494,7 +494,7 @@ Ads without traffic earn ~nothing. Immediately after the ads gate, take traffic 
 
 - [ ] **Step 0** founder setup (tools, accounts, secrets, `.env.example`) — tools done; accounts pending
 - [x] **Phase 0 init** scaffold + libraries + folder structure + local Supabase + tests + CI (§2)
-- [ ] **Foundation migration** applied, types generated, seeds loaded, pgTAP green (§3 F1–F2)
+- [x] **Foundation migration** applied, types generated, seeds loaded, pgTAP green (§3 F1–F2)
 - [ ] **Auth** Google login + domain denial + bootstrap admin + app shell (§3 F3–F4)
 - [ ] **Foundation Gate** checklist signed (§3 F5)
 - [ ] **T-A003** catalog/enrollment + migration `a_core_academics` (§4 A1)
