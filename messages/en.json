@@ -1,0 +1,49 @@
+{
+  "Meta": {
+    "description": "Marks, bookings and courses for your university — in one place."
+  },
+  "Shell": {
+    "skipToContent": "Skip to main content",
+    "primaryNav": "Primary",
+    "bottomNav": "Bottom",
+    "sidebarNav": "Main sidebar",
+    "mainContent": "Main content",
+    "loading": "Loading",
+    "reservedFor": "Reserved for future actions"
+  },
+  "Nav": {
+    "dashboard": "Dashboard",
+    "courses": "Courses",
+    "bookings": "Bookings",
+    "calendar": "Calendar",
+    "messages": "Messages",
+    "profile": "Profile"
+  },
+  "Home": {
+    "tagline": "Marks, bookings and courses for your university — in one place.",
+    "ctaOpenApp": "Open app"
+  },
+  "Dashboard": {
+    "title": "Dashboard",
+    "body": "Your courses, marks and bookings will appear here once they are set up.",
+    "emptyTitle": "Nothing here yet",
+    "action": "Back to home"
+  },
+  "States": {
+    "error": {
+      "title": "Something went wrong",
+      "body": "This page failed to load. You can retry safely.",
+      "correlation": "Correlation ID",
+      "retry": "Retry"
+    },
+    "notFound": {
+      "title": "Page not found",
+      "body": "The page you are looking for does not exist or may have moved.",
+      "home": "Go to home"
+    },
+    "offline": {
+      "title": "You are offline",
+      "body": "Showing content saved on this device. Changes cannot be saved until you are back online."
+    }
+  }
+}

@@ -5,6 +5,19 @@ on:
   push:
     branches: [main]
 
+# Placeholder env for clean-clone build/dev (no secrets). Real values live in
+# .env.local (gitignored); see .env.example for the contract.
+env:
+  NEXT_PUBLIC_PRODUCT_NAME: Metria
+  NEXT_PUBLIC_SITE_URL: http://localhost:3000
+  NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+  SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-service-role-key
+  SUPABASE_DB_URL: postgres://postgres:postgres@127.0.0.1:54322/postgres
+  BOOTSTRAP_ADMIN_EMAIL: admin@example.com
+  GOOGLE_OAUTH_CLIENT_ID: ci-placeholder-client-id
+  GOOGLE_OAUTH_CLIENT_SECRET: ci-placeholder-client-secret
+
 jobs:
   ci:
     runs-on: ubuntu-latest

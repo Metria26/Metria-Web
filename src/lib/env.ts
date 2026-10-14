@@ -22,10 +22,22 @@ export const clientEnv = clientEnvSchema.parse({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
 });
 
-export const serverEnv = serverEnvSchema.parse({
-  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-  SUPABASE_DB_URL: process.env.SUPABASE_DB_URL,
-  BOOTSTRAP_ADMIN_EMAIL: process.env.BOOTSTRAP_ADMIN_EMAIL,
-  GOOGLE_OAUTH_CLIENT_ID: process.env.GOOGLE_OAUTH_CLIENT_ID,
-  GOOGLE_OAUTH_CLIENT_SECRET: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
-});
+/**
+ * Server env is parsed lazily: founder secrets (OAuth, bootstrap admin) are
+ * still empty during the Foundation Gate (F3 pending), and importing this
+ * module (e.g. for clientEnv) must not fail builds or client bundles.
+ */
+let cachedServerEnv: z.infer<typeof serverEnvSchema> | undefined;
+
+export function getServerEnv(): z.infer<typeof serverEnvSchema> {
+  if (!cachedServerEnv) {
+    cachedServerEnv = serverEnvSchema.parse({
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+      SUPABASE_DB_URL: process.env.SUPABASE_DB_URL,
+      BOOTSTRAP_ADMIN_EMAIL: process.env.BOOTSTRAP_ADMIN_EMAIL,
+      GOOGLE_OAUTH_CLIENT_ID: process.env.GOOGLE_OAUTH_CLIENT_ID,
+      GOOGLE_OAUTH_CLIENT_SECRET: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+    });
+  }
+  return cachedServerEnv;
+}
