@@ -16,11 +16,49 @@ Multi-tenant academic evaluation/coursework platform (launch tenant: FAST-NUCES 
 
 ## Current status
 
-- **Done:** Step 0 tooling · **Phase 0 init** (scaffold, libs, shadcn, folder structure, test harness, local Supabase, CI, pre-commit) · **Foundation Gate F1+F2+F3+F4** (foundation migration + seeds + generated types, pgTAP 16/16, auth domain allowlist + bootstrap admin + `/auth/*` + proxy gating (pgTAP 13/13, e2e 10/10), app shell + design tokens + next-intl) — verified 2026-10-14.
-- **Remaining before F5 sign-off:** founder adds `http://127.0.0.1:54321/auth/v1/callback` to the Google Console OAuth client (real-login smoke), then reviews/signs the F5 checklist.
+- **Done:** Step 0 tooling · **Phase 0 init** (scaffold, libs, shadcn, folder structure, test harness, local Supabase, CI, pre-commit) · **Foundation Gate F1+F2+F3+F4** (foundation migration + seeds + generated types, pgTAP 16/16, auth domain allowlist + bootstrap admin + `/auth/*` + proxy gating (pgTAP 13/13, e2e 10/10), app shell + design tokens + next-intl) — verified 2026-10-14 · **F5 agent-side pre-signoff verification** — all local gates re-run green 2026-10-15 (see below).
+- **F5 sign-off status:** ALL agent-side items are done and re-verified (2026-10-15). The **only** remaining gate item is the founder Google OAuth smoke (Console redirect URI + real-login check + gate sign-off) — see **"F5 sign-off status — READ FIRST in a new session"** below. The OAuth Console step cannot be automated from this repo and is expected to stay open for a while; it does NOT block code work except the formal Phase 1 start rule in plan.md §3.
 - **CI:** green on `MetriaAdmin123/Metria-Web` — run `38619640718` (commit `e9cb77f`, F3): `ci` ✅ `e2e` ✅ (e2e job boots Supabase itself with public demo keys). Actions had to be enabled on the new repo first (Settings → Actions → General).
-- **Founder Step 0:** secrets filled into `.env.local` (bootstrap admin email, Google OAuth client ID/secret); cloud Supabase keys in gitignored `.env.cloud`. `Metria_Env.txt` deleted (was committed with secrets — history rewrite deliberately avoided).
+- **Founder Step 0:** secrets filled into `.env.local` (bootstrap admin email, Google OAuth client ID/secret); cloud Supabase keys in gitignored `.env.cloud`. `Metria_Env.txt` deleted (was committed with secrets — history rewrite deliberately avoided). **Still open:** Google Console redirect URI (the OAuth smoke below).
 - See `plan.md` §10 for the full MVP checklist.
+
+## F5 sign-off status — READ FIRST in a new session
+
+> Purpose: single source of truth for where the Foundation Gate (plan.md §3 F5) stands.
+> Status as of 2026-10-15: **every agent-side item verified green; sign-off blocked ONLY on the founder Google OAuth smoke.** Nothing in code remains to build for F5.
+
+### Checklist status
+
+| # | F5 checklist item | Status | Evidence / note |
+|---|---|---|---|
+| 1 | Repo/tooling/CI green on clean clone | ✅ | CI run `38619640718` on `e9cb77f` — `ci` ✅ `e2e` ✅ (e2e job boots its own Supabase) |
+| 2 | Local Supabase up; migrations apply clean; `db:types` generated | ✅ | 2026-10-15: full `db reset` from empty re-applied both migrations + seed cleanly; `src/lib/supabase/database.types.ts` committed (generate from WSL, see Commands) |
+| 3 | Auth tenant skeleton: Google login + domain denial + bootstrap admin | ⏳ **code complete; live Google roundtrip blocked (founder)** | All automatable paths verified: pgTAP 13/13 (allowlist triggers via admin-API fixture user) + e2e 10/10. The real Google sign-in flow (button → Google → PKCE callback → profile/membership provisioning) is built but **untested against a real Google account** until the Console step below is done |
+| 4 | RLS helpers present (`current_university_ids`, `has_role`, `is_offering_staff`, `is_enrolled`, `is_platform_admin`) | ⚠️ 3/5 now; **2 deferred to T-A003 (intentional)** | Present in `20261014140937_s_foundation_auth.sql`, all `search_path=''`: `private.current_university_ids()`, `private.has_role()`, `private.is_platform_admin()`. **`private.is_offering_staff()` and `private.is_enrolled()` CANNOT exist yet** — they reference `offering_staff` / `enrollments`, which arrive with the core-academics migration. They MUST be added in the T-A003 migration (documented gate deviation; do not invent stubs) |
+| 5 | Seeds applied (university, domains, roles, permissions, flags-off) | ✅ | 2026-10-15 post-reset counts: 1 university, 1 domain, 3 roles, 20 permissions, 23 role↔permission mappings, 22 flags with exactly 1 enabled (`ads.global_kill=true`) |
+| 6 | pgTAP harness running (foundation tests pass) | ✅ | 29/29 PASS 2026-10-15 (post-reset): `foundation-auth.test.sql` 16/16 + `auth-domain-allowlist.test.sql` 13/13 |
+| 7 | Design tokens + app shell render on mobile viewport | ✅ | e2e app-shell suite green (360px: no horizontal scroll, bottom nav visible, sidebar hidden) |
+| 8 | Secrets inventory recorded; `.env.example` matches reality | ✅ agent-side | `.env.local` (local stack + founder secrets) and `.env.cloud` (cloud keys) populated; `.env.example` placeholders current (incl. deferred `RESEND_API_KEY`). Password-manager inventory is founder-owned and not verifiable from the repo |
+
+### BLOCKED on founder — Google OAuth smoke (the ONLY open F5 item)
+
+**What is missing:** a real Google sign-in roundtrip. The entire auth code path exists and is tested, but only against a fixture password user (the admin API fires the same DB triggers). Google's side must allow the local Supabase Auth callback, which only the founder can configure.
+
+**Founder action (manual, once, ~10 min, in Google Cloud Console):**
+1. Open the OAuth 2.0 Client ID whose secrets live in `.env.local` (`GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`).
+2. Under **Authorized redirect URIs**, add exactly:
+   `http://127.0.0.1:54321/auth/v1/callback`
+   (Authorized JavaScript origin should already be `http://localhost:3000`.)
+3. Smoke test in a browser (with `pnpm dev` running):
+   - `http://localhost:3000/auth/sign-in` → **Continue with Google** → sign in with the `BOOTSTRAP_ADMIN_EMAIL` Google account → expect to land on `/app` with a profile + active membership + `platform_admins` row provisioned (check Studio if curious).
+   - Optional negative check: sign in with a Google account **not** on `lhr.nu.edu.pk` → expect `/auth/access-denied` and no membership row.
+4. Tick the F5 boxes in `plan.md` §3 and mark the Foundation Gate signed (both founders per T-S001).
+
+**Until that is done:**
+- Do not treat F3 as fully proven — the fixture-user e2e coverage is strong but the Google exchange itself (redirect handling, PKCE state, domain claims on a real verified Google email) is unverified.
+- Everything else in the repo is ready; no other F5 item is waiting on anything.
+- When the founder finishes the Console step, re-run `pnpm test:e2e` + `pnpm test:db` as a sanity check, complete the real-login smoke manually, and update this section + plan.md §3/§10.
+- **Phase 1 has been explicitly green-lit by the founder (2026-10-15) despite the open OAuth item** — the only gate blocker is external, so feature cards proceed in parallel. When the OAuth smoke completes, sign F5 retroactively (evidence: this section's verification table).
 
 ## Tech stack (pinned via lockfile)
 
@@ -173,8 +211,14 @@ Pre-commit: husky + lint-staged (eslint --fix + prettier on staged `ts/tsx/mjs`;
 - **Next 16 fixes en route:** `searchParams` awaited inside `<Suspense>` (instant-nav validation), `connection()` + `instant = false` on `/app` (supabase-js `getUser()` does `Date.now()` — unstable at prerender), `<Link>` over `<a>` in auth layout, e2e helper hides the `<nextjs-portal>` dev overlay (covers the sidebar in dev even with zero issues).
 - **Remaining external (founder):** add `http://127.0.0.1:54321/auth/v1/callback` to the Google Console OAuth client (JS origin `http://localhost:3000`) for the real-login smoke. CI on the new repo: ✅ green (run `38619640718` on `e9cb77f`, both jobs).
 
-### Next: F5 Foundation Gate sign-off → T-A003
-CI is green on the new repo ✅. Sign the **F5 checklist** (`plan.md` §3) after the founder adds the Google Console redirect URI and completes a real-login smoke. Then Phase 1 feature cards start with **T-A003** core-academics (A1). `is_offering_staff()`/`is_enrolled()` helpers arrive with A1 (T-A003), noted as a gate deviation.
+### Foundation Gate F5 — agent-side pre-signoff verification (2026-10-15) ✅
+- Re-verified every agent-side F5 item on `efc962e` (tree clean, `hassan-dev` = `main` = origin): lint ✅ · typecheck ✅ · vitest 2/2 ✅ · build ✅ (static `/`, `/auth/*`, `/app` partial-prerender) · **`db reset` from empty** clean (both migrations + seed) ✅ · pgTAP 29/29 post-reset ✅ · e2e 10/10 ✅ · seed counts exact (1/1/3/20/23/22 flags, only `ads.global_kill=true`) ✅.
+- Helper inventory confirmed: `private.current_university_ids()`, `private.has_role()`, `private.is_platform_admin()` present (`search_path=''`); `private.is_offering_staff()`/`private.is_enrolled()` intentionally deferred to T-A003 — their tables arrive with the `a_core_academics` migration; they must be added there, not stubbed now.
+- Two environmental flakes observed (both pass on re-run; logged in watch list): vitest forks-worker startup timeout under heavy parallel load; e2e "sign-in bounces authenticated users to /app" when the Supabase auth container is cold (`getUser()` network failure → treated as anonymous → no proxy bounce).
+- **F5 remaining = founder only:** Google Console redirect URI + real-login smoke + gate sign-off. Full breakdown in "F5 sign-off status — READ FIRST in a new session" above. The OAuth Console step is expected to stay open for a while — future sessions must not treat it as forgotten, and must not attempt to automate it.
+
+## Next: T-A003 (Phase 1 underway) · founder OAuth smoke still pending
+**Phase 1 started 2026-10-15** under explicit founder green-light while the OAuth smoke stays open. Currently executing **T-A003** core-academics (plan.md §4 A1) — it also delivers the two deferred RLS helpers `is_offering_staff()`/`is_enrolled()`. The founder OAuth smoke + retroactive F5 sign-off remains queued (see "F5 sign-off status").
 
 ## Git workflow
 
@@ -184,9 +228,35 @@ CI is green on the new repo ✅. Sign the **F5 checklist** (`plan.md` §3) after
 - Never commit: `.env*` (except `.env.example`), secrets, student data.
 - `CODEOWNERS` currently has placeholder `@founder-a` / `@founder-b` — replace with real GitHub handles.
 
+## Parked / deferred work index (check here before inventing work)
+
+Everything intentionally NOT being done right now, and where it resumes. If you are about to start something in this table, stop — it is parked for a reason.
+
+| Item | Why parked | Where/when it resumes |
+|---|---|---|
+| Real Google OAuth smoke + formal F5 sign-off | Founder must add `http://127.0.0.1:54321/auth/v1/callback` in Google Console; cannot be automated | "F5 sign-off status" above; sign retroactively after smoke |
+| `private.is_offering_staff()` / `private.is_enrolled()` | Their tables (`offering_staff`, `enrollments`) don't exist before core-academics | T-A003 migration (in progress) — do not stub earlier |
+| `resend` npm package | Notifications engine not built (adapter behind interface per D4) | Install when T-A012 notifications ship |
+| `@sentry/nextjs` | Optional at MVP; needs PII-scrubbing config (D5) | Before first production deploy (plan.md §7 DEP-2) |
+| shadcn `form` component | Needs `react-hook-form`, not on the approved library list | Use zod + server actions instead, always |
+| Booking features 3.3–3.6 (public schedule, peer visibility, chat, swaps, reminders, waitlist) | Out of MVP scope (plan.md §5) | T-A007; `booking.waitlist.enabled=false` stays OFF |
+| Objections 4.x | Out of MVP scope | T-A008 |
+| Messaging, coursework, calendar, PWA push | Out of MVP scope (plan.md §0) | P2 expansion phase |
+| Ads enablement (flipping `ads.*` flags on) | Deploy strategy: Marks + Booking must be live & stable in prod first | plan.md §7 GATE |
+| Visit analytics / revenue payouts 10.7–10.9 | No ad revenue yet; terms must state revenue share first (D15) | T-B005 / T-B006, post-MVP |
+| Public SEO/content layer (T-B001, T-B004) | After ads gate; traffic before monetization (plan.md §9) | Post-MVP priority #1–2 |
+| `CODEOWNERS` placeholder handles (`@founder-a` / `@founder-b`) | Real GitHub handles unknown | Replace once founders decide |
+| Cloud `private.runtime_config` dblink password | Cloud Postgres password ≠ local `postgres` seed value | Ops SQL when cloud project is provisioned (never commit) — F3 phase log |
+| WSL keep-alive automation | Manual `Start-Process wsl.exe sleep infinity` works | Optional: systemd/user task later |
+| `vitest.config.ts` → `.mts` rename | Cosmetic ESM-in-CJS warning only | Only if the warning becomes noisy |
+| eslint@9 + eslint-config-next upgrade | Deprecated upstream but pinned pair works; upgrade both together | Routine maintenance window |
+| Supabase CLI 2.121.0 (installed 2.120.0) | Version parity Windows/WSL/CI matters more than newest | Upgrade all three together when convenient |
+
 ## Known issues / watch list
 
-- WSL keep-alive is manual (no systemd task yet). If containers cycle every ~30s, re-run the keep-alive command.
+- WSL keep-alive is manual (no systemd task yet). If containers cycle every ~30s, re-run the keep-alive command. (Re-confirmed 2026-10-15: after a WSL restart the stack auto-started but containers cycled until the keep-alive `wsl.exe sleep infinity` process was launched.)
+- e2e flake (cold stack only): "sign-in bounces authenticated users to /app" fails if the Supabase auth container is still warming — proxy `getUser()` network failure is treated as anonymous, so no bounce. Passes on re-run and in CI (fresh stack, sequential health). Not a code bug; re-run the spec before investigating.
+- vitest flake (heavy load only): forks-worker "Timeout waiting for worker to respond" when the machine is simultaneously booting WSL/Docker. Passes on re-run.
 - Vitest warns `vitest.config.ts` is ESM-in-CJS (cosmetic; rename to `.mts` if it becomes noisy).
 - Supabase services bind `0.0.0.0` in local dev with shared default JWT secrets — fine for local, never reuse in production.
 - `eslint@9` is deprecated upstream; `eslint-config-next` 16.4 still targets it — upgrade both together later.

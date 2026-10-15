@@ -492,11 +492,11 @@ Ads without traffic earn ~nothing. Immediately after the ads gate, take traffic 
 
 ## 10. Execution checklist (update as work completes)
 
-- [ ] **Step 0** founder setup (tools, accounts, secrets, `.env.example`) — tools done; accounts pending
+- [ ] **Step 0** founder setup (tools, accounts, secrets, `.env.example`) — all done except Google Console redirect URI for the local Supabase OAuth callback (see README "F5 sign-off status")
 - [x] **Phase 0 init** scaffold + libraries + folder structure + local Supabase + tests + CI (§2)
 - [x] **Foundation migration** applied, types generated, seeds loaded, pgTAP green (§3 F1–F2)
-- [x] **Auth** Google login + domain denial + bootstrap admin + app shell (§3 F3–F4) — done 2026-10-14; founder deviation: bootstrap admin email exempt from domain allowlist (D20); real Google roundtrip pending founder Console redirect URI; CI pending Actions enable on new repo
-- [ ] **Foundation Gate** checklist signed (§3 F5)
+- [x] **Auth** Google login + domain denial + bootstrap admin + app shell (§3 F3–F4) — done 2026-10-14; founder deviation: bootstrap admin email exempt from domain allowlist (D20); real Google roundtrip pending founder Console redirect URI; CI green on new repo (run 38619640718)
+- [ ] **Foundation Gate** checklist signed (§3 F5) — agent-side items ALL verified green 2026-10-15 (lint/typecheck/vitest/build/db-reset/pgTAP 29/29/e2e 10/10); blocked ONLY on founder Google OAuth smoke + both-founders sign-off; RLS helpers `is_offering_staff()`/`is_enrolled()` deferred to T-A003 by design. Full status: README "F5 sign-off status — READ FIRST in a new session"
 - [ ] **T-A003** catalog/enrollment + migration `a_core_academics` (§4 A1)
 - [ ] **T-A004** marks + CSV importer + marksheet (§4 A2)
 - [ ] **T-A005** dashboard + announcements + TA analytics (§4 A3)
