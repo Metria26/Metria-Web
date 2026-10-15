@@ -99,7 +99,9 @@ test.describe("TA academics journey", () => {
     const enrollmentItem = page
       .getByTestId("enrollment-item")
       .filter({ hasText: SEED_STUDENT_EMAIL });
-    await expect(enrollmentItem).toBeVisible();
+    // Dev-server first compile under parallel workers can push the server
+    // action past the 5s default (button still shows Saving…, not an error).
+    await expect(enrollmentItem).toBeVisible({ timeout: 15_000 });
     await expect(enrollmentItem).toContainText("E2E-A");
 
     // --- 7. The offering shows up on the catalog page.

@@ -49,6 +49,8 @@
     "newOffering": "New offering",
     "newOfferingHint": "Create a course once, then open it in a term as an offering.",
     "backToList": "All offerings",
+    "enterMarks": "Enter marks",
+    "viewMarksheet": "View marksheet",
     "saving": "Saving…",
     "selectPlaceholder": "Select…",
     "capacityLabel": "Capacity {count}",
@@ -128,6 +130,140 @@
     "offline": {
       "title": "You are offline",
       "body": "Showing content saved on this device. Changes cannot be saved until you are back online."
+    }
+  },
+  "Marks": {
+    "hub": {
+      "title": "Marks for {name}",
+      "subtitle": "Enter marks for your teaching assignments or open your own marksheets.",
+      "teaching": "Teaching",
+      "myMarksheets": "My marksheets",
+      "noAssessments": "No assessments yet.",
+      "enterMarks": "Enter marks — {title}",
+      "openMarksheet": "Open marksheet",
+      "scoreSummary": "{graded} graded · {pending} pending",
+      "empty": {
+        "signedOutTitle": "Sign in to continue",
+        "signedOutBody": "Marks are shown for your signed-in account only.",
+        "staffTitle": "No teaching assignments",
+        "staffBody": "Offerings you staff will list their assessments here.",
+        "studentTitle": "No marks yet",
+        "studentBody": "Your marksheets appear here once scores are released."
+      }
+    },
+    "entry": {
+      "backToOffering": "Back to offering",
+      "meta": "{type} · {total} points · {weight}% weight",
+      "types": {
+        "quiz": "Quiz",
+        "exam": "Exam",
+        "assignment": "Assignment",
+        "project": "Project",
+        "other": "Other"
+      },
+      "listTitle": "Students",
+      "noStudents": "No students are enrolled in this offering yet.",
+      "status": {
+        "graded": "Graded",
+        "pending": "Pending"
+      },
+      "scoreAria": "Score for {name}",
+      "save": "Save",
+      "saving": "Saving…",
+      "importSection": "Import from CSV",
+      "notStaffedTitle": "Marks entry unavailable",
+      "notStaffedBody": "You are not staffed on this offering. Ask a teacher to add you.",
+      "errors": {
+        "notAuthorized": "You do not have permission to record marks.",
+        "invalidInput": "Some values are invalid. Check the score and try again.",
+        "scoreTooHigh": "The score cannot be higher than the assessment total.",
+        "notEnrolled": "That student is not enrolled in this offering.",
+        "duplicate": "A mark for that student already exists.",
+        "generic": "Something went wrong. Please try again."
+      }
+    },
+    "import": {
+      "title": "Import marks from CSV",
+      "fileHelp": "Up to {megabytes} MB and {rows} rows. Columns: email, score.",
+      "chooseFile": "Choose CSV file",
+      "fileLoaded": "{name} — {count} rows",
+      "fileErrors": {
+        "tooLarge": "The file is larger than the import limit.",
+        "emptyFile": "The file has no rows.",
+        "invalidHeader": "The header must include email and score columns.",
+        "tooManyRows": "The file has more rows than the import limit.",
+        "parseError": "The file could not be read."
+      },
+      "overwriteLabel": "Overwrite existing marks",
+      "overwriteHelp": "Rows that already have a mark are skipped unless this is checked.",
+      "preview": "Preview import",
+      "previewing": "Preparing preview…",
+      "counts": {
+        "ready": "Ready",
+        "existing": "Existing",
+        "not_found": "Not found",
+        "duplicate": "Duplicates",
+        "invalid": "Invalid",
+        "total": "Total"
+      },
+      "errorsTitle": "{count} rows need attention",
+      "rowReasons": {
+        "email_invalid": "Email address is not valid",
+        "score_invalid": "Score is not a number",
+        "score_out_of_range": "Score is above the assessment total",
+        "duplicate_email": "Email appears more than once in the file",
+        "student_not_found": "No student with that email in your university",
+        "not_enrolled": "Student is not enrolled in this offering",
+        "exists": "Mark already exists",
+        "not_found": "Student could not be resolved",
+        "duplicate": "Duplicate row",
+        "invalid": "Row is invalid",
+        "skipped": "Skipped because a mark already exists"
+      },
+      "downloadErrors": "Download error rows",
+      "confirm": "Confirm import",
+      "confirming": "Applying…",
+      "confirmAgain": "Replay import",
+      "startOver": "Start over",
+      "confirmed": "{applied} applied · {skipped} skipped",
+      "confirmedHint": "Existing marks were only replaced when overwrite was checked.",
+      "apiErrors": {
+        "unauthenticated": "Your session expired. Sign in and try again.",
+        "forbidden": "You do not have permission to import marks.",
+        "not_found": "The import batch no longer exists.",
+        "validation_error": "The import request was rejected. Re-check the file.",
+        "conflict": "This import was already submitted with different data.",
+        "batch_expired": "The preview expired. Generate a new preview.",
+        "rate_limited": "Too many requests. Wait a moment and retry.",
+        "temporarily_unavailable": "Something went wrong. Please try again."
+      }
+    },
+    "marksheet": {
+      "backToOffering": "Back to offering",
+      "subtitle": "Your released scores for this offering.",
+      "overall": "Overall",
+      "gradedWeight": "of {weight}% graded",
+      "gradeLabel": "Grade",
+      "rank": "Rank {rank} of {cohort}",
+      "mean": "Mean {value}",
+      "median": "Median {value}",
+      "range": "Range {min}–{max}",
+      "suppressed": "Class statistics need {k} students with scores (you are in a cohort of {cohort}).",
+      "assessmentsTitle": "Assessments",
+      "noAssessmentsTitle": "No assessments yet",
+      "noAssessmentsBody": "Released assessments will appear here as rows.",
+      "rowMeta": "{weight}% weight · {total} points",
+      "cells": {
+        "graded": "Graded",
+        "pending": "Awaiting score",
+        "missing": "Not entered"
+      },
+      "missingHint": "{missing} assessments not entered · {pending} awaiting score",
+      "legendTitle": "Grading scale",
+      "errorTitle": "Marksheet unavailable",
+      "errorBody": "The marksheet could not be loaded. Please retry.",
+      "notEnrolledTitle": "Marksheet unavailable",
+      "notEnrolledBody": "You are not enrolled in this offering, so no marksheet exists for you."
     }
   }
 }

@@ -209,14 +209,14 @@ isOneToOne: false
                   ]
                 },"import_batches": {
                   Row: {
-                    "assessment_id": string,"created_at": string,"created_by": string,"expires_at": string,"id": string,"idempotency_key": string,"state": string,"university_id": string,"updated_at": string
+                    "assessment_id": string,"created_at": string,"created_by": string,"expires_at": string,"id": string,"idempotency_key": string,"overwrite_existing": boolean,"state": string,"university_id": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "assessment_id": string,"created_at"?: string,"created_by": string,"expires_at": string,"id"?: string,"idempotency_key": string,"state": string,"university_id": string,"updated_at"?: string
+                    "assessment_id": string,"created_at"?: string,"created_by": string,"expires_at": string,"id"?: string,"idempotency_key": string,"overwrite_existing"?: boolean,"state": string,"university_id": string,"updated_at"?: string
                   }
                   Update: {
-                    "assessment_id"?: string,"created_at"?: string,"created_by"?: string,"expires_at"?: string,"id"?: string,"idempotency_key"?: string,"state"?: string,"university_id"?: string,"updated_at"?: string
+                    "assessment_id"?: string,"created_at"?: string,"created_by"?: string,"expires_at"?: string,"id"?: string,"idempotency_key"?: string,"overwrite_existing"?: boolean,"state"?: string,"university_id"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {

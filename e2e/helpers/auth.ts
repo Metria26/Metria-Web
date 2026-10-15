@@ -17,7 +17,29 @@ export const E2E_TA_PASSWORD = "e2e-Password123!";
 
 /** Creates the fixture user through the local admin API (fires the F3 triggers). */
 export async function ensureE2EUser(): Promise<void> {
-  await ensureAuthUser(E2E_EMAIL, E2E_PASSWORD, "E2E Student");
+  const authUserId = await ensureAuthUser(E2E_EMAIL, E2E_PASSWORD, "E2E Student");
+  // F3 provisions profile + pending membership; tenant RLS
+  // (private.current_university_ids) only admits active members, so promote
+  // to a plain active member — no roles, hence no manage permission.
+  await promoteMembership(authUserId, "student");
+}
+
+/** Promotes the F3-provisioned pending membership to active; returns the profile. */
+async function promoteMembership(
+  authUserId: string,
+  label: string,
+): Promise<{ id: string; university_id: string }> {
+  const profiles = await serviceRest<{ id: string; university_id: string }[]>(
+    `profiles?auth_user_id=eq.${authUserId}&select=id,university_id`,
+  );
+  const profile = profiles[0];
+  if (!profile) throw new Error(`e2e ${label} profile was not provisioned by the auth trigger`);
+
+  await serviceRest(`university_memberships?profile_id=eq.${profile.id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: "active" }),
+  });
+  return profile;
 }
 
 async function ensureAuthUser(email: string, password: string, fullName: string): Promise<string> {
@@ -39,10 +61,10 @@ async function ensureAuthUser(email: string, password: string, fullName: string)
     const created = (await res.json()) as { id: string };
     return created.id;
   }
-  if (res.status !== 422) {
-    throw new Error(`e2e user create failed: ${res.status} ${await res.text()}`);
-  }
-  // Already exists (repeated local runs) — look the user up.
+  // GoTrue answers 422 for a pre-existing email on sequential runs, but a
+  // concurrent create race (parallel spec files calling ensureE2E*) can return
+  // 500 with the 23505 unique violation — both mean "already exists": fall
+  // through to the lookup instead of failing the suite.
   const list = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
     headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
   });
@@ -56,7 +78,8 @@ async function ensureAuthUser(email: string, password: string, fullName: string)
   return match.id;
 }
 
-async function serviceRest<T>(path: string, init?: RequestInit): Promise<T> {
+/** Service-role REST helper for fixture setup only (never called from browser code). */
+export async function serviceRest<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...init,
     headers: {
@@ -78,17 +101,7 @@ async function serviceRest<T>(path: string, init?: RequestInit): Promise<T> {
  */
 export async function ensureE2ETa(): Promise<void> {
   const authUserId = await ensureAuthUser(E2E_TA_EMAIL, E2E_TA_PASSWORD, "E2E TA");
-
-  const profiles = await serviceRest<{ id: string; university_id: string }[]>(
-    `profiles?auth_user_id=eq.${authUserId}&select=id,university_id`,
-  );
-  const profile = profiles[0];
-  if (!profile) throw new Error("e2e TA profile was not provisioned by the auth trigger");
-
-  await serviceRest(`university_memberships?profile_id=eq.${profile.id}`, {
-    method: "PATCH",
-    body: JSON.stringify({ status: "active" }),
-  });
+  const profile = await promoteMembership(authUserId, "TA");
 
   const roles = await serviceRest<{ id: string }[]>(
     `roles?university_id=eq.${profile.university_id}&name=eq.ta&select=id`,
@@ -129,8 +142,13 @@ export async function signInE2E(
       document.head.appendChild(style);
     });
   });
-  await page.goto(
-    `/auth/e2e-session?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&next=/app`,
-  );
-  await expect(page).toHaveURL(/\/app$/);
+  const sessionUrl = `/auth/e2e-session?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&next=/app`;
+  await page.goto(sessionUrl);
+  // Under parallel workers the dev server can transiently fail the GoTrue
+  // password exchange (redirect back to sign-in). One retry keeps real
+  // credential failures visible on the second attempt.
+  if (page.url().includes("/auth/sign-in")) {
+    await page.goto(sessionUrl);
+  }
+  await expect(page).toHaveURL(/\/app$/, { timeout: 10_000 });
 }

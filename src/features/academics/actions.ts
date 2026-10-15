@@ -103,16 +103,53 @@ export async function createOfferingAction(formData: FormData): Promise<ActionRe
   });
   if (!parsed.success) return invalidInput();
 
-  const { error } = await supabase.from("course_offerings").insert({
+  const { data: created, error } = await supabase
+    .from("course_offerings")
+    .insert({
+      university_id: profile.university_id,
+      created_by: profile.id,
+      course_id: parsed.data.courseId,
+      term_id: parsed.data.termId,
+      offering_code: parsed.data.offeringCode,
+    })
+    .select("id")
+    .single();
+  if (error || !created) return { ok: false, error: mapError(error?.code) };
+
+  // Creator staffing (T-A004): marks entry/marksheet RLS keys on
+  // is_offering_staff, so the offering's creator must hold an
+  // offering_staff row. staff_role derives from the caller's active
+  // role_assignments when those are readable; both catalog reads fail
+  // closed for regular members, hence the "member" fallback (nothing in
+  // marks RLS branches on the value — only row existence matters).
+  let staffRole = "member";
+  const { data: assignments } = await supabase
+    .from("role_assignments")
+    .select("role_id")
+    .eq("profile_id", profile.id)
+    .is("revoked_at", null);
+  const roleIds = [...new Set((assignments ?? []).map((row) => row.role_id))];
+  if (roleIds.length > 0) {
+    const { data: roles } = await supabase
+      .from("roles")
+      .select("id, name")
+      .in("id", roleIds)
+      .eq("university_id", profile.university_id);
+    const names = new Set((roles ?? []).map((role) => role.name));
+    if (names.has("teacher")) staffRole = "teacher";
+    else if (names.has("ta")) staffRole = "ta";
+  }
+  const { error: staffError } = await supabase.from("offering_staff").insert({
     university_id: profile.university_id,
     created_by: profile.id,
-    course_id: parsed.data.courseId,
-    term_id: parsed.data.termId,
-    offering_code: parsed.data.offeringCode,
+    offering_id: created.id,
+    profile_id: profile.id,
+    staff_role: staffRole,
   });
-  if (error) return { ok: false, error: mapError(error.code) };
+  if (staffError) return { ok: false, error: mapError(staffError.code) };
 
   revalidatePath("/app/offerings");
+  revalidatePath(`/app/offerings/${created.id}`);
   return { ok: true };
 }
 
