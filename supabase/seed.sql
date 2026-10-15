@@ -162,3 +162,143 @@ WHERE u.slug = 'fast-nuces-lahore'
     SELECT 1 FROM public.platform_settings s
     WHERE s.key = 'bootstrap_admin_email'
   );
+
+-- ============================================================================
+-- 9) Core-academics dev fixtures (T-A003; guidance: docs/03-database/seed/core-academics.sql)
+--    Idempotent, tenant-scoped, synthetic people only (auth_user_id values are
+--    fixture-local UUIDs -- no auth.users rows; e2e creates real auth users via
+--    the admin API instead). No real personal data (L: never seed PII).
+-- ============================================================================
+
+-- Department
+INSERT INTO public.departments (university_id, name, slug)
+SELECT u.id, 'Computer Science', 'cs'
+FROM public.universities u
+WHERE u.slug = 'fast-nuces-lahore'
+  AND NOT EXISTS (SELECT 1 FROM public.departments d WHERE d.university_id = u.id AND d.slug = 'cs');
+
+-- Term
+INSERT INTO public.terms (university_id, name, starts_on, ends_on, publication_state)
+SELECT u.id, 'Fall 2026', DATE '2026-08-01', DATE '2026-12-31', 'published'
+FROM public.universities u
+WHERE u.slug = 'fast-nuces-lahore'
+  AND NOT EXISTS (SELECT 1 FROM public.terms t WHERE t.university_id = u.id AND t.name = 'Fall 2026');
+
+-- Course
+INSERT INTO public.courses (university_id, department_id, code, title, description, publication_state)
+SELECT u.id, d.id, 'CS301', 'Software Engineering I',
+       'Introductory software engineering course (dev fixture).', 'published'
+FROM public.universities u
+JOIN public.departments d ON d.university_id = u.id AND d.slug = 'cs'
+WHERE u.slug = 'fast-nuces-lahore'
+  AND NOT EXISTS (SELECT 1 FROM public.courses c WHERE c.university_id = u.id AND c.code = 'CS301');
+
+-- Offering
+INSERT INTO public.course_offerings (university_id, course_id, term_id, offering_code)
+SELECT u.id, c.id, t.id, 'CS301-F26'
+FROM public.universities u
+JOIN public.courses c ON c.university_id = u.id AND c.code = 'CS301'
+JOIN public.terms t ON t.university_id = u.id AND t.name = 'Fall 2026'
+WHERE u.slug = 'fast-nuces-lahore'
+  AND NOT EXISTS (SELECT 1 FROM public.course_offerings o WHERE o.university_id = u.id AND o.offering_code = 'CS301-F26');
+
+-- Sections A + B
+INSERT INTO public.sections (university_id, offering_id, section_code, capacity)
+SELECT u.id, o.id, s.code, s.capacity
+FROM public.universities u
+JOIN public.course_offerings o ON o.university_id = u.id AND o.offering_code = 'CS301-F26'
+CROSS JOIN (VALUES ('A', 40), ('B', 40)) AS s(code, capacity)
+WHERE u.slug = 'fast-nuces-lahore'
+  AND NOT EXISTS (SELECT 1 FROM public.sections se WHERE se.university_id = u.id AND se.offering_id = o.id AND se.section_code = s.code);
+
+-- Grading scale (FAST-style percentage bands)
+INSERT INTO public.grading_scales (university_id, name, scale_type, definition)
+SELECT u.id, 'FAST Percentage', 'percentage',
+       '{"bands":[{"min":85,"grade":"A"},{"min":80,"grade":"A-"},{"min":75,"grade":"B+"},{"min":70,"grade":"B"},{"min":65,"grade":"C+"},{"min":60,"grade":"C"},{"min":50,"grade":"D"},{"min":0,"grade":"F"}]}'::jsonb
+FROM public.universities u
+WHERE u.slug = 'fast-nuces-lahore'
+  AND NOT EXISTS (SELECT 1 FROM public.grading_scales g WHERE g.university_id = u.id AND g.name = 'FAST Percentage');
+
+-- Assessments
+INSERT INTO public.assessments (university_id, offering_id, title, assessment_type, total, weight, visibility)
+SELECT u.id, o.id, a.title, a.assessment_type, a.total, a.weight, 'private'
+FROM public.universities u
+JOIN public.course_offerings o ON o.university_id = u.id AND o.offering_code = 'CS301-F26'
+CROSS JOIN (VALUES ('Quiz 1', 'quiz', 10::numeric, 10::numeric), ('Midterm', 'exam', 30::numeric, 25::numeric)) AS a(title, assessment_type, total, weight)
+WHERE u.slug = 'fast-nuces-lahore'
+  AND NOT EXISTS (SELECT 1 FROM public.assessments ass WHERE ass.university_id = u.id AND ass.offering_id = o.id AND ass.title = a.title);
+
+-- Synthetic TA (active membership + ta role + offering staff)
+INSERT INTO public.profiles (university_id, auth_user_id, display_name, email, roll_no)
+SELECT u.id, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0001', 'Dev TA', 'ta.dev@lhr.nu.edu.pk', 'TA-0001'
+FROM public.universities u
+WHERE u.slug = 'fast-nuces-lahore'
+  AND NOT EXISTS (SELECT 1 FROM public.profiles p WHERE p.email = 'ta.dev@lhr.nu.edu.pk');
+
+INSERT INTO public.university_memberships (university_id, profile_id, status)
+SELECT u.id, p.id, 'active'
+FROM public.universities u
+JOIN public.profiles p ON p.university_id = u.id AND p.email = 'ta.dev@lhr.nu.edu.pk'
+WHERE u.slug = 'fast-nuces-lahore'
+  AND NOT EXISTS (SELECT 1 FROM public.university_memberships m WHERE m.university_id = u.id AND m.profile_id = p.id);
+
+INSERT INTO public.role_assignments (university_id, profile_id, role_id, assigned_by)
+SELECT u.id, p.id, r.id, p.id
+FROM public.universities u
+JOIN public.profiles p ON p.university_id = u.id AND p.email = 'ta.dev@lhr.nu.edu.pk'
+JOIN public.roles r ON r.university_id = u.id AND r.name = 'ta'
+WHERE u.slug = 'fast-nuces-lahore'
+  AND NOT EXISTS (
+    SELECT 1 FROM public.role_assignments ra
+    WHERE ra.university_id = u.id AND ra.profile_id = p.id AND ra.role_id = r.id AND ra.revoked_at IS NULL
+  );
+
+INSERT INTO public.offering_staff (university_id, offering_id, profile_id, staff_role, created_by)
+SELECT u.id, o.id, p.id, 'ta', p.id
+FROM public.universities u
+JOIN public.course_offerings o ON o.university_id = u.id AND o.offering_code = 'CS301-F26'
+JOIN public.profiles p ON p.university_id = u.id AND p.email = 'ta.dev@lhr.nu.edu.pk'
+WHERE u.slug = 'fast-nuces-lahore'
+  AND NOT EXISTS (
+    SELECT 1 FROM public.offering_staff os
+    WHERE os.university_id = u.id AND os.offering_id = o.id AND os.profile_id = p.id
+  );
+
+-- Synthetic student (active membership + student role + enrolled in section A)
+INSERT INTO public.profiles (university_id, auth_user_id, display_name, email, roll_no)
+SELECT u.id, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0002', 'Dev Student', 'student.dev@lhr.nu.edu.pk', 'lhr-2026-0002'
+FROM public.universities u
+WHERE u.slug = 'fast-nuces-lahore'
+  AND NOT EXISTS (SELECT 1 FROM public.profiles p WHERE p.email = 'student.dev@lhr.nu.edu.pk');
+
+INSERT INTO public.university_memberships (university_id, profile_id, status)
+SELECT u.id, p.id, 'active'
+FROM public.universities u
+JOIN public.profiles p ON p.university_id = u.id AND p.email = 'student.dev@lhr.nu.edu.pk'
+WHERE u.slug = 'fast-nuces-lahore'
+  AND NOT EXISTS (SELECT 1 FROM public.university_memberships m WHERE m.university_id = u.id AND m.profile_id = p.id);
+
+INSERT INTO public.role_assignments (university_id, profile_id, role_id, assigned_by)
+SELECT u.id, p.id, r.id, p.id
+FROM public.universities u
+JOIN public.profiles p ON p.university_id = u.id AND p.email = 'student.dev@lhr.nu.edu.pk'
+JOIN public.roles r ON r.university_id = u.id AND r.name = 'student'
+WHERE u.slug = 'fast-nuces-lahore'
+  AND NOT EXISTS (
+    SELECT 1 FROM public.role_assignments ra
+    WHERE ra.university_id = u.id AND ra.profile_id = p.id AND ra.role_id = r.id AND ra.revoked_at IS NULL
+  );
+
+INSERT INTO public.enrollments (university_id, section_id, profile_id, status, created_by)
+SELECT u.id, s.id, p.id, 'active', p.id
+FROM public.universities u
+JOIN public.sections s
+  ON s.university_id = u.id
+ AND s.section_code = 'A'
+ AND s.offering_id = (SELECT o.id FROM public.course_offerings o WHERE o.university_id = u.id AND o.offering_code = 'CS301-F26')
+JOIN public.profiles p ON p.university_id = u.id AND p.email = 'student.dev@lhr.nu.edu.pk'
+WHERE u.slug = 'fast-nuces-lahore'
+  AND NOT EXISTS (
+    SELECT 1 FROM public.enrollments e
+    WHERE e.university_id = u.id AND e.section_id = s.id AND e.profile_id = p.id
+  );

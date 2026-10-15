@@ -496,8 +496,8 @@ Ads without traffic earn ~nothing. Immediately after the ads gate, take traffic 
 - [x] **Phase 0 init** scaffold + libraries + folder structure + local Supabase + tests + CI (§2)
 - [x] **Foundation migration** applied, types generated, seeds loaded, pgTAP green (§3 F1–F2)
 - [x] **Auth** Google login + domain denial + bootstrap admin + app shell (§3 F3–F4) — done 2026-10-14; founder deviation: bootstrap admin email exempt from domain allowlist (D20); real Google roundtrip pending founder Console redirect URI; CI green on new repo (run 38619640718)
-- [ ] **Foundation Gate** checklist signed (§3 F5) — agent-side items ALL verified green 2026-10-15 (lint/typecheck/vitest/build/db-reset/pgTAP 29/29/e2e 10/10); blocked ONLY on founder Google OAuth smoke + both-founders sign-off; RLS helpers `is_offering_staff()`/`is_enrolled()` deferred to T-A003 by design. Full status: README "F5 sign-off status — READ FIRST in a new session"
-- [ ] **T-A003** catalog/enrollment + migration `a_core_academics` (§4 A1)
+- [ ] **Foundation Gate** checklist signed (§3 F5) — agent-side items ALL verified green 2026-10-15 (lint/typecheck/vitest/build/db-reset/pgTAP 29/29/e2e 10/10); blocked ONLY on founder Google OAuth smoke + both-founders sign-off; RLS helpers `is_offering_staff()`/`is_enrolled()` shipped later in T-A003 (2026-10-15). Full status: README "F5 sign-off status — READ FIRST in a new session"
+- [x] **T-A003** catalog/enrollment + migration `a_core_academics` (§4 A1) — done 2026-10-15: migration + 6 documented deviations (incl. F1 `auth_uid()` helper fix + `has_permission` registry delta), seed section 9, pgTAP 58/58, regenerated types, `/app/offerings/*` CRUD (contracts/actions/forms/i18n), e2e journey 12/12; gates all green (README phase log)
 - [ ] **T-A004** marks + CSV importer + marksheet (§4 A2)
 - [ ] **T-A005** dashboard + announcements + TA analytics (§4 A3)
 - [ ] **T-A006** booking base + concurrency test (§5)

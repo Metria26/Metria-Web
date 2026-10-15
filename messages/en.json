@@ -44,6 +44,75 @@
     "emptyTitle": "Nothing here yet",
     "action": "Back to home"
   },
+  "Offerings": {
+    "title": "Offerings",
+    "newOffering": "New offering",
+    "newOfferingHint": "Create a course once, then open it in a term as an offering.",
+    "backToList": "All offerings",
+    "saving": "Saving…",
+    "selectPlaceholder": "Select…",
+    "capacityLabel": "Capacity {count}",
+    "capacityUnlimited": "No capacity set",
+    "unknownStudent": "Student",
+    "enrollmentNeedsSection": "Add a section first to enroll students.",
+    "offeringNeedsCourseTerm": "Create at least one course and one term before opening an offering.",
+    "sections": {
+      "createCourse": "Create course",
+      "createOffering": "Create offering",
+      "sections": "Sections",
+      "assessments": "Assessments",
+      "students": "Students"
+    },
+    "fields": {
+      "code": "Course code",
+      "title": "Title",
+      "description": "Description",
+      "department": "Department",
+      "course": "Course",
+      "term": "Term",
+      "offeringCode": "Offering code",
+      "sectionCode": "Section code",
+      "capacity": "Capacity",
+      "assessmentType": "Type",
+      "total": "Total marks",
+      "weight": "Weight (%)",
+      "section": "Section",
+      "studentEmail": "Student email"
+    },
+    "assessmentTypes": {
+      "quiz": "Quiz",
+      "exam": "Exam",
+      "assignment": "Assignment",
+      "project": "Project",
+      "other": "Other"
+    },
+    "actions": {
+      "saveCourse": "Save course",
+      "saveOffering": "Save offering",
+      "saveSection": "Save section",
+      "saveAssessment": "Save assessment",
+      "enrollStudent": "Enroll student"
+    },
+    "empty": {
+      "title": "No offerings yet",
+      "body": "Offerings appear here once a course is opened in a term.",
+      "sectionsTitle": "No sections yet",
+      "sectionsBody": "Add a section so students can be enrolled.",
+      "assessmentsTitle": "No assessments yet",
+      "assessmentsBody": "Add quizzes, exams or assignments with marks and weight.",
+      "studentsTitle": "No students enrolled",
+      "studentsBody": "Enroll a student by their university email."
+    },
+    "errors": {
+      "notAuthorized": "You do not have permission to do this.",
+      "invalidInput": "Some fields are invalid. Check the values and try again.",
+      "duplicate": "That already exists. Use a different code or value.",
+      "invalidReference": "One of the selected items no longer exists.",
+      "studentNotFound": "No student with that email was found in your university.",
+      "alreadyEnrolled": "That student is already enrolled in this section.",
+      "generic": "Something went wrong. Please try again."
+    }
+  },
   "States": {
     "error": {
       "title": "Something went wrong",

@@ -23,7 +23,151 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "feature_flags": {
+            "announcements": {
+                  Row: {
+                    "author_id": string,"body_html": string,"created_at": string,"created_by": string | null,"id": string,"section_id": string,"title": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "author_id": string,"body_html": string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"section_id": string,"title": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "author_id"?: string,"body_html"?: string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"section_id"?: string,"title"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "announcements_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"assessments": {
+                  Row: {
+                    "assessment_type": string,"created_at": string,"created_by": string | null,"id": string,"offering_id": string,"section_id": string | null,"title": string,"total": number,"university_id": string,"updated_at": string,"visibility": string,"weight": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "assessment_type": string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"offering_id": string,"section_id"?: string | null,"title": string,"total": number,"university_id": string,"updated_at"?: string,"visibility"?: string,"weight": number
+                  }
+                  Update: {
+                    "assessment_type"?: string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"offering_id"?: string,"section_id"?: string | null,"title"?: string,"total"?: number,"university_id"?: string,"updated_at"?: string,"visibility"?: string,"weight"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "assessments_offering_id_tenant_fk"
+      columns: ["university_id","offering_id"]
+isOneToOne: false
+      referencedRelation: "course_offerings"
+      referencedColumns: ["university_id","id"]
+    },{
+      foreignKeyName: "assessments_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"course_offerings": {
+                  Row: {
+                    "course_id": string,"created_at": string,"created_by": string | null,"id": string,"offering_code": string,"term_id": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "course_id": string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"offering_code": string,"term_id": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "course_id"?: string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"offering_code"?: string,"term_id"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "course_offerings_course_id_tenant_fk"
+      columns: ["university_id","course_id"]
+isOneToOne: false
+      referencedRelation: "courses"
+      referencedColumns: ["university_id","id"]
+    },{
+      foreignKeyName: "course_offerings_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"courses": {
+                  Row: {
+                    "code": string,"created_at": string,"created_by": string | null,"department_id": string | null,"description": string,"id": string,"publication_state": string,"title": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "code": string,"created_at"?: string,"created_by"?: string | null,"department_id"?: string | null,"description"?: string,"id"?: string,"publication_state"?: string,"title": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "code"?: string,"created_at"?: string,"created_by"?: string | null,"department_id"?: string | null,"description"?: string,"id"?: string,"publication_state"?: string,"title"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "courses_department_id_tenant_fk"
+      columns: ["university_id","department_id"]
+isOneToOne: false
+      referencedRelation: "departments"
+      referencedColumns: ["university_id","id"]
+    },{
+      foreignKeyName: "courses_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"departments": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"id": string,"name": string,"slug": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"name": string,"slug": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"name"?: string,"slug"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "departments_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"enrollments": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"id": string,"profile_id": string,"section_id": string,"status": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"profile_id": string,"section_id": string,"status"?: string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"profile_id"?: string,"section_id"?: string,"status"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "enrollments_section_id_tenant_fk"
+      columns: ["university_id","section_id"]
+isOneToOne: false
+      referencedRelation: "sections"
+      referencedColumns: ["university_id","id"]
+    },{
+      foreignKeyName: "enrollments_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"feature_flags": {
                   Row: {
                     "config": NonNullable<Json>,"created_at": string,"created_by": string | null,"enabled": boolean,"id": string,"key": string,"university_id": string,"updated_at": string
                   }
@@ -37,6 +181,78 @@ export type Database = {
                   Relationships: [
                     {
       foreignKeyName: "feature_flags_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"grading_scales": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"definition": NonNullable<Json>,"id": string,"name": string,"scale_type": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"definition": NonNullable<Json>,"id"?: string,"name": string,"scale_type": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"definition"?: NonNullable<Json>,"id"?: string,"name"?: string,"scale_type"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "grading_scales_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"import_batches": {
+                  Row: {
+                    "assessment_id": string,"created_at": string,"created_by": string,"expires_at": string,"id": string,"idempotency_key": string,"state": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "assessment_id": string,"created_at"?: string,"created_by": string,"expires_at": string,"id"?: string,"idempotency_key": string,"state": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "assessment_id"?: string,"created_at"?: string,"created_by"?: string,"expires_at"?: string,"id"?: string,"idempotency_key"?: string,"state"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "import_batches_assessment_id_tenant_fk"
+      columns: ["university_id","assessment_id"]
+isOneToOne: false
+      referencedRelation: "assessments"
+      referencedColumns: ["university_id","id"]
+    },{
+      foreignKeyName: "import_batches_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"import_rows": {
+                  Row: {
+                    "batch_id": string,"created_at": string,"created_by": string | null,"email": string | null,"error_code": string | null,"id": string,"proposed_score": number | null,"row_hash": string,"row_number": number,"status": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "batch_id": string,"created_at"?: string,"created_by"?: string | null,"email"?: string | null,"error_code"?: string | null,"id"?: string,"proposed_score"?: number | null,"row_hash": string,"row_number": number,"status": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "batch_id"?: string,"created_at"?: string,"created_by"?: string | null,"email"?: string | null,"error_code"?: string | null,"id"?: string,"proposed_score"?: number | null,"row_hash"?: string,"row_number"?: number,"status"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "import_rows_batch_id_tenant_fk"
+      columns: ["university_id","batch_id"]
+isOneToOne: false
+      referencedRelation: "import_batches"
+      referencedColumns: ["university_id","id"]
+    },{
+      foreignKeyName: "import_rows_university_fk"
       columns: ["university_id"]
 isOneToOne: false
       referencedRelation: "universities"
@@ -57,6 +273,78 @@ isOneToOne: false
                   Relationships: [
                     {
       foreignKeyName: "invites_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"mark_history": {
+                  Row: {
+                    "actor_id": string,"created_at": string,"created_by": string | null,"id": string,"mark_id": string,"new_score": number | null,"old_score": number | null,"reason": string,"source": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"mark_id": string,"new_score"?: number | null,"old_score"?: number | null,"reason": string,"source": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "actor_id"?: string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"mark_id"?: string,"new_score"?: number | null,"old_score"?: number | null,"reason"?: string,"source"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "mark_history_mark_id_tenant_fk"
+      columns: ["university_id","mark_id"]
+isOneToOne: false
+      referencedRelation: "marks"
+      referencedColumns: ["university_id","id"]
+    },{
+      foreignKeyName: "mark_history_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"marks": {
+                  Row: {
+                    "assessment_id": string,"created_at": string,"created_by": string | null,"id": string,"score": number | null,"status": string,"student_id": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "assessment_id": string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"score"?: number | null,"status"?: string,"student_id": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "assessment_id"?: string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"score"?: number | null,"status"?: string,"student_id"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "marks_assessment_id_tenant_fk"
+      columns: ["university_id","assessment_id"]
+isOneToOne: false
+      referencedRelation: "assessments"
+      referencedColumns: ["university_id","id"]
+    },{
+      foreignKeyName: "marks_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"offering_staff": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"id": string,"offering_id": string,"profile_id": string,"staff_role": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"offering_id": string,"profile_id": string,"staff_role": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"offering_id"?: string,"profile_id"?: string,"staff_role"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "offering_staff_university_fk"
       columns: ["university_id"]
 isOneToOne: false
       referencedRelation: "universities"
@@ -217,6 +505,52 @@ isOneToOne: false
                   Relationships: [
                     {
       foreignKeyName: "roles_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"sections": {
+                  Row: {
+                    "capacity": number | null,"created_at": string,"created_by": string | null,"id": string,"offering_id": string,"section_code": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "capacity"?: number | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"offering_id": string,"section_code": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "capacity"?: number | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"offering_id"?: string,"section_code"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "sections_offering_id_tenant_fk"
+      columns: ["university_id","offering_id"]
+isOneToOne: false
+      referencedRelation: "course_offerings"
+      referencedColumns: ["university_id","id"]
+    },{
+      foreignKeyName: "sections_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"terms": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"ends_on": string,"id": string,"name": string,"publication_state": string,"starts_on": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"ends_on": string,"id"?: string,"name": string,"publication_state"?: string,"starts_on": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"ends_on"?: string,"id"?: string,"name"?: string,"publication_state"?: string,"starts_on"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "terms_university_fk"
       columns: ["university_id"]
 isOneToOne: false
       referencedRelation: "universities"
