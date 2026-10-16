@@ -59,7 +59,14 @@ export default async function NewBookingPeriodPage() {
         }),
   ]);
 
-  const offerings = (offeringsRes.data ?? []).map((offering) => ({
+  // PostgREST embeds are typed as relation | relation[] (no cardinality
+  // inference): cast to the one-to-one shape the FK guarantees.
+  const offeringRows = (offeringsRes.data ?? []) as unknown as {
+    id: string;
+    offering_code: string;
+    courses: { code: string } | null;
+  }[];
+  const offerings = offeringRows.map((offering) => ({
     id: offering.id,
     label: `${offering.courses?.code ?? offering.offering_code} · ${offering.offering_code}`,
   }));

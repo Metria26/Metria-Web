@@ -76,9 +76,14 @@ export default async function BookingsPage() {
       ? supabase.from("sections").select("id, section_code").in("id", sectionIds)
       : Promise.resolve({ data: [] as { id: string; section_code: string }[] }),
   ]);
-  const offeringLabels = new Map(
-    (offeringsRes.data ?? []).map((offering) => [offering.id, offering]),
-  );
+  // PostgREST embeds are typed as relation | relation[] (no cardinality
+  // inference): cast to the one-to-one shape the FK guarantees.
+  const offeringRows = (offeringsRes.data ?? []) as unknown as {
+    id: string;
+    offering_code: string;
+    courses: { code: string } | null;
+  }[];
+  const offeringLabels = new Map(offeringRows.map((offering) => [offering.id, offering]));
   const sectionLabels = new Map(
     (sectionsRes.data ?? []).map((section) => [section.id, section.section_code]),
   );
