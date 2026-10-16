@@ -40,12 +40,27 @@ export const dashboardAssessmentSchema = z.object({
   created_at: z.string(),
 });
 
+export const dashboardSlotSchema = z.object({
+  period_id: z.string().uuid(),
+  period_title: z.string(),
+  slot_id: z.string().uuid(),
+  course_code: z.string(),
+  offering_id: z.string().uuid(),
+  starts_at: z.string(),
+  ends_at: z.string(),
+  location: z.string().nullable(),
+  capacity: z.coerce.number(),
+  booked: z.coerce.number(),
+  cutoff_hours: z.coerce.number(),
+  my_booking_id: z.string().uuid().nullable(),
+});
+
 export const studentDashboardSchema = z.object({
   latest_marks: z.array(dashboardMarkSchema),
   announcements: z.array(dashboardAnnouncementSchema),
   upcoming_assessments: z.array(dashboardAssessmentSchema),
-  // T-A006 fills this in (expand-only); parsed as opaque for now.
-  evaluation_slots: z.array(z.unknown()),
+  // T-A006 filled the T-A005 placeholder: upcoming slots of enrolled sections.
+  evaluation_slots: z.array(dashboardSlotSchema),
 });
 
 export type StudentDashboard = z.infer<typeof studentDashboardSchema>;

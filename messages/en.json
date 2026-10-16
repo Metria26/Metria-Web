@@ -50,6 +50,11 @@
     "noAnnouncements": "No announcements for your sections yet.",
     "upcoming": "Upcoming assessments",
     "noUpcoming": "Nothing upcoming right now.",
+    "bookings": "Bookings",
+    "noBookings": "No upcoming evaluation slots.",
+    "seats": "{booked}/{capacity} seats",
+    "booked": "Booked",
+    "viewBookings": "Bookings",
     "pending": "Pending",
     "viewMarksheet": "Marksheet",
     "viewOffering": "Open",
@@ -80,6 +85,68 @@
         "invalidReference": "The selected section no longer exists.",
         "generic": "Something went wrong. Please try again."
       }
+    }
+  },
+  "Booking": {
+    "title": "Bookings",
+    "newPeriod": "New period",
+    "view": "View",
+    "backToList": "All bookings",
+    "notStaffTitle": "No offerings to manage",
+    "notStaffHint": "Period management is available to offering staff. Ask your course team for access.",
+    "noPeriods": "No evaluation periods yet",
+    "noPeriodsHint": "When a TA opens an evaluation period for your section, it appears here.",
+    "slots": "Slots",
+    "noSlots": "No slots have been added yet.",
+    "addSlot": "Add slot",
+    "students": "Booked students",
+    "noStudents": "No bookings yet.",
+    "booked": "Booked",
+    "bookedInPeriod": "You already have a booking in this period.",
+    "full": "Full",
+    "availability": "{open} of {capacity} seats open",
+    "window": "{start} → {end}",
+    "cutoffNote": "Booking changes close {hours}h before each slot.",
+    "cancelClosedCutoff": "Cancellation closed: the cutoff has passed.",
+    "cancelClosedEnded": "This slot already took place.",
+    "periodCreated": "Period created.",
+    "slotCreated": "Slot added.",
+    "saving": "Saving…",
+    "selectPlaceholder": "Select…",
+    "sectionCode": "Section {code}",
+    "fields": {
+      "offering": "Offering",
+      "section": "Section",
+      "periodTitle": "Title",
+      "startsAt": "Starts",
+      "endsAt": "Ends",
+      "cutoffHours": "Cutoff hours before slot",
+      "capacity": "Capacity",
+      "location": "Location (optional)"
+    },
+    "actions": {
+      "savePeriod": "Create period",
+      "saveSlot": "Add slot",
+      "book": "Book slot",
+      "cancel": "Cancel booking"
+    },
+    "statuses": {
+      "active": "booked",
+      "cancelled": "cancelled",
+      "completed": "completed"
+    },
+    "errors": {
+      "notAuthorized": "You do not have permission to do that.",
+      "invalidInput": "Check the form values and try again.",
+      "duplicate": "That period or slot already exists.",
+      "invalidReference": "The selected offering or section no longer exists.",
+      "slotFull": "This slot is full. Pick another slot.",
+      "alreadyBooked": "You already have a booking in this period.",
+      "cutoffPassed": "The cancellation cutoff has passed for this slot.",
+      "slotEnded": "This slot already took place.",
+      "notActive": "This booking is no longer active.",
+      "notFound": "That record no longer exists.",
+      "generic": "Something went wrong. Please try again."
     }
   },
   "Analytics": {

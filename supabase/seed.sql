@@ -302,3 +302,38 @@ WHERE u.slug = 'fast-nuces-lahore'
     SELECT 1 FROM public.enrollments e
     WHERE e.university_id = u.id AND e.section_id = s.id AND e.profile_id = p.id
   );
+
+-- Section 10: evaluation booking fixtures (T-A006) — one future-dated period
+-- with two slots on CS301-F26 section A (student.dev is enrolled there).
+-- Idempotent: guarded by period title and slot location.
+
+INSERT INTO public.evaluation_periods (university_id, offering_id, section_id, title, starts_at, ends_at, cutoff_hours, created_by)
+SELECT u.id, o.id, s.id, 'Midterm evaluation (dev fixture)',
+       date_trunc('day', now()) + interval '7 days 8 hours',
+       date_trunc('day', now()) + interval '7 days 18 hours',
+       6, p.id
+FROM public.universities u
+JOIN public.course_offerings o ON o.university_id = u.id AND o.offering_code = 'CS301-F26'
+JOIN public.sections s ON s.university_id = u.id AND s.offering_id = o.id AND s.section_code = 'A'
+JOIN public.profiles p ON p.university_id = u.id AND p.email = 'ta.dev@lhr.nu.edu.pk'
+WHERE u.slug = 'fast-nuces-lahore'
+  AND NOT EXISTS (
+    SELECT 1 FROM public.evaluation_periods ep
+    WHERE ep.university_id = u.id AND ep.title = 'Midterm evaluation (dev fixture)'
+  );
+
+INSERT INTO public.slots (university_id, period_id, starts_at, ends_at, capacity, location, created_by)
+SELECT u.id, ep.id, v.starts_at, v.ends_at, v.capacity, v.location, p.id
+FROM public.universities u
+JOIN public.evaluation_periods ep
+  ON ep.university_id = u.id AND ep.title = 'Midterm evaluation (dev fixture)'
+JOIN public.profiles p ON p.university_id = u.id AND p.email = 'ta.dev@lhr.nu.edu.pk'
+CROSS JOIN (VALUES
+  (date_trunc('day', now()) + interval '7 days 9 hours', date_trunc('day', now()) + interval '7 days 9 hours 15 minutes', 3, 'CS Lab 1'),
+  (date_trunc('day', now()) + interval '7 days 9 hours 30 minutes', date_trunc('day', now()) + interval '7 days 9 hours 45 minutes', 3, 'CS Lab 2')
+) AS v(starts_at, ends_at, capacity, location)
+WHERE u.slug = 'fast-nuces-lahore'
+  AND NOT EXISTS (
+    SELECT 1 FROM public.slots sl
+    WHERE sl.university_id = u.id AND sl.period_id = ep.id AND sl.location = v.location
+  );

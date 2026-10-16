@@ -19,6 +19,12 @@ const displayDateFormat = new Intl.DateTimeFormat("en-PK", {
   dateStyle: "medium",
 });
 
+const slotDateFormat = new Intl.DateTimeFormat("en-PK", {
+  timeZone: "Asia/Karachi",
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
 /**
  * T-A005 student dashboard (2.4): latest own marks, announcements for enrolled
  * sections and upcoming released assessments — all from one bounded RPC
@@ -79,6 +85,46 @@ export default async function DashboardPage() {
                   className="text-sm text-primary hover:underline"
                 >
                   {t("viewMarksheet")}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="grid gap-3" aria-labelledby="dashboard-bookings-heading">
+        <h2 id="dashboard-bookings-heading" className="text-lg font-semibold">
+          {t("bookings")}
+        </h2>
+        {dashboard.evaluation_slots.length === 0 ? (
+          <p className="text-sm text-muted-foreground" data-testid="dashboard-bookings-empty">
+            {t("noBookings")}
+          </p>
+        ) : (
+          <ul className="grid gap-2" data-testid="dashboard-bookings">
+            {dashboard.evaluation_slots.map((slot, index) => (
+              <li
+                key={`${slot.slot_id}-${index}`}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card px-4 py-3"
+                data-testid="dashboard-booking"
+              >
+                <span className="grid gap-0.5">
+                  <span className="font-medium">
+                    {slot.period_title} · {slot.course_code}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {slotDateFormat.format(new Date(slot.starts_at))}
+                    {slot.location ? ` · ${slot.location}` : ""} ·{" "}
+                    {t("seats", { booked: slot.booked, capacity: slot.capacity })}
+                    {slot.my_booking_id ? ` · ${t("booked")}` : ""}
+                  </span>
+                </span>
+                <Link
+                  href={`/app/bookings/${slot.period_id}`}
+                  className="text-sm text-primary hover:underline"
+                  data-testid="dashboard-booking-link"
+                >
+                  {t("viewBookings")}
                 </Link>
               </li>
             ))}

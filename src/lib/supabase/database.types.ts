@@ -69,6 +69,38 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"bookings": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"id": string,"period_id": string,"slot_id": string,"status": string,"student_id": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"period_id": string,"slot_id": string,"status"?: string,"student_id": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"period_id"?: string,"slot_id"?: string,"status"?: string,"student_id"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "bookings_period_id_tenant_fk"
+      columns: ["university_id","period_id"]
+isOneToOne: false
+      referencedRelation: "evaluation_periods"
+      referencedColumns: ["university_id","id"]
+    },{
+      foreignKeyName: "bookings_slot_id_tenant_fk"
+      columns: ["university_id","slot_id"]
+isOneToOne: false
+      referencedRelation: "slots"
+      referencedColumns: ["university_id","id"]
+    },{
+      foreignKeyName: "bookings_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"course_offerings": {
                   Row: {
                     "course_id": string,"created_at": string,"created_by": string | null,"id": string,"offering_code": string,"term_id": string,"university_id": string,"updated_at": string
@@ -161,6 +193,32 @@ isOneToOne: false
       referencedColumns: ["university_id","id"]
     },{
       foreignKeyName: "enrollments_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"evaluation_periods": {
+                  Row: {
+                    "allow_swaps": boolean,"created_at": string,"created_by": string | null,"cutoff_hours": number,"ends_at": string,"id": string,"offering_id": string,"section_id": string,"starts_at": string,"title": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "allow_swaps"?: boolean,"created_at"?: string,"created_by"?: string | null,"cutoff_hours"?: number,"ends_at": string,"id"?: string,"offering_id": string,"section_id": string,"starts_at": string,"title": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "allow_swaps"?: boolean,"created_at"?: string,"created_by"?: string | null,"cutoff_hours"?: number,"ends_at"?: string,"id"?: string,"offering_id"?: string,"section_id"?: string,"starts_at"?: string,"title"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "evaluation_periods_offering_id_tenant_fk"
+      columns: ["university_id","offering_id"]
+isOneToOne: false
+      referencedRelation: "course_offerings"
+      referencedColumns: ["university_id","id"]
+    },{
+      foreignKeyName: "evaluation_periods_university_fk"
       columns: ["university_id"]
 isOneToOne: false
       referencedRelation: "universities"
@@ -537,6 +595,52 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"slots": {
+                  Row: {
+                    "capacity": number,"created_at": string,"created_by": string | null,"ends_at": string,"id": string,"location": string | null,"period_id": string,"starts_at": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "capacity": number,"created_at"?: string,"created_by"?: string | null,"ends_at": string,"id"?: string,"location"?: string | null,"period_id": string,"starts_at": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "capacity"?: number,"created_at"?: string,"created_by"?: string | null,"ends_at"?: string,"id"?: string,"location"?: string | null,"period_id"?: string,"starts_at"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "slots_period_id_tenant_fk"
+      columns: ["university_id","period_id"]
+isOneToOne: false
+      referencedRelation: "evaluation_periods"
+      referencedColumns: ["university_id","id"]
+    },{
+      foreignKeyName: "slots_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"swap_requests": {
+                  Row: {
+                    "accepted_by": string | null,"created_at": string,"created_by": string | null,"from_booking_id": string,"id": string,"requested_by": string,"status": string,"to_booking_id": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "accepted_by"?: string | null,"created_at"?: string,"created_by"?: string | null,"from_booking_id": string,"id"?: string,"requested_by": string,"status"?: string,"to_booking_id": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "accepted_by"?: string | null,"created_at"?: string,"created_by"?: string | null,"from_booking_id"?: string,"id"?: string,"requested_by"?: string,"status"?: string,"to_booking_id"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "swap_requests_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"terms": {
                   Row: {
                     "created_at": string,"created_by": string | null,"ends_on": string,"id": string,"name": string,"publication_state": string,"starts_on": string,"university_id": string,"updated_at": string
@@ -611,13 +715,39 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"waitlist_entries": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"id": string,"position": number,"slot_id": string,"status": string,"student_id": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"position": number,"slot_id": string,"status"?: string,"student_id": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"position"?: number,"slot_id"?: string,"status"?: string,"student_id"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "waitlist_entries_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {
             [_ in never]: never
           }
           Functions: {
-            "confirm_mark_import":
+            "book_slot":
+{ Args: { "p_period_id": string,"p_slot_id": string,"p_university_id": string }; Returns: string
+                           },
+"cancel_booking":
+{ Args: { "p_booking_id": string }; Returns: string
+                           },
+"confirm_mark_import":
 { Args: { "p_batch_id": string }; Returns: Json
                            },
 "offering_analytics":
@@ -625,6 +755,9 @@ isOneToOne: false
                            },
 "offering_marksheet":
 { Args: { "p_offering_id": string }; Returns: Json
+                           },
+"period_booking_overview":
+{ Args: { "p_period_id": string }; Returns: Json
                            },
 "student_dashboard":
 { Args: Record<PropertyKey, never>; Returns: Json

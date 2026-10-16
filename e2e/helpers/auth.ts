@@ -14,6 +14,12 @@ export const E2E_EMAIL = "e2e.student@lhr.nu.edu.pk";
 export const E2E_PASSWORD = "e2e-Password123!";
 export const E2E_TA_EMAIL = "ta.e2e@lhr.nu.edu.pk";
 export const E2E_TA_PASSWORD = "e2e-Password123!";
+/** Second student fixture: capacity races need two distinct bookers (T-A006). */
+export const E2E_STUDENT2_EMAIL = "e2e.student2@lhr.nu.edu.pk";
+
+/** Default demo anon key (publicly documented local value, same as .env.local). */
+const ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
 
 /** Creates the fixture user through the local admin API (fires the F3 triggers). */
 export async function ensureE2EUser(): Promise<void> {
@@ -151,4 +157,84 @@ export async function signInE2E(
     await page.goto(sessionUrl);
   }
   await expect(page).toHaveURL(/\/app$/, { timeout: 10_000 });
+}
+
+/** Creates the second student fixture (F3 triggers, then promote membership). */
+export async function ensureE2EStudent2(): Promise<void> {
+  const authUserId = await ensureAuthUser(E2E_STUDENT2_EMAIL, E2E_PASSWORD, "E2E Student Two");
+  await promoteMembership(authUserId, "student2");
+}
+
+/** Fixture profile lookup over service role (id + tenant) for API-level specs. */
+export async function fixtureProfile(
+  email: string,
+): Promise<{ id: string; university_id: string }> {
+  const rows = await serviceRest<{ id: string; university_id: string }[]>(
+    `profiles?email=eq.${encodeURIComponent(email)}&select=id,university_id`,
+  );
+  const profile = rows[0];
+  if (!profile) throw new Error(`e2e fixture profile not found: ${email}`);
+  return profile;
+}
+
+/** Idempotent active enrollment for fixture-driven booking specs. */
+export async function ensureEnrollment(
+  profile: { id: string; university_id: string },
+  sectionId: string,
+): Promise<void> {
+  const existing = await serviceRest<{ id: string }[]>(
+    `enrollments?section_id=eq.${sectionId}&profile_id=eq.${profile.id}&select=id`,
+  );
+  if (existing.length > 0) return;
+  await serviceRest("enrollments", {
+    method: "POST",
+    body: JSON.stringify({
+      university_id: profile.university_id,
+      section_id: sectionId,
+      profile_id: profile.id,
+      status: "active",
+      created_by: profile.id,
+    }),
+  });
+}
+
+/** Password-grant access token for fixture users (API-level specs only). */
+export async function passwordGrantToken(email: string, password = E2E_PASSWORD): Promise<string> {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: ANON_KEY },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) throw new Error(`e2e token grant failed for ${email}: ${res.status}`);
+  const body = (await res.json()) as { access_token?: string };
+  if (!body.access_token) throw new Error(`e2e token grant returned no access_token for ${email}`);
+  return body.access_token;
+}
+
+/**
+ * PostgREST RPC call as a fixture user. Returns ok/status/message instead of
+ * throwing so parallel race specs can assert "exactly one winner" shapes.
+ */
+export async function rpcAs(
+  token: string,
+  fn: string,
+  args: Record<string, unknown>,
+): Promise<{ ok: boolean; status: number; message: string | null }> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: ANON_KEY,
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(args),
+  });
+  const text = await res.text();
+  let body: { message?: string } | null = null;
+  try {
+    body = text ? (JSON.parse(text) as { message?: string }) : null;
+  } catch {
+    body = null;
+  }
+  return { ok: res.ok, status: res.status, message: body?.message ?? null };
 }
