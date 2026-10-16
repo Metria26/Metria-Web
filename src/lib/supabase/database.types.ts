@@ -617,7 +617,18 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            [_ in never]: never
+            "confirm_mark_import":
+{ Args: { "p_batch_id": string }; Returns: Json
+                           },
+"offering_analytics":
+{ Args: { "p_offering_id": string }; Returns: Json
+                           },
+"offering_marksheet":
+{ Args: { "p_offering_id": string }; Returns: Json
+                           },
+"student_dashboard":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           }
           }
           Enums: {
             [_ in never]: never

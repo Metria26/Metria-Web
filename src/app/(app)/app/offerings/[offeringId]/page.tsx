@@ -5,7 +5,11 @@ import { connection } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { EmptyState } from "@/components/states/empty-state";
 import { createClient } from "@/lib/supabase/server";
+import { loadOfferingAnalytics } from "@/features/academics/analytics";
 import { AssessmentForm, EnrollmentForm, SectionForm } from "@/features/academics/ui/forms";
+import { AnnouncementForm as AnnouncementComposer } from "@/features/academics/ui/announcement-editor";
+import { AnnouncementList } from "@/features/academics/ui/announcement-list";
+import { TaAnalytics } from "@/features/academics/ui/ta-analytics";
 
 export const metadata: Metadata = {
   title: "Offering",
@@ -26,6 +30,13 @@ type AssessmentRow = {
 };
 type EnrollmentRow = { id: string; section_id: string; profile_id: string; status: string };
 type ProfileRow = { id: string; display_name: string; email: string };
+type AnnouncementRow = {
+  id: string;
+  title: string;
+  body_html: string;
+  section_id: string;
+  created_at: string;
+};
 
 export default async function OfferingDetailPage({
   params,
@@ -135,6 +146,33 @@ export default async function OfferingDetailPage({
     label: section.section_code,
   }));
 
+  // T-A005 announcements: RLS narrows this to staff-of-offering or enrolled
+  // students, so the query is safe to run for every viewer.
+  const announcementsRes =
+    sections.length > 0
+      ? await supabase
+          .from("announcements")
+          .select("id, title, body_html, section_id, created_at")
+          .in(
+            "section_id",
+            sections.map((section) => section.id),
+          )
+          .order("created_at", { ascending: false })
+      : { data: [] as AnnouncementRow[] };
+  const announcements = (announcementsRes.data ?? []) as AnnouncementRow[];
+  const sectionCodeById = new Map(sections.map((section) => [section.id, section.section_code]));
+
+  // T-A005 TA analytics: RPC raises 42501 for non-staff, so only staff attempt
+  // it; a failure hides the section rather than failing the whole page.
+  let analytics: Awaited<ReturnType<typeof loadOfferingAnalytics>> | null = null;
+  if (viewerIsStaff) {
+    try {
+      analytics = await loadOfferingAnalytics(supabase, offeringId);
+    } catch {
+      analytics = null;
+    }
+  }
+
   return (
     <div className="flex flex-col gap-10">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -236,6 +274,31 @@ export default async function OfferingDetailPage({
         <AssessmentForm offeringId={offeringId} sections={sectionOptions} />
       </section>
 
+      <section className="grid gap-3" aria-labelledby="announcements-heading">
+        <h2 id="announcements-heading" className="text-lg font-semibold">
+          {t("sections.announcements")}
+        </h2>
+        {announcements.length === 0 ? (
+          <EmptyState
+            title={t("empty.announcementsTitle")}
+            description={t("empty.announcementsBody")}
+          />
+        ) : (
+          <AnnouncementList
+            announcements={announcements.map((announcement) => ({
+              id: announcement.id,
+              title: announcement.title,
+              bodyHtml: announcement.body_html,
+              context: sectionCodeById.get(announcement.section_id),
+              createdAt: announcement.created_at,
+            }))}
+          />
+        )}
+        {viewerIsStaff && sectionOptions.length > 0 ? (
+          <AnnouncementComposer sections={sectionOptions} />
+        ) : null}
+      </section>
+
       <section className="grid gap-3" aria-labelledby="students-heading">
         <h2 id="students-heading" className="text-lg font-semibold">
           {t("sections.students")}
@@ -273,6 +336,15 @@ export default async function OfferingDetailPage({
           <p className="text-sm text-muted-foreground">{t("enrollmentNeedsSection")}</p>
         )}
       </section>
+
+      {viewerIsStaff && analytics ? (
+        <section className="grid gap-3" aria-labelledby="analytics-heading">
+          <h2 id="analytics-heading" className="text-lg font-semibold">
+            {t("sections.analytics")}
+          </h2>
+          <TaAnalytics analytics={analytics} />
+        </section>
+      ) : null}
     </div>
   );
 }

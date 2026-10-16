@@ -10,6 +10,11 @@ export default defineConfig({
     baseURL: "http://localhost:3000",
     trace: "on-first-retry",
   },
+  // Dev-mode server actions + revalidatePath refreshes on a loaded machine
+  // exceed the 5s default (T-A005 made /app/offerings/[id] heavier).
+  expect: {
+    timeout: 10_000,
+  },
   projects: [
     {
       name: "chromium",

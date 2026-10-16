@@ -2,7 +2,9 @@
 
 Multi-tenant academic evaluation/coursework platform (launch tenant: FAST-NUCES Lahore, `lhr.nu.edu.pk`) with a public SEO/ad-monetized layer and an authenticated student/TA layer (marks, evaluation-slot booking, announcements). Investment-free: free tiers only, no Vercel, no paid plans.
 
-> **Documentation authority:** `docs/` is the permanent source of truth. `plan.md` is an *ephemeral* execution plan — it is replaced when a plan cycle completes. **This README is the living compacted record** of environment decisions, operational notes, and progress. Update it at the end of every phase/major task.
+> **Documentation authority:** `docs/` is the permanent source of truth. `plan.md` is an *ephemeral* execution plan — it is replaced when a plan cycle completes. **This README is the living compacted record** of environment decisions, operational notes, and progress.
+>
+> **README maintenance contract — run at the end of every card/phase:** ① update *Current status*; ② append a *Phase log* entry (never rewrite past entries); ③ update *Parked / deferred work* and *Known issues / watch list* if anything changed; ④ update *Toolchain notes* / *Local Supabase* / *Commands* / *Project structure* whenever the environment or workflow changes; ⑤ keep it compact — link `docs/` instead of duplicating. `plan.md` gets replaced between plan cycles; **anything a future session needs to know must live here or in `docs/`, never only in chat history or memory.**
 
 | Document | Role |
 |---|---|
@@ -12,11 +14,11 @@ Multi-tenant academic evaluation/coursework platform (launch tenant: FAST-NUCES 
 | `docs/TRACEABILITY.md` | Feature ID → module → card → test matrix |
 | `docs/09-ai-agent-setup/AGENTS.md` | Master rules for coding agents (12 rules) |
 | `plan.md` | Current MVP execution plan (Marks + Booking + Ads) — replace when done |
-| **`README.md` (this file)** | Living operational record: env, WSL2, commands, phase log |
+| **`README.md` (this file)** | Living operational record: machine setup, env vars, commands, phase log |
 
 ## Current status
 
-- **Done:** Step 0 tooling · **Phase 0 init** (scaffold, libs, shadcn, folder structure, test harness, local Supabase, CI, pre-commit) · **Foundation Gate F1+F2+F3+F4** (foundation migration + seeds + generated types, pgTAP 16/16, auth domain allowlist + bootstrap admin + `/auth/*` + proxy gating (pgTAP 13/13, e2e 10/10), app shell + design tokens + next-intl) — verified 2026-10-14 · **F5 agent-side pre-signoff verification** — all local gates re-run green 2026-10-15 (see below) · **Phase 1 T-A003 core-academics** (migration `a_core_academics` + helpers, seed fixtures, pgTAP 58/58, `/app/offerings/*` CRUD UI, e2e 12/12) — 2026-10-15 · **Phase 1 T-A004 marks + CSV importer + marksheet** (migration `a_marks_import` + D-g…D-k, pgTAP 127/127, `/app/marks*` + importer + marksheet UI, e2e 14/14) — 2026-10-16.
+- **Done:** Step 0 tooling · **Phase 0 init** (scaffold, libs, shadcn, folder structure, test harness, local Supabase, CI, pre-commit) · **Foundation Gate F1+F2+F3+F4** (foundation migration + seeds + generated types, pgTAP 16/16, auth domain allowlist + bootstrap admin + `/auth/*` + proxy gating (pgTAP 13/13, e2e 10/10), app shell + design tokens + next-intl) — verified 2026-10-14 · **F5 agent-side pre-signoff verification** — all local gates re-run green 2026-10-15 (see below) · **Phase 1 T-A003 core-academics** (migration `a_core_academics` + helpers, seed fixtures, pgTAP 58/58, `/app/offerings/*` CRUD UI, e2e 12/12) — 2026-10-15 · **Phase 1 T-A004 marks + CSV importer + marksheet** (migration `a_marks_import` + D-g…D-k, pgTAP 127/127, `/app/marks*` + importer + marksheet UI, e2e 14/14) — 2026-10-16 · **Phase 1 T-A005 dashboard + announcements + TA analytics** (migration `a_announcements_dashboard`, one bounded dashboard RPC, Tiptap + sanitize on write/render, k≥5 analytics, pgTAP 148/148, vitest 58/58, e2e dashboard journey 2/2 standalone) — 2026-10-16 · **T-A005 independently re-verified 2026-10-16** (vitest 58/58 · db reset clean · pgTAP 148/148 · e2e 2/2 `--workers=1`; README test-count typo fixed — announcements vitest file = 11 tests).
 - **F5 sign-off status:** ALL agent-side items are done and re-verified (2026-10-15). The **only** remaining gate item is the founder Google OAuth smoke (Console redirect URI + real-login check + gate sign-off) — see **"F5 sign-off status — READ FIRST in a new session"** below. The OAuth Console step cannot be automated from this repo and is expected to stay open for a while; it does NOT block code work except the formal Phase 1 start rule in plan.md §3.
 - **CI:** green on `MetriaAdmin123/Metria-Web` — run `38619640718` (commit `e9cb77f`, F3): `ci` ✅ `e2e` ✅ (e2e job boots Supabase itself with public demo keys). Actions had to be enabled on the new repo first (Settings → Actions → General).
 - **Founder Step 0:** secrets filled into `.env.local` (bootstrap admin email, Google OAuth client ID/secret); cloud Supabase keys in gitignored `.env.cloud`. `Metria_Env.txt` deleted (was committed with secrets — history rewrite deliberately avoided). **Still open:** Google Console redirect URI (the OAuth smoke below).
@@ -32,7 +34,7 @@ Multi-tenant academic evaluation/coursework platform (launch tenant: FAST-NUCES 
 | # | F5 checklist item | Status | Evidence / note |
 |---|---|---|---|
 | 1 | Repo/tooling/CI green on clean clone | ✅ | CI run `38619640718` on `e9cb77f` — `ci` ✅ `e2e` ✅ (e2e job boots its own Supabase) |
-| 2 | Local Supabase up; migrations apply clean; `db:types` generated | ✅ | 2026-10-15: full `db reset` from empty re-applied both migrations + seed cleanly; `src/lib/supabase/database.types.ts` committed (generate from WSL, see Commands) |
+| 2 | Local Supabase up; migrations apply clean; `db:types` generated | ✅ | 2026-10-15: full `db reset` from empty re-applied both migrations + seed cleanly; `src/lib/supabase/database.types.ts` committed (2026-10-16: `pnpm db:types` now works from PowerShell too, byte-identical rerun) |
 | 3 | Auth tenant skeleton: Google login + domain denial + bootstrap admin | ⏳ **code complete; live Google roundtrip blocked (founder)** | All automatable paths verified: pgTAP 13/13 (allowlist triggers via admin-API fixture user) + e2e 10/10. The real Google sign-in flow (button → Google → PKCE callback → profile/membership provisioning) is built but **untested against a real Google account** until the Console step below is done |
 | 4 | RLS helpers present (`current_university_ids`, `has_role`, `is_offering_staff`, `is_enrolled`, `is_platform_admin`) | ✅ 5/5 (as of T-A003, 2026-10-15) | Present in `20261014140937_s_foundation_auth.sql`, all `search_path=''`: `private.current_university_ids()`, `private.has_role()`, `private.is_platform_admin()`. `private.is_offering_staff()`/`private.is_enrolled()` shipped with the T-A003 core-academics migration (their tables arrived there). **All three F1 helpers were re-defined in T-A003 to resolve the caller via `profiles.auth_user_id = auth.uid()`** — the F1 originals compared `profile_id` (profiles.id) directly to `auth.uid()` (auth.users.id), which is always empty for real users |
 | 5 | Seeds applied (university, domains, roles, permissions, flags-off) | ✅ | 2026-10-15 post-reset counts: 1 university, 1 domain, 3 roles, 20 permissions, 23 role↔permission mappings, 22 flags with exactly 1 enabled (`ads.global_kill=true`) |
@@ -64,7 +66,7 @@ Multi-tenant academic evaluation/coursework platform (launch tenant: FAST-NUCES 
 
 | Layer | Choice |
 |---|---|
-| Runtime | Node.js ≥ 22 (installed: v22.17.1), pnpm 10.34.7 |
+| Runtime | Node.js ≥ 22 (current machine v24.15.0 · original setup v22.17.1), pnpm 10.34.7 |
 | Framework | Next.js 16.4.0 App Router, React 19.3.0, TypeScript 5.9.3 (`strict` + `noUncheckedIndexedAccess`) |
 | Styling | Tailwind CSS 4, shadcn/ui (15 components) |
 | Data | Supabase (Postgres/Auth/Realtime/Storage), `@supabase/supabase-js` + `@supabase/ssr`, **no ORM** — logic in Postgres RPCs |
@@ -77,19 +79,35 @@ Multi-tenant academic evaluation/coursework platform (launch tenant: FAST-NUCES 
 
 Deferred installs (add when their features ship): `resend` (notifications), `@sentry/nextjs` (pre-deploy), shadcn `form` component (needs `react-hook-form`, not on the approved library list — use zod + server actions instead).
 
-## Toolchain notes (Windows + WSL2 machine)
+## Toolchain notes (Windows machines)
 
-- **pnpm** installed via `corepack enable --install-directory %LOCALAPPDATA%\pnpm` (no admin; Node is in `C:\Program Files\nodejs`). Added to **user PATH** — new terminals pick it up; current shells may need `$env:Path = "$env:LOCALAPPDATA\pnpm;$env:Path"`.
-  - **pnpm 12 is incompatible** with the bundled corepack 0.33.0 (bin layout mismatch). Stay on **pnpm 10** until corepack/Node is upgraded.
-- **Docker:** NOT Docker Desktop. **Docker Engine 29.1.3 + compose v2 run inside WSL2 Ubuntu 24.04**, installed as root (`wsl -d Ubuntu -u root`).
-  - Daemon listens on `unix:///var/run/docker.sock` **and** `tcp://127.0.0.1:2375` (override at `/etc/systemd/system/docker.service.d/override.conf`).
-  - User `hp` is in the `docker` group.
-- **Supabase CLI:** repo dev-dep `supabase@2.120.0` (Windows) for version/CI parity, but **day-to-day commands run the WSL binary** (`/usr/local/bin/supabase`, same version) because Windows paths cannot bind-mount into the WSL daemon.
-- **WSL keep-alive:** the WSL VM auto-terminates when the last `wsl.exe` exits, which bounces all containers. A detached keep-alive must run:
+> Two dev environments exist. **This machine (current)** = Docker Desktop on Windows, everything from PowerShell, repo at `D:\Metria-Web`. **Legacy machine** (used through T-A004) = Docker Engine inside WSL2, repo at `C:\Users\HP\OneDrive\Desktop\Metria-Web`; its notes are compacted below in case that machine is used again.
+
+### Current machine (verified 2026-10-16)
+
+- Windows user `MZG` · Node **v24.15.0** · pnpm **10.34.7** (corepack) · Docker Desktop **29.8.2** (`docker` is on the Windows PATH) · repo at `D:\Metria-Web`.
+- **Docker Desktop** at `C:\Program Files\Docker\Docker\Docker Desktop.exe` (WSL2 backend). Boot it and wait for the engine before any Supabase command:
+  ```powershell
+  Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+  while ((Get-Date) -lt (Get-Date).AddSeconds(180)) { docker info *> $null; if ($LASTEXITCODE -eq 0) { "engine ready"; break }; Start-Sleep -Seconds 5 }
+  ```
+  Quit it when done to free RAM: `Get-Process "Docker Desktop","com.docker.backend","com.docker.build" -ErrorAction SilentlyContinue | Stop-Process -Force`
+- **Supabase CLI runs directly from PowerShell on this machine** — `pnpm exec supabase …` exactly as in *Local Supabase* below. All commands verified 2026-10-16 (start, status, db reset, test db, db:types, stop); no WSL hop needed.
+  - If `supabase start` exits with `container is not ready: starting` right after a Docker boot, wait ~30 s and re-run — it resumes where it left off.
+  - `supabase stop` keeps data ("Starting database from backup…" on the next start).
+  - PowerShell sometimes renders `pnpm exec supabase` stderr lines as red `NativeCommandError` noise (pnpm.ps1 wrapper) — cosmetic; judge by the actual output.
+- **Low RAM (8 GB) rules** (full list in `AGENTS.md`): one heavy process at a time; run heavy e2e specs individually with `--workers=1`; skip `build` / full `typecheck` / full lint unless a gate needs them; stop Supabase + Docker Desktop as soon as testing is done.
+
+### Legacy machine notes (WSL2 Docker Engine — compacted, keep for that machine)
+
+- Docker Engine 29.1.3 + compose v2 inside **WSL2 Ubuntu 24.04**, installed as root (`wsl -d Ubuntu -u root`); daemon at `unix:///var/run/docker.sock` **and** `tcp://127.0.0.1:2375` (override: `/etc/systemd/system/docker.service.d/override.conf`); user `hp` in the `docker` group.
+- Supabase CLI must run through WSL there because Windows paths cannot bind-mount into the WSL daemon — wrap every command as `wsl -d Ubuntu -- bash -lc "cd /mnt/c/Users/HP/OneDrive/Desktop/Metria-Web && supabase <cmd>"`; `pnpm db:types` fails from Windows on that machine (use the WSL variant in *Commands*).
+- **WSL keep-alive after every reboot** (else containers restart every ~30 s):
   ```powershell
   Start-Process -FilePath "wsl.exe" -ArgumentList "-d","Ubuntu","--","sleep","infinity" -WindowStyle Hidden
   ```
-  Re-run this **after every reboot** (or whenever containers keep restarting every ~30s). Verify with `wsl -d Ubuntu -- bash -lc "uptime"`.
+  Verify with `wsl -d Ubuntu -- bash -lc "uptime"`.
+- pnpm installed via `corepack enable --install-directory %LOCALAPPDATA%\pnpm` (no admin; Node in `C:\Program Files\nodejs`), added to user PATH. **pnpm 12 is incompatible** with the bundled corepack 0.33.0 (bin layout mismatch) — stay on **pnpm 10** until corepack/Node is upgraded.
 
 ## Environment variables
 
@@ -102,20 +120,21 @@ Deferred installs (add when their features ship): `resend` (notifications), `@se
 - Runtime validation: `src/lib/env.ts` (zod). `clientEnv` parses eagerly (build fails fast if public env is missing); **`getServerEnv()` parses lazily** so builds/client bundles don't throw while founder secrets are still empty. Full registry env list: `SYMBOL_REGISTRY.md`.
 - CI provides **placeholder env** (workflow-level `env:` in `ci.yml`, no secrets) so clean-clone `build`/`dev`/e2e pass; real local values stay in `.env.local`.
 
-## Local Supabase (WSL2)
+## Local Supabase (Docker Desktop)
 
-```bash
-# From Windows — all supabase commands go through WSL:
-wsl -d Ubuntu -- bash -lc "cd /mnt/c/Users/HP/OneDrive/Desktop/Metria-Web && supabase start"
-wsl -d Ubuntu -- bash -lc "cd /mnt/c/Users/HP/OneDrive/Desktop/Metria-Web && supabase status"   # URLs + keys
-wsl -d Ubuntu -- bash -lc "cd /mnt/c/Users/HP/OneDrive/Desktop/Metria-Web && supabase db reset" # apply migrations (slow ~2min, realtime restarts)
-wsl -d Ubuntu -- bash -lc "cd /mnt/c/Users/HP/OneDrive/Desktop/Metria-Web && supabase test db"  # pgTAP
+```powershell
+# From the repo root (D:\Metria-Web) — Docker Desktop must be running:
+pnpm exec supabase start     # stack up (first-ever start pulls ~10 images, >15 min; resumable)
+pnpm exec supabase status    # URLs + keys
+pnpm exec supabase db reset  # clean apply: all migrations + supabase/seed.sql (~1 min)
+pnpm exec supabase test db   # pgTAP suite
+pnpm exec supabase stop      # free RAM when done (data preserved, restored on next start)
 ```
 
-- Stack published on `127.0.0.1:54321` (API/Kong), `:54322` (DB), `:54323` (Studio), `:54324` (Mailpit) — reachable from Windows via WSL2 localhost forwarding.
-- First `supabase start` pulls ~10 images (takes >15 min on slow links; resumable — cached layers persist).
-- `db reset` with zero migrations is a clean no-op schema init (skips `.gitkeep` files correctly). With the foundation migration it applies schema + `supabase/seed.sql` (verified 2026-10-14: 1 university, 1 domain, 3 roles, 20 permissions, 23 role↔permission mappings, 22 flags with only `ads.global_kill=true`).
-- pgTAP: **`foundation-auth.test.sql` (16/16) + `auth-domain-allowlist.test.sql` (13/13)** live here (both green). The other 3 module test files were removed from `supabase/tests/` because they assert on tables that don't exist yet — each module card re-copies its own file when its migration lands (docs copies remain authoritative in `docs/03-database/tests/`). CI runs `supabase test db` once `supabase/migrations/*.sql` exist.
+- Legacy WSL machine: wrap every command as `wsl -d Ubuntu -- bash -lc "cd /mnt/c/Users/HP/OneDrive/Desktop/Metria-Web && supabase <cmd>"`.
+- Stack published on `127.0.0.1:54321` (API/Kong), `:54322` (DB), `:54323` (Studio), `:54324` (Mailpit).
+- `db reset` applies `supabase/migrations/` in order — 5 as of 2026-10-16: `foundation_auth`, `auth_domain_allowlist`, `a_core_academics`, `a_marks_import`, `a_announcements_dashboard` — plus the seed. Seed counts (verified 2026-10-15/16): 1 university, 1 domain, 3 roles, 20 permissions, 23 role↔permission mappings, 22 flags with only `ads.global_kill=true` enabled.
+- pgTAP files live in `supabase/tests/` per landed module — currently 5 files / **148 tests, all green** (2026-10-16): `foundation-auth` 16, `auth-domain-allowlist` 13, `core-academics` 29, `marks.rls` 69, `announcements-analytics.rls` 21. Module cards re-copy their doc file when their migration lands; authoritative originals stay in `docs/03-database/tests/`. CI runs `supabase test db` once migrations exist.
 
 ## Commands
 
@@ -125,11 +144,11 @@ wsl -d Ubuntu -- bash -lc "cd /mnt/c/Users/HP/OneDrive/Desktop/Metria-Web && sup
 | `pnpm build` / `pnpm start` | Production build / serve |
 | `pnpm lint` | ESLint (flat config; Next 16 removed `next lint`) |
 | `pnpm typecheck` | `next typegen` (generates `LayoutProps`/route types) then `tsc --noEmit` — needed on clean clones where `.next/` doesn't exist yet |
-| `pnpm test` | Vitest run (`src/**/*.test.ts(x)`) |
-| `pnpm test:e2e` | Playwright (`e2e/`, auto-starts dev server) |
-| `pnpm test:db` | pgTAP via Supabase CLI (run from WSL, see above) |
-| `pnpm db:reset` | Reset local DB (WSL) |
-| `pnpm db:types` | Generate `src/lib/supabase/database.types.ts`. **Windows script fails (needs Docker on PATH)** — run the equivalent from WSL: `wsl -d Ubuntu -- bash -lc "cd /mnt/c/Users/HP/OneDrive/Desktop/Metria-Web && supabase gen types typescript --local > src/lib/supabase/database.types.ts"` then `pnpm exec prettier --write src/lib/supabase/database.types.ts` |
+| `pnpm test` | Vitest run (`src/**/*.test.ts(x)`) — full suite 58/58 (2026-10-16) |
+| `pnpm test:e2e` | Playwright (`e2e/`, auto-starts dev server). On this 8 GB machine run heavy specs individually with `--workers=1` — e.g. `pnpm exec playwright test e2e/dashboard.journey.spec.ts --workers=1` (verified 2/2, 2.0 min, 2026-10-16) |
+| `pnpm test:db` | pgTAP via Supabase CLI (from PowerShell on this machine — see *Local Supabase*) |
+| `pnpm db:reset` | Reset local DB — migrations + seed from clean (stack must be up) |
+| `pnpm db:types` | Generate `src/lib/supabase/database.types.ts` — **works from PowerShell now** (Docker Desktop; verified 2026-10-16, rerun byte-identical). Legacy WSL machine only: `wsl -d Ubuntu -- bash -lc "cd /mnt/c/Users/HP/OneDrive/Desktop/Metria-Web && supabase gen types typescript --local > src/lib/supabase/database.types.ts"` then `pnpm exec prettier --write src/lib/supabase/database.types.ts` |
 | `pnpm format` | Prettier write |
 
 Pre-commit: husky + lint-staged (eslint --fix + prettier on staged `ts/tsx/mjs`; prettier on `json/css/yml`).
@@ -146,10 +165,12 @@ Pre-commit: husky + lint-staged (eslint --fix + prettier on staged `ts/tsx/mjs`;
 │  ├─ app/                    # route composition only
 │  │  ├─ error.tsx / global-error.tsx / not-found.tsx / loading.tsx   # global states
 │  │  ├─ page.tsx             # public landing (product name from env)
-│  │  ├─ (app)/app/           # authenticated shell: layout (sidebar+bottom nav), dashboard placeholder
-│  │  ├─ (public)/ (auth)/ (admin)/admin/   # planned route groups
+│  │  ├─ (app)/app/           # authenticated shell: dashboard, offerings/*, marks/*, marksheet; layout = sidebar + bottom nav
+│  │  ├─ (auth)/              # sign-in, callback, access-denied, e2e-session — noindex, zero ad scripts
+│  │  ├─ api/                 # route handlers (CSV import preview/confirm)
+│  │  └─ (public)/ (admin)/admin/   # planned route groups (T-B001 / T-B008)
 │  ├─ i18n/request.ts         # next-intl request config (static 'en', no locale routing)
-│  ├─ features/               # {auth,academics,booking,ads} — lane-owned
+│  ├─ features/               # lane-owned: auth ✅ · academics ✅ (catalog, marks, importer, marksheet, dashboard/announcements/analytics) · booking + ads pending
 │  ├─ components/
 │  │  ├─ shell/               # app-sidebar, bottom-nav, app-header, offline-banner, nav-items
 │  │  ├─ states/              # error-state (correlation ID + retry), empty-state
@@ -157,11 +178,11 @@ Pre-commit: husky + lint-staged (eslint --fix + prettier on staged `ts/tsx/mjs`;
 │  └─ lib/                    # supabase clients, env.ts (lazy server env), brand.ts, contracts/, utils.ts
 ├─ supabase/
 │  ├─ config.toml             # local stack config
-│  ├─ migrations/             # ONLY schema authority (CLI, lane-prefixed) — foundation_auth + auth_domain_allowlist landed
+│  ├─ migrations/             # ONLY schema authority (CLI, lane-prefixed) — 5 landed (see *Local Supabase*)
 │  ├─ seed.sql                # idempotent tenant seed (FAST, roles, perms, flags, bootstrap admin email)
-│  ├─ tests/                  # pgTAP (foundation-auth + auth-domain-allowlist; module cards copy theirs on arrival)
+│  ├─ tests/                  # pgTAP — 5 files / 148 tests green
 │  └─ functions/              # edge functions (later)
-├─ e2e/                       # Playwright specs (smoke + app-shell @360px + auth)
+├─ e2e/                       # Playwright: smoke, app-shell @360px, auth, academics.journey, marks.import, dashboard.journey
 ├─ .github/workflows/ci.yml   # PR pipeline (+ placeholder env)
 └─ CODEOWNERS                 # lane ownership (placeholder GitHub handles!)
 ```
@@ -234,14 +255,23 @@ Pre-commit: husky + lint-staged (eslint --fix + prettier on staged `ts/tsx/mjs`;
 - **Fixture fixes found via e2e debugging:** `ensureE2EUser` now promotes the F3-**pending** membership to `active` (plain member, no roles — tenant RLS `current_university_ids()` saw nothing for a pending member; the academics "read" test only asserted page structure, so it never caught this); race-tolerant `ensureAuthUser` (concurrent create → fall through to lookup), one-shot `signInE2E` retry for transient GoTrue failures under parallel workers.
 - **Gates:** lint ✅ typecheck ✅ vitest 47/47 ✅ build ✅ db reset ✅ pgTAP 127/127 ✅ e2e 14/14 ✅ (2026-10-16).
 
-## Next: T-A005 (dashboard + announcements) · founder OAuth smoke still pending
-**T-A004 completed 2026-10-16.** Phase 1 continues under the founder green-light — next card per plan.md §4 (A3, T-A005). D-k (public RPC wrappers) is a standing deviation: any future private RPC invoked over PostgREST needs the same wrapper. The founder OAuth smoke + retroactive F5 sign-off remains queued (see "F5 sign-off status").
+### T-A005 — dashboard + announcements + TA analytics (2026-10-16) ✅
+- **Migration** `supabase/migrations/20261016120000_a_announcements_dashboard.sql`: narrows `announcements` RLS (T-A003 left it platform-admin-only) → staff-of-offering write (requires `academic.manage_offering` + author = caller, spoofed author denied), author update/delete, enrolled-student read; adds `private.student_dashboard()` (one bounded RPC: latest own marks + enrolled-section announcements + upcoming released assessments; `evaluation_slots` stays `[]` for T-A006, expand-only) and `private.offering_analytics(uuid)` (per-assessment distribution buckets + per-section averages, **every aggregate k>=5-suppressed in SQL**, D10/P14; staff or `academic.view_offering_analytics` only). Public wrappers per D-k. Rollback note included; no table/column changes.
+- **App**: `src/features/academics/` additions — `sanitize.ts` (D8 allowlist, sanitize on write in the server action **and** again at render in `AnnouncementList`), `dashboard.ts`/`analytics.ts` (Zod-parsed RPC contracts), `createAnnouncementAction` (callerProfile gate + error map), UI `AnnouncementForm` (Tiptap v3, `immediatelyRender:false`), `TaAnalytics` + `analytics-chart.tsx` (recharts behind `next/dynamic` ssr:false, D7). `/app` dashboard replaced (marks/announcements/upcoming + empty states), offering page gains announcements section (staff composer) + staff-only analytics section (RPC failure hides section, never breaks page, try/catch).
+- **Tests**: vitest `announcements.validation.test.ts` 11 tests (XSS stripping, idempotent sanitize, RPC contract parse; suite 58/58); pgTAP `announcements-analytics.rls.test.sql` plan(21) — staff allow/deny/cross-tenant/spoofed-author, student read own-section only, dashboard payload keys, analytics 42501 for students + cross-tenant, **k-threshold both sides** (5 marks reported, 3 suppressed; section >=k vs empty suppressed); Playwright `dashboard.journey.spec.ts` 2/2 — TA posts Tiptap announcement + sees analytics section, enrolled student sees it on the dashboard (serial mode; 20s first-compile timeouts).
+- **e2e infra**: `playwright.config.ts` expect timeout 5s → 10s (dev-mode server actions + heavier offering page on a loaded machine); suite verified green spec-by-spec — full-parallel run flakes on this 8GB machine under Docker+Chromium load (same for pre-existing specs incl. app-shell/auth), not a code regression. Found (pre-existing, not fixed here): `pattern="[A-Za-z0-9-]+"` in academics forms is an invalid regex under the `v`-flag attribute parsing (browser console error only; server Zod still validates).
+- **Gates:** lint ✅ typecheck ✅ vitest 58/58 ✅ build ✅ db reset ✅ pgTAP 148/148 ✅ targeted e2e ✅ (2026-10-16).
+- **Re-verified 2026-10-16 (independent pass, Windows PowerShell + Docker Desktop machine):** vitest 58/58 · `db reset` clean (5 migrations + seed) · pgTAP 148/148 · e2e `dashboard.journey.spec.ts` 2/2 with `--workers=1` (2.0 min) · `pnpm db:types` works from PowerShell (byte-identical rerun). Doc fix: `announcements.validation.test.ts` = 11 tests (19 + 28 + 11 = 58; the earlier "28" was copy-paste from the marks file).
+
+## Next: T-A006 (booking base) · founder OAuth smoke still pending
+**T-A005 completed 2026-10-16 and committed via `zohaib-dev` → `main`.** Phase 1 continues — next card per plan.md §5 (T-A006 booking capacity + cancellation, includes the mandatory concurrency test). D-k (public RPC wrappers) is a standing deviation; announcements render-sanitization is a standing pattern (D8). The founder OAuth smoke + retroactive F5 sign-off remains queued (see "F5 sign-off status").
 
 ## Git workflow
 
 - Trunk-based: short-lived branches, PRs, cross-lane review on shared paths (`CODEOWNERS`).
-- Branch: `hassan-dev` (active dev branch, default on remote) → merge to `main` for stable integration.
-- Remote: `https://github.com/MetriaAdmin123/Metria-Web` (migrated 2026-10-14 from the old `metria1010` repo, which was abandoned; commit authorship preserved). Collaborator pushes via HassanNawaz14 PAT; owner = MetriaAdmin123.
+- Branches: `hassan-dev` (Hassan) and `zohaib-dev` (Zohaib) are the per-founder dev branches → merged to `main` for stable integration. `main` is the remote default (`origin/HEAD`).
+- History: F1–F5, T-A003 and T-A004 were committed straight to `main`; T-A005 landed via `zohaib-dev` → `main` (2026-10-16).
+- Remote: `https://github.com/MetriaAdmin123/Metria-Web` (migrated 2026-10-14 from the old `metria1010` repo, abandoned; commit authorship preserved). Pushes from this Windows machine authenticate as Muhammad Zohaib `<zohaib.mzg158@gmail.com>`; Hassan pushes via HassanNawaz14 PAT. Owner = MetriaAdmin123.
 - Never commit: `.env*` (except `.env.example`), secrets, student data.
 - `CODEOWNERS` currently has placeholder `@founder-a` / `@founder-b` — replace with real GitHub handles.
 
@@ -264,16 +294,19 @@ Everything intentionally NOT being done right now, and where it resumes. If you 
 | Public SEO/content layer (T-B001, T-B004) | After ads gate; traffic before monetization (plan.md §9) | Post-MVP priority #1–2 |
 | `CODEOWNERS` placeholder handles (`@founder-a` / `@founder-b`) | Real GitHub handles unknown | Replace once founders decide |
 | Cloud `private.runtime_config` dblink password | Cloud Postgres password ≠ local `postgres` seed value | Ops SQL when cloud project is provisioned (never commit) — F3 phase log |
-| WSL keep-alive automation | Manual `Start-Process wsl.exe sleep infinity` works | Optional: systemd/user task later |
+| WSL keep-alive automation | Manual `Start-Process wsl.exe sleep infinity` works (legacy WSL machine) | Optional: systemd/user task later |
 | `vitest.config.ts` → `.mts` rename | Cosmetic ESM-in-CJS warning only | Only if the warning becomes noisy |
 | eslint@9 + eslint-config-next upgrade | Deprecated upstream but pinned pair works; upgrade both together | Routine maintenance window |
 | Supabase CLI 2.121.0 (installed 2.120.0) | Version parity Windows/WSL/CI matters more than newest | Upgrade all three together when convenient |
 
 ## Known issues / watch list
 
-- WSL keep-alive is manual (no systemd task yet). If containers cycle every ~30s, re-run the keep-alive command. (Re-confirmed 2026-10-15: after a WSL restart the stack auto-started but containers cycled until the keep-alive `wsl.exe sleep infinity` process was launched.)
+- (Legacy WSL machine) WSL keep-alive is manual (no systemd task yet). If containers cycle every ~30s, re-run the keep-alive command. (Re-confirmed 2026-10-15: after a WSL restart the stack auto-started but containers cycled until the keep-alive `wsl.exe sleep infinity` process was launched.)
+- (Current machine) `supabase start` may exit with `container is not ready: starting` on the first attempt right after a Docker Desktop boot — wait ~30 s and re-run (resumes; no data loss).
 - e2e flake (cold stack only): "sign-in bounces authenticated users to /app" fails if the Supabase auth container is still warming — proxy `getUser()` network failure is treated as anonymous, so no bounce. Passes on re-run and in CI (fresh stack, sequential health). Not a code bug; re-run the spec before investigating.
+- e2e full-parallel flake: on this 8 GB machine the full parallel suite can flake under Docker + Chromium load (incl. pre-existing specs). Runs green spec-by-spec (`--workers=1`); not a code regression. (2026-10-16)
 - vitest flake (heavy load only): forks-worker "Timeout waiting for worker to respond" when the machine is simultaneously booting WSL/Docker. Passes on re-run.
 - Vitest warns `vitest.config.ts` is ESM-in-CJS (cosmetic; rename to `.mts` if it becomes noisy).
+- `pattern="[A-Za-z0-9-]+"` in academics forms is an invalid regex under the `v`-flag attribute parsing (browser console error only; server Zod still validates). Pre-existing; fix opportunistically.
 - Supabase services bind `0.0.0.0` in local dev with shared default JWT secrets — fine for local, never reuse in production.
 - `eslint@9` is deprecated upstream; `eslint-config-next` 16.4 still targets it — upgrade both together later.

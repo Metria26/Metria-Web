@@ -42,7 +42,54 @@
     "title": "Dashboard",
     "body": "Your courses, marks and bookings will appear here once they are set up.",
     "emptyTitle": "Nothing here yet",
-    "action": "Back to home"
+    "action": "Back to home",
+    "browseOfferings": "Browse offerings",
+    "latestMarks": "Latest marks",
+    "noMarks": "No released marks yet.",
+    "announcements": "Announcements",
+    "noAnnouncements": "No announcements for your sections yet.",
+    "upcoming": "Upcoming assessments",
+    "noUpcoming": "Nothing upcoming right now.",
+    "pending": "Pending",
+    "viewMarksheet": "Marksheet",
+    "viewOffering": "Open",
+    "assessmentTypes": {
+      "quiz": "Quiz",
+      "exam": "Exam",
+      "assignment": "Assignment",
+      "project": "Project",
+      "other": "Other"
+    }
+  },
+  "Announcements": {
+    "form": {
+      "section": "Section",
+      "sectionPlaceholder": "Select…",
+      "title": "Title",
+      "bodyLabel": "Message",
+      "bold": "Bold",
+      "italic": "Italic",
+      "bullets": "Bulleted list",
+      "saving": "Posting…",
+      "submit": "Post announcement",
+      "posted": "Announcement posted.",
+      "errors": {
+        "notAuthorized": "You do not have permission to post here.",
+        "invalidInput": "Write a title and a message, then try again.",
+        "duplicate": "That announcement already exists.",
+        "invalidReference": "The selected section no longer exists.",
+        "generic": "Something went wrong. Please try again."
+      }
+    }
+  },
+  "Analytics": {
+    "suppressed": "Hidden: fewer than {k} students have scores.",
+    "emptyAssessments": "No assessments with scores yet.",
+    "responses": "{count} responses",
+    "avg": "Average",
+    "min": "Lowest",
+    "max": "Highest",
+    "bySection": "By section"
   },
   "Offerings": {
     "title": "Offerings",
@@ -63,6 +110,8 @@
       "createOffering": "Create offering",
       "sections": "Sections",
       "assessments": "Assessments",
+      "announcements": "Announcements",
+      "analytics": "Class analytics",
       "students": "Students"
     },
     "fields": {
@@ -103,7 +152,9 @@
       "assessmentsTitle": "No assessments yet",
       "assessmentsBody": "Add quizzes, exams or assignments with marks and weight.",
       "studentsTitle": "No students enrolled",
-      "studentsBody": "Enroll a student by their university email."
+      "studentsBody": "Enroll a student by their university email.",
+      "announcementsTitle": "No announcements yet",
+      "announcementsBody": "Post an update for a section so enrolled students see it on their dashboard."
     },
     "errors": {
       "notAuthorized": "You do not have permission to do this.",

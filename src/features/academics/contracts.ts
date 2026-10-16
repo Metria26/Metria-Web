@@ -60,3 +60,10 @@ export const enrollmentInputSchema = z.object({
 export type EnrollmentInput = z.infer<typeof enrollmentInputSchema>;
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
+
+export const announcementInputSchema = z.object({
+  sectionId: z.string().uuid("sectionRequired"),
+  title: z.string().trim().min(2, "titleMin").max(200, "titleMax"),
+  bodyHtml: z.string().trim().min(1, "bodyMin").max(50000, "bodyMax"),
+});
+export type AnnouncementInput = z.infer<typeof announcementInputSchema>;

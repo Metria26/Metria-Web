@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import {
+  announcementInputSchema,
   assessmentInputSchema,
   courseInputSchema,
   enrollmentInputSchema,
@@ -10,6 +11,7 @@ import {
   sectionInputSchema,
   type ActionResult,
 } from "./contracts";
+import { sanitizeAnnouncementHtml } from "./sanitize";
 
 /** i18n-safe error keys returned to forms (never leak Postgres details). */
 type ErrorKey =
@@ -255,5 +257,45 @@ export async function enrollStudentAction(formData: FormData): Promise<ActionRes
       .maybeSingle();
     if (section) revalidatePath(`/app/offerings/${section.offering_id}`);
   }
+  return { ok: true };
+}
+
+/**
+ * T-A005: TA/teacher posts a section announcement. The body is sanitized on
+ * write (D8) before it reaches Postgres; the RLS insert policy independently
+ * requires staff membership + academic.manage_offering, so a rogue caller
+ * without the UI still fails closed at the database.
+ */
+export async function createAnnouncementAction(formData: FormData): Promise<ActionResult> {
+  const { supabase, profile } = await callerProfile();
+  if (!profile) return { ok: false, error: "notAuthorized" };
+
+  const parsed = announcementInputSchema.safeParse({
+    sectionId: emptyToUndefined(formData.get("sectionId")),
+    title: emptyToUndefined(formData.get("title")),
+    bodyHtml: emptyToUndefined(formData.get("bodyHtml")),
+  });
+  if (!parsed.success) return invalidInput();
+
+  const cleanHtml = sanitizeAnnouncementHtml(parsed.data.bodyHtml);
+  if (cleanHtml.trim().length === 0) return invalidInput();
+
+  const { error } = await supabase.from("announcements").insert({
+    university_id: profile.university_id,
+    created_by: profile.id,
+    section_id: parsed.data.sectionId,
+    author_id: profile.id,
+    title: parsed.data.title,
+    body_html: cleanHtml,
+  });
+  if (error) return { ok: false, error: mapError(error.code) };
+
+  const { data: section } = await supabase
+    .from("sections")
+    .select("offering_id")
+    .eq("id", parsed.data.sectionId)
+    .maybeSingle();
+  if (section) revalidatePath(`/app/offerings/${section.offering_id}`);
+  revalidatePath("/app");
   return { ok: true };
 }
