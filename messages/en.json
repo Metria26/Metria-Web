@@ -383,5 +383,13 @@
       "notEnrolledTitle": "Marksheet unavailable",
       "notEnrolledBody": "You are not enrolled in this offering, so no marksheet exists for you."
     }
+  },
+  "Ads": {
+    "consent": {
+      "title": "Ads and analytics on Metria",
+      "body": "We use first-party cookies to count visits and to show sponsored placements. Nothing loads before you choose.",
+      "accept": "Accept all",
+      "reject": "Reject non-essential"
+    }
   }
 }

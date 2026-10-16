@@ -337,3 +337,59 @@ WHERE u.slug = 'fast-nuces-lahore'
     SELECT 1 FROM public.slots sl
     WHERE sl.university_id = u.id AND sl.period_id = ep.id AND sl.location = v.location
   );
+
+
+-- Section 11: ads registries (T-B002) — page types, formats and one network for
+-- the dev tenant, plus two dev placements. Ads stay dark: ads.enabled=false and
+-- ads.global_kill=true (Section 6). Idempotent: registry rows are guarded by the
+-- global key uniqueness, placements by slot_key + page type.
+
+INSERT INTO public.page_types (university_id, key, is_auth, enabled)
+SELECT u.id, v.key, v.is_auth, v.enabled
+FROM public.universities u
+CROSS JOIN (VALUES
+  ('public_home', false, true),
+  ('login', true, false),
+  ('dashboard', false, true),
+  ('offering', false, true),
+  ('marks', false, true)
+) AS v(key, is_auth, enabled)
+WHERE u.slug = 'fast-nuces-lahore'
+ON CONFLICT (key) DO NOTHING;
+
+INSERT INTO public.ad_formats (university_id, key, is_pop_style, needs_consent, injection_mode)
+SELECT u.id, v.key, v.is_pop_style, v.needs_consent, v.injection_mode
+FROM public.universities u
+CROSS JOIN (VALUES
+  ('banner', false, true, 'script_async'),
+  ('native', false, true, 'script_async'),
+  ('social_bar', false, true, 'script_async'),
+  ('in_page_push', false, true, 'script_async'),
+  ('pop_under', true, true, 'script_pop'),
+  ('smartlink', true, true, 'link'),
+  ('direct_sponsor', false, false, 'first_party')
+) AS v(key, is_pop_style, needs_consent, injection_mode)
+WHERE u.slug = 'fast-nuces-lahore'
+ON CONFLICT (key) DO NOTHING;
+
+INSERT INTO public.ad_networks (university_id, key, name, enabled)
+SELECT u.id, 'adsterra', 'Adsterra', false
+FROM public.universities u
+WHERE u.slug = 'fast-nuces-lahore'
+ON CONFLICT (key) DO NOTHING;
+
+INSERT INTO public.ad_placements (university_id, page_type_id, network_id, format_id, slot_key, enabled, priority, isolation_mode)
+SELECT u.id, pt.id, n.id, f.id, v.slot_key, true, v.priority, v.isolation_mode
+FROM public.universities u
+CROSS JOIN (VALUES
+  ('dashboard', 'banner', 'dashboard-top', 10, 'no_script_ads'),
+  ('offering', 'native', 'offering-inline', 5, 'iframe_only')
+) AS v(page_type, format, slot_key, priority, isolation_mode)
+JOIN public.page_types pt ON pt.university_id = u.id AND pt.key = v.page_type
+JOIN public.ad_networks n ON n.university_id = u.id AND n.key = 'adsterra'
+JOIN public.ad_formats f ON f.university_id = u.id AND f.key = v.format
+WHERE u.slug = 'fast-nuces-lahore'
+  AND NOT EXISTS (
+    SELECT 1 FROM public.ad_placements p
+    WHERE p.university_id = u.id AND p.page_type_id = pt.id AND p.slot_key = v.slot_key
+  );

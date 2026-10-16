@@ -23,7 +23,133 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "announcements": {
+            "ad_config_versions": {
+                  Row: {
+                    "config": NonNullable<Json>,"created_at": string,"created_by": string,"id": string,"university_id": string,"updated_at": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "config": NonNullable<Json>,"created_at"?: string,"created_by": string,"id"?: string,"university_id": string,"updated_at"?: string,"version": number
+                  }
+                  Update: {
+                    "config"?: NonNullable<Json>,"created_at"?: string,"created_by"?: string,"id"?: string,"university_id"?: string,"updated_at"?: string,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ad_config_versions_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"ad_formats": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"id": string,"injection_mode": string,"is_pop_style": boolean,"key": string,"needs_consent": boolean,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"injection_mode": string,"is_pop_style": boolean,"key": string,"needs_consent": boolean,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"injection_mode"?: string,"is_pop_style"?: boolean,"key"?: string,"needs_consent"?: boolean,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ad_formats_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"ad_impressions": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"creative_id": string | null,"event_type": string,"id": string,"occurred_at": string,"placement_id": string,"university_id": string,"updated_at": string,"visitor_hash": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"creative_id"?: string | null,"event_type": string,"id"?: string,"occurred_at": string,"placement_id": string,"university_id": string,"updated_at"?: string,"visitor_hash"?: string | null
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"creative_id"?: string | null,"event_type"?: string,"id"?: string,"occurred_at"?: string,"placement_id"?: string,"university_id"?: string,"updated_at"?: string,"visitor_hash"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ad_impressions_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"ad_kill_switches": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"enabled": boolean,"id": string,"is_global": boolean,"network_id": string | null,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"enabled"?: boolean,"id"?: string,"is_global"?: boolean,"network_id"?: string | null,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"enabled"?: boolean,"id"?: string,"is_global"?: boolean,"network_id"?: string | null,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ad_kill_switches_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"ad_networks": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"enabled": boolean,"id": string,"key": string,"name": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"enabled"?: boolean,"id"?: string,"key": string,"name": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"enabled"?: boolean,"id"?: string,"key"?: string,"name"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ad_networks_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"ad_placements": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"enabled": boolean,"format_id": string,"frequency_cap": number | null,"id": string,"isolation_mode": string,"network_id": string,"page_type_id": string,"priority": number,"slot_key": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"enabled"?: boolean,"format_id": string,"frequency_cap"?: number | null,"id"?: string,"isolation_mode"?: string,"network_id": string,"page_type_id": string,"priority"?: number,"slot_key": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"enabled"?: boolean,"format_id"?: string,"frequency_cap"?: number | null,"id"?: string,"isolation_mode"?: string,"network_id"?: string,"page_type_id"?: string,"priority"?: number,"slot_key"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ad_placements_page_type_id_tenant_fk"
+      columns: ["university_id","page_type_id"]
+isOneToOne: false
+      referencedRelation: "page_types"
+      referencedColumns: ["university_id","id"]
+    },{
+      foreignKeyName: "ad_placements_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"announcements": {
                   Row: {
                     "author_id": string,"body_html": string,"created_at": string,"created_by": string | null,"id": string,"section_id": string,"title": string,"university_id": string,"updated_at": string
                   }
@@ -69,6 +195,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"attribution_rules": {
+                  Row: {
+                    "attribution": string,"created_at": string,"created_by": string | null,"effective_from": string,"entity_type": string,"id": string,"page_type": string,"university_id": string,"updated_at": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "attribution": string,"created_at"?: string,"created_by"?: string | null,"effective_from": string,"entity_type": string,"id"?: string,"page_type": string,"university_id": string,"updated_at"?: string,"version": number
+                  }
+                  Update: {
+                    "attribution"?: string,"created_at"?: string,"created_by"?: string | null,"effective_from"?: string,"entity_type"?: string,"id"?: string,"page_type"?: string,"university_id"?: string,"updated_at"?: string,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "attribution_rules_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"bookings": {
                   Row: {
                     "created_at": string,"created_by": string | null,"id": string,"period_id": string,"slot_id": string,"status": string,"student_id": string,"university_id": string,"updated_at": string
@@ -95,6 +241,26 @@ isOneToOne: false
       referencedColumns: ["university_id","id"]
     },{
       foreignKeyName: "bookings_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"consent_records": {
+                  Row: {
+                    "anonymous_key_hash": string | null,"categories": NonNullable<Json>,"created_at": string,"created_by": string | null,"id": string,"policy_version": string,"profile_id": string | null,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "anonymous_key_hash"?: string | null,"categories": NonNullable<Json>,"created_at"?: string,"created_by"?: string | null,"id"?: string,"policy_version": string,"profile_id"?: string | null,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "anonymous_key_hash"?: string | null,"categories"?: NonNullable<Json>,"created_at"?: string,"created_by"?: string | null,"id"?: string,"policy_version"?: string,"profile_id"?: string | null,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "consent_records_university_fk"
       columns: ["university_id"]
 isOneToOne: false
       referencedRelation: "universities"
@@ -167,6 +333,26 @@ isOneToOne: false
                   Relationships: [
                     {
       foreignKeyName: "departments_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"earnings_entries": {
+                  Row: {
+                    "amount_minor": number,"created_at": string,"created_by": string | null,"currency_code": string,"id": string,"idempotency_key": string,"month": string,"network_id": string,"statement_reference": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "amount_minor": number,"created_at"?: string,"created_by"?: string | null,"currency_code": string,"id"?: string,"idempotency_key": string,"month": string,"network_id": string,"statement_reference": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "amount_minor"?: number,"created_at"?: string,"created_by"?: string | null,"currency_code"?: string,"id"?: string,"idempotency_key"?: string,"month"?: string,"network_id"?: string,"statement_reference"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "earnings_entries_university_fk"
       columns: ["university_id"]
 isOneToOne: false
       referencedRelation: "universities"
@@ -409,6 +595,132 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"page_types": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"enabled": boolean,"id": string,"is_auth": boolean,"key": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"enabled"?: boolean,"id"?: string,"is_auth"?: boolean,"key": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"enabled"?: boolean,"id"?: string,"is_auth"?: boolean,"key"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "page_types_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"page_visits_daily": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"entity_id": string | null,"entity_type": string | null,"id": string,"page_type": string,"unique_visits": number,"university_id": string,"updated_at": string,"visited_on": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"entity_id"?: string | null,"entity_type"?: string | null,"id"?: string,"page_type": string,"unique_visits": number,"university_id": string,"updated_at"?: string,"visited_on": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"entity_id"?: string | null,"entity_type"?: string | null,"id"?: string,"page_type"?: string,"unique_visits"?: number,"university_id"?: string,"updated_at"?: string,"visited_on"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "page_visits_daily_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"page_visits_raw": {
+                  Row: {
+                    "course_id": string | null,"created_at": string,"created_by": string | null,"entity_id": string | null,"entity_type": string | null,"id": string,"offering_id": string | null,"page_type": string,"ta_id": string | null,"university_id": string,"updated_at": string,"visited_on": string,"visitor_hash": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "course_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"entity_id"?: string | null,"entity_type"?: string | null,"id"?: string,"offering_id"?: string | null,"page_type": string,"ta_id"?: string | null,"university_id": string,"updated_at"?: string,"visited_on": string,"visitor_hash": string
+                  }
+                  Update: {
+                    "course_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"entity_id"?: string | null,"entity_type"?: string | null,"id"?: string,"offering_id"?: string | null,"page_type"?: string,"ta_id"?: string | null,"university_id"?: string,"updated_at"?: string,"visited_on"?: string,"visitor_hash"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "page_visits_raw_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"payout_accounts": {
+                  Row: {
+                    "account_name": string,"account_reference_ciphertext": string,"created_at": string,"created_by": string | null,"id": string,"method": string,"profile_id": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "account_name": string,"account_reference_ciphertext": string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"method": string,"profile_id": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "account_name"?: string,"account_reference_ciphertext"?: string,"created_at"?: string,"created_by"?: string | null,"id"?: string,"method"?: string,"profile_id"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payout_accounts_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"payout_events": {
+                  Row: {
+                    "actor_id": string,"created_at": string,"created_by": string | null,"event_type": string,"id": string,"payout_id": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id": string,"created_at"?: string,"created_by"?: string | null,"event_type": string,"id"?: string,"payout_id": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "actor_id"?: string,"created_at"?: string,"created_by"?: string | null,"event_type"?: string,"id"?: string,"payout_id"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payout_events_payout_id_tenant_fk"
+      columns: ["university_id","payout_id"]
+isOneToOne: false
+      referencedRelation: "payouts"
+      referencedColumns: ["university_id","id"]
+    },{
+      foreignKeyName: "payout_events_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"payouts": {
+                  Row: {
+                    "amount_minor": number,"created_at": string,"created_by": string | null,"currency_code": string,"id": string,"profile_id": string,"proof_reference": string | null,"status": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "amount_minor": number,"created_at"?: string,"created_by"?: string | null,"currency_code": string,"id"?: string,"profile_id": string,"proof_reference"?: string | null,"status"?: string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "amount_minor"?: number,"created_at"?: string,"created_by"?: string | null,"currency_code"?: string,"id"?: string,"profile_id"?: string,"proof_reference"?: string | null,"status"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "payouts_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"permissions": {
                   Row: {
                     "created_at": string,"created_by": string | null,"description": string,"id": string,"key": string,"university_id": string,"updated_at": string
@@ -483,6 +795,46 @@ isOneToOne: false
                   Relationships: [
                     {
       foreignKeyName: "profiles_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"revenue_allocations": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"currency_code": string,"id": string,"input_snapshot": NonNullable<Json>,"model_snapshot": NonNullable<Json>,"month": string,"platform_amount_minor": number,"profile_id": string | null,"ta_amount_minor": number,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"currency_code": string,"id"?: string,"input_snapshot": NonNullable<Json>,"model_snapshot": NonNullable<Json>,"month": string,"platform_amount_minor": number,"profile_id"?: string | null,"ta_amount_minor": number,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"currency_code"?: string,"id"?: string,"input_snapshot"?: NonNullable<Json>,"model_snapshot"?: NonNullable<Json>,"month"?: string,"platform_amount_minor"?: number,"profile_id"?: string | null,"ta_amount_minor"?: number,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "revenue_allocations_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"revenue_share_models": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"currency_code": string,"effective_from": string,"id": string,"model_type": string,"rate_per_thousand_minor": number | null,"share_basis_points": number,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"currency_code": string,"effective_from": string,"id"?: string,"model_type": string,"rate_per_thousand_minor"?: number | null,"share_basis_points": number,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"currency_code"?: string,"effective_from"?: string,"id"?: string,"model_type"?: string,"rate_per_thousand_minor"?: number | null,"share_basis_points"?: number,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "revenue_share_models_university_fk"
       columns: ["university_id"]
 isOneToOne: false
       referencedRelation: "universities"
@@ -621,6 +973,66 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"sponsor_creatives": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"ends_at": string,"id": string,"image_url": string,"sponsor_id": string,"starts_at": string,"target_url": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"ends_at": string,"id"?: string,"image_url": string,"sponsor_id": string,"starts_at": string,"target_url": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"ends_at"?: string,"id"?: string,"image_url"?: string,"sponsor_id"?: string,"starts_at"?: string,"target_url"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "sponsor_creatives_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"sponsor_slots": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"creative_id": string,"id": string,"page_type_id": string,"priority": number,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"creative_id": string,"id"?: string,"page_type_id": string,"priority"?: number,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"creative_id"?: string,"id"?: string,"page_type_id"?: string,"priority"?: number,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "sponsor_slots_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"sponsors": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"id": string,"is_active": boolean,"name": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"is_active"?: boolean,"name": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"is_active"?: boolean,"name"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "sponsors_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"swap_requests": {
                   Row: {
                     "accepted_by": string | null,"created_at": string,"created_by": string | null,"from_booking_id": string,"id": string,"requested_by": string,"status": string,"to_booking_id": string,"university_id": string,"updated_at": string
@@ -741,7 +1153,13 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "book_slot":
+            "ad_config_snapshot":
+{ Args: { "p_university_id": string }; Returns: Json
+                           },
+"ad_kill_state":
+{ Args: { "p_university_id": string }; Returns: Json
+                           },
+"book_slot":
 { Args: { "p_period_id": string,"p_slot_id": string,"p_university_id": string }; Returns: string
                            },
 "cancel_booking":
