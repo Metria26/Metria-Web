@@ -1,8 +1,10 @@
 import {
   adConfigSnapshotSchema,
   adKillStateSchema,
+  sponsorReadSchema,
   type AdConfigSnapshot,
   type AdKillState,
+  type SponsorRead,
 } from "./contracts";
 
 /**
@@ -35,10 +37,12 @@ export function killTtlSeconds(env: Record<string, string | undefined> = process
 type CacheEntry = { value: unknown; expiresAt: number };
 const configCache = new Map<string, CacheEntry>();
 const killCache = new Map<string, CacheEntry>();
+const sponsorCache = new Map<string, CacheEntry>();
 
 export function clearAdCaches(): void {
   configCache.clear();
   killCache.clear();
+  sponsorCache.clear();
 }
 
 type LoadOptions = {
@@ -116,4 +120,36 @@ export async function loadAdContext(
     loadAdKillState(caller, universityId, options),
   ]);
   return { config, killState };
+}
+
+/**
+ * Direct-sponsor creatives for one page type (T-B003, feature 10.5). Cached
+ * with the config TTL: admin edits to the sponsor tables may take up to 60s to
+ * surface, matching the config snapshot staleness the spec already accepts.
+ * Failures cache as null — the renderer keeps the reserved slot and shows no
+ * sponsor (fail empty).
+ */
+export async function loadSponsorCreatives(
+  caller: RpcCaller,
+  universityId: string,
+  pageType: string,
+  options?: LoadOptions,
+): Promise<SponsorRead | null> {
+  const now = options?.now ?? Date.now();
+  const value = await loadCached(
+    sponsorCache,
+    `${universityId}:${pageType}`,
+    configTtlSeconds(options?.env),
+    now,
+    async () => {
+      const { data, error } = await caller.rpc("page_sponsor_slots", {
+        p_university_id: universityId,
+        p_page_type: pageType,
+      });
+      if (error) return null;
+      const parsed = sponsorReadSchema.safeParse(data);
+      return parsed.success ? parsed.data : null;
+    },
+  );
+  return (value as SponsorRead | null) ?? null;
 }

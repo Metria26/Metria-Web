@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadPeriodBookingOverview } from "@/features/booking/overview";
 import { cancelState, remainingSeats } from "@/features/booking/rules";
 import { BookButton, CancelButton, SlotForm } from "@/features/booking/ui/forms";
+import { AdSlot } from "@/features/ads/ui/ad-slot";
 
 export const metadata: Metadata = {
   title: "Evaluation period",
@@ -74,6 +75,10 @@ export default async function BookingPeriodPage({
           {t("cutoffNote", { hours: period.cutoff_hours })}
         </p>
       </div>
+
+      {/* T-B003: reserved ad geometry (booking-top) as its own section — never
+          adjacent to Book/Cancel actions; normal gap-8 spacing separates them. */}
+      <AdSlot pageType="booking" slotKey="booking-top" withSponsor />
 
       <section className="grid gap-3" aria-labelledby="slots-heading">
         <h2 id="slots-heading" className="text-lg font-semibold">

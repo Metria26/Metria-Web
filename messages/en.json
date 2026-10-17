@@ -387,9 +387,17 @@
   "Ads": {
     "consent": {
       "title": "Ads and analytics on Metria",
-      "body": "We use first-party cookies to count visits and to show sponsored placements. Nothing loads before you choose.",
+      "body": "We use first-party cookies to count visits and to show sponsored placements. No third-party scripts load before you choose.",
       "accept": "Accept all",
       "reject": "Reject non-essential"
+    },
+    "slotLabel": "Advertisement",
+    "sponsored": "Sponsored",
+    "sponsoredLinkLabel": "Sponsored link (opens in a new tab)",
+    "reveal": {
+      "reveal": "Show marks",
+      "hide": "Hide marks",
+      "hiddenNote": "Marks stay hidden on this page until you choose to show them."
     }
   }
 }

@@ -131,5 +131,12 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Playwright
-        run: pnpm test:e2e
+      - name: Playwright (all suites except ads-safety)
+        run: pnpm exec playwright test --grep-invert "ads-safety"
+
+      # ads.safety (T-B003) flips the global ads.* flags and seeds a sponsor
+      # fixture: page_types keys are globally unique, so no tenant-scoped
+      # variant exists. Run it alone, single-worker, after the main pass so no
+      # other suite observes the flipped state (and it sees a clean server).
+      - name: Playwright (ads-safety, isolated)
+        run: pnpm exec playwright test --grep "ads-safety" --workers=1

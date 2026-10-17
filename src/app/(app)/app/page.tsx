@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/states/empty-state";
 import { createClient } from "@/lib/supabase/server";
 import { loadStudentDashboard } from "@/features/academics/dashboard";
 import { AnnouncementList } from "@/features/academics/ui/announcement-list";
+import { AdSlot } from "@/features/ads/ui/ad-slot";
 
 export const metadata = {
   title: "Dashboard",
@@ -44,6 +45,9 @@ export default async function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
       <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+
+      {/* T-B003: reserved ad geometry (dashboard-top). Renders nothing while ads are dark. */}
+      <AdSlot pageType="dashboard" slotKey="dashboard-top" withSponsor />
 
       {isEmpty ? (
         <EmptyState

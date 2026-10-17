@@ -66,6 +66,26 @@ export const AD_DEVICES = ["desktop", "mobile", "tablet"] as const;
 export const adDeviceSchema = z.enum(AD_DEVICES);
 export type AdDevice = z.infer<typeof adDeviceSchema>;
 
+/**
+ * Direct-sponsor read contract (T-B003, feature 10.5):
+ * public.page_sponsor_slots returns sanitized creative rows only — image link,
+ * target link and slot priority, no ids, no created_by. Tenant, window, sponsor
+ * and auth page filters already ran in SQL; this schema is the second gate
+ * before the renderer trusts the payload (D3 pattern shared with the config
+ * snapshots). The http(s)-only target filter also lives in SQL (D-B3-a).
+ */
+export const sponsorCreativeSchema = z.object({
+  image_url: z.string().min(1),
+  target_url: z.string().min(1),
+  priority: z.number().int(),
+});
+export type SponsorCreativeRead = z.infer<typeof sponsorCreativeSchema>;
+
+export const sponsorReadSchema = z.object({
+  creatives: z.array(sponsorCreativeSchema),
+});
+export type SponsorRead = z.infer<typeof sponsorReadSchema>;
+
 /** Consent categories that gate ad scripts; "necessary" is implicit and never stored. */
 export const CONSENT_CATEGORIES = ["analytics", "ads"] as const;
 export type ConsentCategory = (typeof CONSENT_CATEGORIES)[number];

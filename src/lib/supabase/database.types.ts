@@ -1174,6 +1174,9 @@ isOneToOne: false
 "offering_marksheet":
 { Args: { "p_offering_id": string }; Returns: Json
                            },
+"page_sponsor_slots":
+{ Args: { "p_page_type": string,"p_university_id": string }; Returns: Json
+                           },
 "period_booking_overview":
 { Args: { "p_period_id": string }; Returns: Json
                            },

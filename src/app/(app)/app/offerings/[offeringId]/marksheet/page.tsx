@@ -8,6 +8,9 @@ import { createClient } from "@/lib/supabase/server";
 import { marksheetSchema } from "@/features/marks/contracts";
 import { privateRpc } from "@/features/marks/rpc";
 import { cellStatus, classify, gradeFor, weightedTotal } from "@/features/marks/marksheet";
+import { resolvePageAds } from "@/features/ads/page-ads";
+import { AdSlot } from "@/features/ads/ui/ad-slot";
+import { TapToReveal } from "@/features/ads/ui/tap-to-reveal";
 
 export const metadata: Metadata = {
   title: "Marksheet",
@@ -90,6 +93,17 @@ export default async function MarksheetPage({
     sheet.ownScores,
   );
 
+  // T-B003 (R1): while the ad surface for this page is open, marks sit behind
+  // tap-to-reveal so no third-party code can read them from the DOM. With ads
+  // dark (defaults) revealValues is false and the page renders exactly as
+  // before — children pass through untouched.
+  const ads = await resolvePageAds({
+    pageType: "offering",
+    slotKeys: ["offering-inline"],
+    withSponsor: true,
+    sensitive: true,
+  });
+
   return (
     <div className="flex flex-col gap-10">
       <div className="grid gap-1">
@@ -102,129 +116,136 @@ export default async function MarksheetPage({
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
 
-      <section className="flex flex-wrap items-stretch gap-3" aria-labelledby="overall-heading">
-        <h2 id="overall-heading" className="sr-only">
-          {t("overall")}
-        </h2>
-        <div className="grid min-w-44 content-center gap-0.5 rounded-lg border bg-card px-5 py-4">
-          <span className="text-3xl font-semibold tabular-nums" data-testid="marksheet-total">
-            {own.total.toFixed(1)}%
-          </span>
-          <span className="text-sm text-muted-foreground">
-            {t("gradedWeight", { weight: own.gradedWeight })}
-          </span>
-        </div>
-        <div className="grid min-w-32 content-center gap-0.5 rounded-lg border bg-card px-5 py-4">
-          <span className="text-3xl font-semibold" data-testid="marksheet-grade">
-            {grade ?? "—"}
-          </span>
-          <span className="text-sm text-muted-foreground">
-            {sheet.gradingScale?.name ?? t("gradeLabel")}
-          </span>
-        </div>
-        {sheet.thresholdMet ? (
-          <div
-            className="flex flex-1 flex-wrap items-center gap-3 rounded-lg border bg-card px-5 py-4 text-sm"
-            data-testid="marksheet-stats"
-          >
-            <span data-testid="marksheet-rank">
-              {t("rank", { rank: sheet.ownRank ?? 0, cohort: sheet.cohortSize })}
-            </span>
-            {sheet.stats ? (
-              <>
-                <span className="text-muted-foreground" data-testid="stats-mean">
-                  {t("mean", { value: sheet.stats.mean.toFixed(1) })}
-                </span>
-                <span className="text-muted-foreground" data-testid="stats-median">
-                  {t("median", { value: sheet.stats.median.toFixed(1) })}
-                </span>
-                <span className="text-muted-foreground" data-testid="stats-range">
-                  {t("range", { min: sheet.stats.min.toFixed(1), max: sheet.stats.max.toFixed(1) })}
-                </span>
-              </>
-            ) : null}
-          </div>
-        ) : (
-          <div
-            className="flex flex-1 items-center rounded-lg border border-dashed px-5 py-4 text-sm text-muted-foreground"
-            data-testid="stats-suppressed"
-          >
-            {t("suppressed", { k: sheet.threshold, cohort: sheet.cohortSize })}
-          </div>
-        )}
-      </section>
+      <AdSlot pageType="offering" slotKey="offering-inline" withSponsor />
 
-      <section className="grid gap-3" aria-labelledby="assessments-heading">
-        <h2 id="assessments-heading" className="text-lg font-semibold">
-          {t("assessmentsTitle")}
-        </h2>
-        {sheet.assessments.length === 0 ? (
-          <EmptyState title={t("noAssessmentsTitle")} description={t("noAssessmentsBody")} />
-        ) : (
-          <ul className="grid gap-2" data-testid="marksheet-list">
-            {sheet.assessments.map((assessment) => {
-              const status = cellStatus(sheet.ownScores[assessment.id]);
-              return (
-                <li
-                  key={assessment.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card px-4 py-3"
-                  data-testid="marksheet-row"
-                >
-                  <span className="grid gap-0.5">
-                    <span className="font-medium">{assessment.title}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {t("rowMeta", { weight: assessment.weight, total: assessment.total })}
-                    </span>
-                  </span>
-                  <span className="flex items-center gap-2">
-                    {status === "graded" ? (
-                      <span className="font-medium tabular-nums" data-testid="cell-score">
-                        {sheet.ownScores[assessment.id]?.score} / {assessment.total}
-                      </span>
-                    ) : (
-                      <span
-                        className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground"
-                        data-testid={`cell-${status}`}
-                      >
-                        {t(`cells.${status}`)}
-                      </span>
-                    )}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        {buckets.missing.length > 0 || buckets.pending.length > 0 ? (
-          <p className="text-sm text-muted-foreground" data-testid="marksheet-missing-hint">
-            {t("missingHint", {
-              missing: buckets.missing.length,
-              pending: buckets.pending.length,
-            })}
-          </p>
-        ) : null}
-      </section>
-
-      {sheet.gradingScale && sheet.gradingScale.bands && sheet.gradingScale.bands.length > 0 ? (
-        <section className="grid gap-3" aria-labelledby="legend-heading">
-          <h2 id="legend-heading" className="text-lg font-semibold">
-            {t("legendTitle")}
+      <TapToReveal active={ads.revealValues} className="flex flex-col gap-10">
+        <section className="flex flex-wrap items-stretch gap-3" aria-labelledby="overall-heading">
+          <h2 id="overall-heading" className="sr-only">
+            {t("overall")}
           </h2>
-          <ul className="flex flex-wrap gap-2" data-testid="grading-legend">
-            {[...sheet.gradingScale.bands]
-              .sort((a, b) => b.min - a.min)
-              .map((band) => (
-                <li
-                  key={`${band.grade}-${band.min}`}
-                  className="rounded-full border px-3 py-1 text-sm"
-                >
-                  <span className="font-medium">{band.grade}</span>{" "}
-                  <span className="text-muted-foreground">≥ {band.min}%</span>
-                </li>
-              ))}
-          </ul>
+          <div className="grid min-w-44 content-center gap-0.5 rounded-lg border bg-card px-5 py-4">
+            <span className="text-3xl font-semibold tabular-nums" data-testid="marksheet-total">
+              {own.total.toFixed(1)}%
+            </span>
+            <span className="text-sm text-muted-foreground">
+              {t("gradedWeight", { weight: own.gradedWeight })}
+            </span>
+          </div>
+          <div className="grid min-w-32 content-center gap-0.5 rounded-lg border bg-card px-5 py-4">
+            <span className="text-3xl font-semibold" data-testid="marksheet-grade">
+              {grade ?? "—"}
+            </span>
+            <span className="text-sm text-muted-foreground">
+              {sheet.gradingScale?.name ?? t("gradeLabel")}
+            </span>
+          </div>
+          {sheet.thresholdMet ? (
+            <div
+              className="flex flex-1 flex-wrap items-center gap-3 rounded-lg border bg-card px-5 py-4 text-sm"
+              data-testid="marksheet-stats"
+            >
+              <span data-testid="marksheet-rank">
+                {t("rank", { rank: sheet.ownRank ?? 0, cohort: sheet.cohortSize })}
+              </span>
+              {sheet.stats ? (
+                <>
+                  <span className="text-muted-foreground" data-testid="stats-mean">
+                    {t("mean", { value: sheet.stats.mean.toFixed(1) })}
+                  </span>
+                  <span className="text-muted-foreground" data-testid="stats-median">
+                    {t("median", { value: sheet.stats.median.toFixed(1) })}
+                  </span>
+                  <span className="text-muted-foreground" data-testid="stats-range">
+                    {t("range", {
+                      min: sheet.stats.min.toFixed(1),
+                      max: sheet.stats.max.toFixed(1),
+                    })}
+                  </span>
+                </>
+              ) : null}
+            </div>
+          ) : (
+            <div
+              className="flex flex-1 items-center rounded-lg border border-dashed px-5 py-4 text-sm text-muted-foreground"
+              data-testid="stats-suppressed"
+            >
+              {t("suppressed", { k: sheet.threshold, cohort: sheet.cohortSize })}
+            </div>
+          )}
         </section>
-      ) : null}
+
+        <section className="grid gap-3" aria-labelledby="assessments-heading">
+          <h2 id="assessments-heading" className="text-lg font-semibold">
+            {t("assessmentsTitle")}
+          </h2>
+          {sheet.assessments.length === 0 ? (
+            <EmptyState title={t("noAssessmentsTitle")} description={t("noAssessmentsBody")} />
+          ) : (
+            <ul className="grid gap-2" data-testid="marksheet-list">
+              {sheet.assessments.map((assessment) => {
+                const status = cellStatus(sheet.ownScores[assessment.id]);
+                return (
+                  <li
+                    key={assessment.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card px-4 py-3"
+                    data-testid="marksheet-row"
+                  >
+                    <span className="grid gap-0.5">
+                      <span className="font-medium">{assessment.title}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {t("rowMeta", { weight: assessment.weight, total: assessment.total })}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-2">
+                      {status === "graded" ? (
+                        <span className="font-medium tabular-nums" data-testid="cell-score">
+                          {sheet.ownScores[assessment.id]?.score} / {assessment.total}
+                        </span>
+                      ) : (
+                        <span
+                          className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground"
+                          data-testid={`cell-${status}`}
+                        >
+                          {t(`cells.${status}`)}
+                        </span>
+                      )}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {buckets.missing.length > 0 || buckets.pending.length > 0 ? (
+            <p className="text-sm text-muted-foreground" data-testid="marksheet-missing-hint">
+              {t("missingHint", {
+                missing: buckets.missing.length,
+                pending: buckets.pending.length,
+              })}
+            </p>
+          ) : null}
+        </section>
+
+        {sheet.gradingScale && sheet.gradingScale.bands && sheet.gradingScale.bands.length > 0 ? (
+          <section className="grid gap-3" aria-labelledby="legend-heading">
+            <h2 id="legend-heading" className="text-lg font-semibold">
+              {t("legendTitle")}
+            </h2>
+            <ul className="flex flex-wrap gap-2" data-testid="grading-legend">
+              {[...sheet.gradingScale.bands]
+                .sort((a, b) => b.min - a.min)
+                .map((band) => (
+                  <li
+                    key={`${band.grade}-${band.min}`}
+                    className="rounded-full border px-3 py-1 text-sm"
+                  >
+                    <span className="font-medium">{band.grade}</span>{" "}
+                    <span className="text-muted-foreground">≥ {band.min}%</span>
+                  </li>
+                ))}
+            </ul>
+          </section>
+        ) : null}
+      </TapToReveal>
     </div>
   );
 }

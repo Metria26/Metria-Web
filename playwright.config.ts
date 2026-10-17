@@ -31,6 +31,9 @@ export default defineConfig({
     env: {
       ...(process.env as Record<string, string>),
       E2E_MODE: "1",
+      // T-B003: collapse the ad config/kill cache TTL so ads.safety's kill-flip
+      // test observes the change after its grace wait (cap stays 15s).
+      AD_CONFIG_CACHE_TTL_SECONDS: "1",
     },
   },
 });
