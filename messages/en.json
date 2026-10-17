@@ -399,5 +399,79 @@
       "hide": "Hide marks",
       "hiddenNote": "Marks stay hidden on this page until you choose to show them."
     }
+  },
+  "AdminAds": {
+    "title": "Ads administration",
+    "subtitle": "Platform-level controls for ad placements, networks, kill switches and configuration versions. Every change writes an audit event and applies within seconds.",
+    "capability": "Requires the platform.manage_ads capability (platform admins only).",
+    "flagsNote": "Resolvers fail closed: a flag missing from feature_flags counts as off. ads.global_kill is checked before any kill-switch row.",
+    "killsNote": "Precedence: ads.global_kill flag, then this global row, then per-network rows. Killing blocks ad units for every university; sponsor units are unaffected.",
+    "placementsNote": "A placement serves an ad unit only while enabled, its page type is enabled (non-auth) and its network is enabled and not killed.",
+    "networksNote": "Network script allowlists stay empty (ADR-008), so network units render as reserved empty boxes until scripts are enabled.",
+    "configNote": "Publishing freezes the active registry as an immutable version; rollbacks append an old config as a new version (no in-place edits).",
+    "sections": {
+      "flags": "Feature flags",
+      "kills": "Kill switches",
+      "placements": "Placements",
+      "networks": "Ad networks",
+      "config": "Configuration versions"
+    },
+    "flags": {
+      "ads": {
+        "enabled": "Ads enabled (master switch)",
+        "public": {
+          "enabled": "Ad units on public pages"
+        },
+        "private": {
+          "enabled": "Sponsor units on authenticated pages"
+        },
+        "global_kill": "Global kill (emergency off)"
+      }
+    },
+    "kills": {
+      "global": "Global kill switch",
+      "globalHint": "Blocks all network ad units platform-wide until released."
+    },
+    "table": {
+      "slot": "Slot",
+      "pageType": "Page type",
+      "network": "Network",
+      "format": "Format",
+      "priority": "Priority",
+      "state": "State",
+      "actions": "Actions"
+    },
+    "actions": {
+      "enable": "Enable",
+      "disable": "Disable",
+      "kill": "Kill",
+      "release": "Release",
+      "publish": "Publish snapshot",
+      "rollback": "Roll back",
+      "saving": "Saving…"
+    },
+    "state": {
+      "on": "On",
+      "off": "Off",
+      "killed": "Killed",
+      "active": "Active",
+      "authPage": "Auth page",
+      "live": "Live registry (nothing published yet)",
+      "currentVersion": "Current version: {n}",
+      "version": "Version {n}",
+      "latest": "Latest",
+      "noVersions": "No published versions yet."
+    },
+    "empty": {
+      "placements": "No placements seeded yet.",
+      "networks": "No networks seeded yet."
+    },
+    "errors": {
+      "notAuthorized": "You do not have permission to do that.",
+      "invalidInput": "Check the form values and try again.",
+      "duplicate": "That configuration version already exists.",
+      "invalidReference": "That item no longer exists.",
+      "generic": "Something went wrong. Try again."
+    }
   }
 }

@@ -16,6 +16,9 @@ export const E2E_TA_EMAIL = "ta.e2e@lhr.nu.edu.pk";
 export const E2E_TA_PASSWORD = "e2e-Password123!";
 /** Second student fixture: capacity races need two distinct bookers (T-A006). */
 export const E2E_STUDENT2_EMAIL = "e2e.student2@lhr.nu.edu.pk";
+/** Platform-admin fixture for the /admin/ads console (AD3). */
+export const E2E_ADMIN_EMAIL = "admin.e2e@lhr.nu.edu.pk";
+export const E2E_ADMIN_PASSWORD = "e2e-Password123!";
 
 /** Default demo anon key (publicly documented local value, same as .env.local). */
 const ANON_KEY =
@@ -163,6 +166,30 @@ export async function signInE2E(
 export async function ensureE2EStudent2(): Promise<void> {
   const authUserId = await ensureAuthUser(E2E_STUDENT2_EMAIL, E2E_PASSWORD, "E2E Student Two");
   await promoteMembership(authUserId, "student2");
+}
+
+/**
+ * Creates the platform-admin fixture (AD3): F3 provisions the profile, the
+ * membership is promoted active, then a platform_admins row is granted via
+ * service role — platform_admins.profile_id references profiles.id (T-A003
+ * D-c), and private.is_platform_admin() joins on it. Idempotent: the row is
+ * only inserted when absent (profile_id is UNIQUE).
+ */
+export async function ensureE2EAdmin(): Promise<void> {
+  const authUserId = await ensureAuthUser(E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD, "E2E Admin");
+  const profile = await promoteMembership(authUserId, "admin");
+  const existing = await serviceRest<{ id: string }[]>(
+    `platform_admins?profile_id=eq.${profile.id}&select=id`,
+  );
+  if (existing.length > 0) return;
+  await serviceRest("platform_admins", {
+    method: "POST",
+    body: JSON.stringify({
+      university_id: profile.university_id,
+      profile_id: profile.id,
+      granted_by: profile.id,
+    }),
+  });
 }
 
 /** Fixture profile lookup over service role (id + tenant) for API-level specs. */

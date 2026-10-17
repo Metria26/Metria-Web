@@ -47,7 +47,7 @@ export async function updateSession(
 
   const { pathname, search } = request.nextUrl;
 
-  if (!user && pathname.startsWith("/app")) {
+  if (!user && (pathname.startsWith("/app") || pathname.startsWith("/admin"))) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/sign-in";
     url.search = "";
