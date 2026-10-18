@@ -60,7 +60,17 @@ jobs:
 
       - name: Secret guard
         run: |
-          if git grep -nE 'eyJ[A-Za-z0-9_-]{30,}\.' -- '.env*' ':(exclude).env.example' ':(exclude)pnpm-lock.yaml'; then
+          # Tracked secret files must never exist — only .env.example is allowed.
+          # (The previous repo was flagged for a committed secrets manifest;
+          # 2026-10-18 migration. History was rewritten, but never rely on that.)
+          if git ls-files | grep -Ei '(^|/)(\.env($|\.)|metria_?env)' | grep -v '^\.env\.example$'; then
+            echo "Sensitive env file is tracked"
+            exit 1
+          fi
+          # Whole-tree scan for high-confidence credential shapes. The local
+          # Supabase demo keys (issuer "supabase-demo") intentionally do not
+          # match the JWT pattern; real project JWTs carry "ref" in the payload.
+          if git grep -nEi 'GOCSPX-|(^|[^A-Za-z0-9_])re_[A-Za-z0-9]{24,}|AIza[0-9A-Za-z_-]{30,}|eyJ[A-Za-z0-9_-]*\.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6' -- . ':(exclude).env.example' ':(exclude)pnpm-lock.yaml'; then
             echo "Potential secret committed"
             exit 1
           fi
@@ -98,7 +108,7 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
       SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
       SUPABASE_DB_URL: postgres://postgres:postgres@127.0.0.1:54322/postgres
-      BOOTSTRAP_ADMIN_EMAIL: metria.admin26@gmail.com
+      BOOTSTRAP_ADMIN_EMAIL: admin@example.com
       GOOGLE_OAUTH_CLIENT_ID: ci-placeholder-client-id
       GOOGLE_OAUTH_CLIENT_SECRET: ci-placeholder-client-secret
     steps:
