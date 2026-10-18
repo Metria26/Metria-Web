@@ -1,0 +1,23 @@
+# DEP-1 (ADR-009, amended 2026-10-18): Netlify Free deployment of Metria-Web.
+#
+# Cautions before changing (full context: README "Hosting — Netlify (DEP-1)"):
+# - Production deploys cost 15 of the 300 monthly credits (failed deploys and
+#   rollbacks are free) — batch merges to `main`.
+# - Staging runs on free branch deploys enabled in the Netlify UI
+#   (Site configuration -> Build & deploy -> Deploy contexts).
+# - A path-scoped [build] ignore rule (skip docs-only pushes) is planned AFTER
+#   first-deploy stability is confirmed; do not add one before that.
+# - Netlify's Next.js runtime auto-installs (detects the `next` dependency);
+#   the Next.js 16 cacheComponents support relies on it staying current.
+
+[build]
+  command = "pnpm build"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # Netlify secrets scanning: NEXT_PUBLIC_* values are public by design (they
+  # are compiled into the client bundle) and BOOTSTRAP_ADMIN_EMAIL is seeded
+  # data (seed.sql / pgTAP fixtures), not a secret — skip scanning for these
+  # values. Real secrets (service role key, DB URL, OAuth client secret,
+  # Resend key) stay scanned.
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_PRODUCT_NAME,NEXT_PUBLIC_SITE_URL,NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,BOOTSTRAP_ADMIN_EMAIL"
