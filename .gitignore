@@ -41,6 +41,9 @@ Metria_Env.txt
 Metria_env.txt
 Metria*Env*.txt
 
+# ad network integration notes (contain publisher keys — NEVER commit)
+adsterra-integration.md
+
 # vercel
 .vercel
 

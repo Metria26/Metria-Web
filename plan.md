@@ -504,9 +504,36 @@ Ads without traffic earn ~nothing. Immediately after the ads gate, take traffic 
 - [x] **T-B002** ads schema + resolver + consent + kill switches (§6 AD1) — done 2026-10-16: migration `b_monetization_ads` (all 20 monetization tables verbatim + 6 documented deviations D-B2-a…f: duplicate `created_by` fix, R3 auth-page CHECK, kill-switch shape + partial uniques, immutable config versions, definer wrappers, sanitized resolver RPCs), seed section 11 (registries + dev placements, ads dark), `src/features/ads/` (Zod contracts, pure resolver with all gates + D13 pop cap, consent/visitor cookies, TTL-capped server loader, consent banner), registry delta (`build_ad_config`/`ad_config_snapshot`/`ad_kill_state` + public wrappers), vitest 113/113, pgTAP 294/294 (new file plan(82)); gates all green (README phase log)
 - [x] **T-B003** AdSlot + isolation + sponsors + Playwright ad safety (§6 AD2) — done 2026-10-17: migration `b_monetization_sponsor_slots` (public `page_sponsor_slots` wrapper per D-k; window/expiry/active + R3 `NOT is_auth` + https-only URL filter D-B3-a; sanitized payload; registry delta first), seed `booking` page_type + `booking-top` placement (6 page types / 3 placements), `resolveAdSlots` contract + `<AdSlot>`/`AdSlotView` reserved geometry (fail empty) + `<TapToReveal>` on marksheet (R1), adapter interface (`resolve`/`mount`/`destroy`/`report`) with empty ADR-008 allowlist (D-B3-b), CSP Report-Only + `/api/csp-report` + Permissions-Policy/Referrer-Policy, consent banner mounted behind `privateAdSurfaceOpen`, mounts on dashboard/booking/marksheet, vitest 145/145 (new file +32), pgTAP 327/327 (new file plan(33)), e2e `ads.safety.spec.ts` 7/7 `[ads-safety]`-isolated (CI grep split + `AD_CONFIG_CACHE_TTL_SECONDS=1`) + main suite 20/20 `--workers=1`; gates all green (README phase log)
 - [x] **Admin ads slice** config + kill switch UI + audit (§6 AD3) — done 2026-10-17: migration `b_admin_ads_audit` (`audit_log` pulled forward from T-B008 per plan §6, D-B4-a; table/indexes/trigger/policy/revokes verbatim from docs `schema|rls/admin.sql`; no registry delta — symbols pre-registered), `src/features/ads/admin/` + `(admin)/admin/ads` (`requireAdmin()` mirrors `is_platform_admin` via `platform_admins.profile_id = profiles.id`; 6 Zod-gated server actions — placement/network/flag/kill toggles, publish via `ad_config_snapshot` → `publishableConfig`, append-only rollback — each writing `ad.config.changed`/`ad.kill_switch.changed` audit rows; `AdsAdminView` + `AdminAds` i18n, button toggles, noindex + `instant=false` + `connection()`), proxy `session.ts` gates `/admin/*`, vitest 158/158 (new file +13), pgTAP 345/345 (new file plan(18)), e2e `admin.ads.spec.ts` 3/3 + main suite 23/23 `--workers=1` + `ads.safety` 7/7 isolated; gates all green (README phase log)
-- [ ] **DEP-1/2** free deployment + staging verification + prod flags OFF (§7)
+- [ ] **DEP-1/2** — DEP-1 ✅ 2026-10-18 (Netlify Free site live + cloud Supabase migrated 9/9, seeded, verified, Google sign-in smoke passed; README "Hosting — Netlify (DEP-1)"); remaining: DEP-2 staging verification + production Supabase project + prod flags OFF (§7)
+- [ ] **Adsterra landing integration** (§11) — planned 2026-10-18; components reuse resolver gates; `ads.*` flags stay OFF
 - [ ] **GATE** Marks + Booking stable in prod → ad QA → enable ads (§7)
 - [ ] **Post-MVP** T-B001 → T-B004 traffic cards (§9)
+
+## 11. Adsterra landing integration (recorded 2026-10-18; implementation starts next)
+
+> **Source of truth for this work:** `adsterra-integration.md` (repo root, **gitignored** — contains the approved unit codes; never commit). Site approved on Adsterra (website ID 6133098). Three units in scope only: Native Banner 31803282, Social Bar 31803283, Banner 468×60 31803284 (script host `https://bauval.org`). Popunder + Smartlink must NOT be implemented.
+
+**Findings (investigation done 2026-10-18):**
+- The ads system is DB-ready: seed already has the `adsterra` network row (disabled), formats `banner`/`native`/`social_bar`, and the `public_home` page type; `public.ad_kill_state` is anon-callable; consent cookie, admin console, CSP Report-Only and `/api/csp-report` exist and are e2e-covered.
+- Two doc deviations, resolved via the task file's own §4.2 fallback ("wrap each component with the same consent and kill-switch checks"):
+  1. The public/anonymous ad layer is explicitly deferred in code (`page-ads.ts:74`, `viewer.ts:10` — "when Track A lands"); anonymous requests fail closed today.
+  2. `adapters.ts` has one script URL per network — cannot express three per-unit scripts, and the registry has no per-unit script column; the ad-system-spec "never page edits" ideal path (data + adapter only) is not practical now.
+- Chosen path: dedicated Adsterra components reusing the SAME gates — `ads.enabled` + `ads.public.enabled` + `!global_kill` + `!university kill` + per-network kill (`killed_networks` excludes `adsterra`) + consent cookie + pathname allowlist — with e2e locking every boundary. No `docs/` edits; the deviation is explained in the PR description.
+- **GATE untouched (§7):** `ads.*` flags stay OFF; this ships provider code ahead of the GATE and the owner enables when ready.
+
+**Plan (order):**
+1. `src/features/ads/adsterra/config.ts` — reviewed registry: 3 unit codes + script URLs (host-reviewed `https://bauval.org`), sizes, allowed paths (`/` for banner + social bar; `/`, `/privacy`, `/terms`, `/about`, `/contact` for native).
+2. `src/features/ads/public-surface.ts` — server-only helper: single-tenant university lookup via service role (read-only, cached, exactly-one else fail closed) + cached kill state (existing `loadAdKillState`) + consent cookie → `{ open, consentGranted }`.
+3. Components: `native-banner.tsx` (script into host div, reserved min-height, below-fold lazy), `banner-468.tsx` (sandboxed `srcDoc` iframe 468×60, title "Advertisement"), `social-bar.tsx` (body script, idle-loaded); all labeled via `Ads.slotLabel`, `data-ad-network-script`/`-frame` markers, clean unmount.
+4. Landing `src/app/page.tsx`: ~300 words real content + footer (legal links) + placements (Banner468 top centered, Native bottom, SocialBar once) + `ConsentBanner` mounted while the public surface is open; i18n in `messages/en.json`.
+5. Legal pages `(public)/`: `/privacy` (names Adsterra, consent mechanics, no ads inside the authenticated app), `/terms`, `/about`, `/contact` (uses `BOOTSTRAP_ADMIN_EMAIL`).
+6. CSP (`next.config.ts`): add `https://bauval.org` to `script-src`, `frame-src`, `connect-src`; no new unsafe-inline/wildcards. Creative CDNs cannot be statically enumerated — Report-Only + `/api/csp-report` monitoring; owner informed.
+7. Tests: vitest (config/guard/component gating) + new `e2e/landing.ads.spec.ts` — flags off → zero markup; on + consent → containers; consent denied → zero + banner; kill flip → dark; `/app`, `/auth/*`, `/admin/*`, 404 → zero Adsterra markup; existing suites must stay green.
+8. Delivery: small commits on `hassan-dev`, pushed there only; PR → `main` with required notes (what was added / exact CSP lines / consent + kill-switch behavior / ad pages / unverified items). No `main` push, no `docs/` edits.
+
+**Owner actions after merge + deploy (task §8):** enable `adsterra` network + `ads.public.enabled` in `/admin/ads` when ready; incognito check with consent granted; confirm impressions in the Adsterra dashboard. Never click own ads.
+
+---
 
 ## Self-check
 - [x] Purpose, audience, prerequisites, owner lane and registry version are stated.
