@@ -1,18 +1,30 @@
-# Lane ownership per docs/08-delivery/lanes-and-ownership.md
-# TODO: replace placeholder usernames with the founders' actual GitHub handles.
+# Ownership derived from commit history (updated 2026-10-18, post-SEC-1 repo migration).
+# Handles: @HassanNawaz14 (hafizhassan142003@gmail.com), @zohaib-mzg (zohaib.mzg158@gmail.com).
+# On GitHub Free this is advisory (PR review requests); rule 9 + CI Secret guard are the hard gates.
 
-# Lane A
-/src/features/auth/ @founder-a
-/src/features/academics/ @founder-a
-/src/features/booking/ @founder-a
+# Single-author areas
+/src/features/auth/ @HassanNawaz14
+/src/features/marks/ @HassanNawaz14
+/src/features/booking/ @zohaib-mzg
 
-# Lane B
-/src/features/growth/ @founder-b
-/src/features/ads/ @founder-b
-/src/features/admin/ @founder-b
+# Co-authored feature areas (either owner can review)
+/src/features/academics/ @HassanNawaz14 @zohaib-mzg
+/src/features/ads/ @HassanNawaz14 @zohaib-mzg
 
-# Shared (require cross-lane review)
-/src/lib/ @founder-a @founder-b
-/src/components/ @founder-a @founder-b
-/supabase/migrations/ @founder-a @founder-b
-/supabase/functions/ @founder-a @founder-b
+# Planned Lane B paths (no commits yet — see docs/08-delivery/lanes-and-ownership.md)
+/src/features/growth/ @zohaib-mzg
+/src/features/admin/ @zohaib-mzg
+
+# Shared — significant commits from both founders
+/src/app/ @HassanNawaz14 @zohaib-mzg
+/src/components/ @HassanNawaz14 @zohaib-mzg
+/src/i18n/ @HassanNawaz14 @zohaib-mzg
+/src/lib/ @HassanNawaz14 @zohaib-mzg
+/supabase/migrations/ @HassanNawaz14 @zohaib-mzg
+/supabase/functions/ @HassanNawaz14 @zohaib-mzg
+/supabase/seed.sql @HassanNawaz14 @zohaib-mzg
+/docs/ @HassanNawaz14 @zohaib-mzg
+/README.md @HassanNawaz14 @zohaib-mzg
+
+# Fallback — config, CI, root files
+* @HassanNawaz14 @zohaib-mzg

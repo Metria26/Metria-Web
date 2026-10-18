@@ -8,7 +8,7 @@
 
 Phase 0 is joint and sequential. Lane A owns auth/roles UI, academics, marks/imports, booking, objections, messaging, coursework, timetable, notifications, TA onboarding. Lane B owns public SEO, content, calculators/tools, ad system, analytics/revenue/payouts, admin, TA public/reviews, chatbot and sharing.
 
-CODEOWNERS: `/src/features/academic/ @founder-a`; `/src/features/booking/ @founder-a`; `/src/features/coursework/ @founder-a`; `/src/features/growth/ @founder-b`; `/src/features/ads/ @founder-b`; `/src/features/admin/ @founder-b`; shared `/src/lib/`, `/src/components/ui/`, `/supabase/functions/_shared/`, `/supabase/migrations/`, contracts and registry require author plus cross-lane review.
+CODEOWNERS (real handles, derived from commit history 2026-10-18 — current practice crossed lanes for booking/ads, so this reflects actual authorship): `/src/features/auth/`, `/src/features/marks/` → `@HassanNawaz14`; `/src/features/booking/` → `@zohaib-mzg`; `/src/features/academics/`, `/src/features/ads/` → `@HassanNawaz14 @zohaib-mzg`; planned `/src/features/growth/`, `/src/features/admin/` → `@zohaib-mzg`; shared `/src/app/`, `/src/components/`, `/src/lib/`, `/src/i18n/`, `/supabase/migrations/`, `/supabase/functions/`, `/docs/` require both (cross-lane review).
 
 Contract-first: generated DB types, zod RPC schema, route DTO and mock land before consumer. Earliest cross-lane interfaces: universities/membership for public tenant hub; courses/offering_staff for attribution; publication views for SEO; ad resolver for all layouts; audit/outbox for admin/notifications. Mock repositories allow parallel UI work.
 
