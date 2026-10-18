@@ -36,6 +36,11 @@ yarn-error.log*
 .env*
 !.env.example
 
+# secret manifests (NEVER commit)
+Metria_Env.txt
+Metria_env.txt
+Metria*Env*.txt
+
 # vercel
 .vercel
 
