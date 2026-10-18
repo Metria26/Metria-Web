@@ -70,7 +70,7 @@ jobs:
           # Whole-tree scan for high-confidence credential shapes. The local
           # Supabase demo keys (issuer "supabase-demo") intentionally do not
           # match the JWT pattern; real project JWTs carry "ref" in the payload.
-          if git grep -nEi 'GOCSPX-|(^|[^A-Za-z0-9_])re_[A-Za-z0-9]{24,}|AIza[0-9A-Za-z_-]{30,}|eyJ[A-Za-z0-9_-]*\.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6' -- . ':(exclude).env.example' ':(exclude)pnpm-lock.yaml'; then
+          if git grep -nEi 'GOCSPX[-]|(^|[^A-Za-z0-9_])re_[A-Za-z0-9]{24,}|AIza[0-9A-Za-z_-]{30,}|eyJ[A-Za-z0-9_-]*\.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6' -- . ':(exclude).env.example' ':(exclude)pnpm-lock.yaml'; then
             echo "Potential secret committed"
             exit 1
           fi
