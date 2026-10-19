@@ -21,7 +21,19 @@
   },
   "Home": {
     "tagline": "Marks, bookings and courses for your university — in one place.",
-    "ctaOpenApp": "Open app"
+    "ctaOpenApp": "Open app",
+    "whatTitle": "What Metria does",
+    "whatBody": "Metria brings the everyday academic admin of a university course into one place: assessment schedules, marks, evaluation bookings and staff announcements. Students stop hunting through chat groups for a marksheet PDF, and teaching assistants stop rebuilding spreadsheets for every quiz.",
+    "whatBody2": "The platform is built for the way a course actually runs — a term, a set of offerings, sections, assessments and the people enrolled in them. Marks are entered once and flow to the student dashboard, the marksheet and the analytics view from the same source of truth.",
+    "whoTitle": "Who it is for",
+    "whoBody": "Metria is built for university students, teaching assistants and course staff. The first deployment serves FAST-NUCES Lahore, with the platform designed so additional universities can be added as separate tenants with their own data.",
+    "featuresTitle": "What you can do today",
+    "featureMarks": "See released marks per assessment, with a weighted marksheet and class statistics.",
+    "featureBooking": "Book evaluation slots with live capacity, and cancel before the cutoff.",
+    "featureAnnouncements": "Read course announcements published by your teaching staff.",
+    "featureAnalytics": "Staff get distribution and per-section analytics, with small groups suppressed for privacy.",
+    "trustTitle": "Built around privacy",
+    "trustBody": "Access rules live in the database, not just in the interface: a student sees their own marks and bookings, staff see the sections they manage, and platform administrators are audited. Analytics suppress small groups so individual marks cannot be inferred from a distribution. Advertising only ever appears on public pages — never behind the sign-in screen."
   },
   "Auth": {
     "signIn": {
@@ -398,6 +410,77 @@
       "reveal": "Show marks",
       "hide": "Hide marks",
       "hiddenNote": "Marks stay hidden on this page until you choose to show them."
+    }
+  },
+  "Public": {
+    "nav": {
+      "label": "Public navigation",
+      "about": "About",
+      "contact": "Contact",
+      "openApp": "Open app"
+    },
+    "footer": {
+      "label": "Footer",
+      "copyright": "© {year} {product}. All rights reserved.",
+      "about": "About",
+      "contact": "Contact",
+      "privacy": "Privacy",
+      "terms": "Terms"
+    },
+    "pages": {
+      "about": {
+        "title": "About",
+        "intro": "{product} is a university academic workspace for marks, evaluation bookings and course announcements.",
+        "missionTitle": "Why it exists",
+        "mission": "Course administration is usually spread across spreadsheets, chat groups and paper sign-up sheets. Metria puts the same information in one place, visible only to the people who are allowed to see it.",
+        "audienceTitle": "Who it serves",
+        "audience": "Students, teaching assistants and course staff at a university. The first tenant is FAST-NUCES Lahore; each university is a separate tenant with its own data.",
+        "privacyTitle": "Privacy by default",
+        "privacy": "Access is enforced in the database, not just the interface. Small class groups are suppressed in analytics so individual marks cannot be inferred from statistics."
+      },
+      "privacy": {
+        "title": "Privacy Policy",
+        "updated": "Last updated: October 2026.",
+        "intro": "{product} collects the minimum needed to run your courses: your university account identity, your memberships and roles, and the academic records for the courses you are enrolled in or staff.",
+        "collectTitle": "What we collect",
+        "collect": "Your name and email from your university Google account, your tenant membership, and course data such as assessments, marks, evaluation bookings and announcements. We do not sell personal data.",
+        "adsTitle": "Advertising",
+        "ads": "Public pages may show advertising served by third-party advertising networks. These networks may use cookies and similar technologies to measure and personalise advertising. Advertising networks are listed in our ad configuration and are subject to their own privacy policies.",
+        "adsNetworks": "The advertising network currently approved for this site is Adsterra. Advertising scripts load only after you grant consent for the advertising category.",
+        "consentTitle": "Consent",
+        "consent": "Non-essential scripts, including advertising, do not load until you accept them in the consent banner. You can reject non-essential categories and still use the site. Your choice is stored in a first-party cookie.",
+        "appTitle": "Inside the app",
+        "app": "No third-party advertising scripts run inside the authenticated application. Course pages, marks and bookings never load advertising code.",
+        "contactTitle": "Contact",
+        "contact": "For privacy questions or data requests, contact the team using the address on the contact page."
+      },
+      "terms": {
+        "title": "Terms of Use",
+        "updated": "Last updated: October 2026.",
+        "intro": "By using {product} you agree to these terms. If you do not agree, do not use the service.",
+        "accountsTitle": "Accounts",
+        "accounts": "Access is limited to members of a participating university. You must use your own university account and keep your credentials secure. Accounts may be suspended for misuse.",
+        "useTitle": "Acceptable use",
+        "use": "Do not attempt to access data you are not authorised to see, disrupt the service, scrape it at scale, or use it to harass other users. Academic records must be used only for their intended purpose.",
+        "contentTitle": "Content",
+        "content": "Course content, marks and announcements belong to the university and the people who created them. You may not redistribute other users' data.",
+        "adsTitle": "Advertising",
+        "ads": "Public pages may display advertising. Advertising is labelled and must not be clicked artificially. Advertising is not shown inside the authenticated application.",
+        "liabilityTitle": "Availability and liability",
+        "liability": "The service is provided as-is. We aim for high availability but do not guarantee uninterrupted access, and we are not liable for indirect losses arising from use of the service.",
+        "contactTitle": "Contact",
+        "contact": "Questions about these terms can be sent using the address on the contact page."
+      },
+      "contact": {
+        "title": "Contact",
+        "intro": "Use the address below for questions about {product}, account access, privacy requests or advertising.",
+        "emailTitle": "Email",
+        "emailPlaceholder": "Contact address to be published before launch.",
+        "issuesTitle": "Reporting a problem",
+        "issues": "If something looks wrong with your marks or bookings, contact your course staff first — they own the academic record. Report platform problems using the same address.",
+        "adsTitle": "Advertising enquiries",
+        "ads": "Advertising and sponsorship enquiries can use the same address. Never click ads on this site to test them; it violates the ad network's terms."
+      }
     }
   },
   "AdminAds": {
