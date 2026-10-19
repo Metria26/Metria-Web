@@ -15,9 +15,10 @@
 
 [build.environment]
   NODE_VERSION = "22"
-  # Netlify secrets scanning: NEXT_PUBLIC_* values are public by design (they
-  # are compiled into the client bundle) and BOOTSTRAP_ADMIN_EMAIL is seeded
-  # data (seed.sql / pgTAP fixtures), not a secret — skip scanning for these
-  # values. Real secrets (service role key, DB URL, OAuth client secret,
-  # Resend key) stay scanned.
-  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_PRODUCT_NAME,NEXT_PUBLIC_SITE_URL,NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,BOOTSTRAP_ADMIN_EMAIL"
+  # Netlify secrets scanning: the omit list for the public/seeded keys
+  # (NEXT_PUBLIC_*, BOOTSTRAP_ADMIN_EMAIL — not secrets; real secrets stay
+  # scanned) is set in the Netlify UI ONLY (Site configuration → Environment
+  # variables; scope "Builds", all contexts). Do NOT inline that variable's
+  # comma-joined value here: the scanner scans env-var values, so a copy of
+  # itself in this file fails every build (DEP-1 trap ③, 2026-10-19; full
+  # story in README "Hosting — Netlify").
