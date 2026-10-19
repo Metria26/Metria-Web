@@ -243,6 +243,42 @@
       "studentNotFound": "No student with that email was found in your university.",
       "alreadyEnrolled": "That student is already enrolled in this section.",
       "generic": "Something went wrong. Please try again."
+    },
+    "enrollImport": {
+      "title": "Import students from CSV",
+      "help": "One column of roll numbers (e.g. 24L-0612) or university emails. Student emails are generated automatically.",
+      "section": "Section",
+      "chooseFile": "Choose CSV file",
+      "fileLoaded": "{name} — {count} rows",
+      "validSummary": "{valid} ready · {duplicates} duplicates · {invalid} not recognised",
+      "invalidTitle": "These rows will be skipped:",
+      "invalidHint": "Use a roll number like 24L-0612 or a full university email.",
+      "submit": "Enroll students",
+      "submitting": "Enrolling…",
+      "startOver": "Start over",
+      "resultTitle": "Import complete",
+      "resultEnrolled": "Enrolled now",
+      "resultAlready": "Already enrolled",
+      "resultPending": "Pending sign-in",
+      "resultDuplicates": "Duplicates",
+      "resultInvalid": "Invalid rows",
+      "pendingHint": "Students who have not signed in yet are enrolled automatically on their first sign-in.",
+      "pendingTitle": "Pending (awaiting first sign-in)",
+      "pendingHintList": "These students are enrolled automatically when they first sign in.",
+      "remove": "Remove",
+      "fileErrors": {
+        "tooLarge": "That file is too large. Keep it under 2 MB.",
+        "emptyFile": "No roll numbers were found. Use a single-column CSV.",
+        "tooManyRows": "Too many rows. Import at most 1000 students at a time.",
+        "parseError": "The file could not be read. Save it as CSV and try again."
+      },
+      "errors": {
+        "notAuthorized": "You do not have permission to import students.",
+        "invalidInput": "The import data is invalid. Check the file and try again.",
+        "duplicate": "That entry already exists.",
+        "invalidReference": "The selected section no longer exists.",
+        "generic": "Something went wrong. Please try again."
+      }
     }
   },
   "States": {

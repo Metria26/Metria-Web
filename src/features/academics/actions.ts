@@ -5,12 +5,15 @@ import { createClient } from "@/lib/supabase/server";
 import {
   announcementInputSchema,
   assessmentInputSchema,
+  bulkEnrollmentInputSchema,
   courseInputSchema,
   enrollmentInputSchema,
   offeringInputSchema,
   sectionInputSchema,
   type ActionResult,
+  type BulkEnrollmentResult,
 } from "./contracts";
+import { parseRollInput, type ParsedRoll } from "./roll-email";
 import { sanitizeAnnouncementHtml } from "./sanitize";
 
 /** i18n-safe error keys returned to forms (never leak Postgres details). */
@@ -258,6 +261,186 @@ export async function enrollStudentAction(formData: FormData): Promise<ActionRes
     if (section) revalidatePath(`/app/offerings/${section.offering_id}`);
   }
   return { ok: true };
+}
+
+/**
+ * Bulk CSV enrollment: one column of roll numbers (or university emails).
+ * Students who already signed in are enrolled immediately; everyone else gets
+ * a pending enrollment_invites row that private.sync_auth_user_profile()
+ * applies on their first sign-in. Re-uploading the same list is idempotent.
+ */
+export async function bulkEnrollStudentsAction(formData: FormData): Promise<BulkEnrollmentResult> {
+  const { supabase, profile } = await callerProfile();
+  if (!profile) return { ok: false, error: "notAuthorized" };
+
+  let entries: unknown = [];
+  try {
+    entries = JSON.parse(String(formData.get("entries") ?? "[]"));
+  } catch {
+    return { ok: false, error: "invalidInput" };
+  }
+  const parsed = bulkEnrollmentInputSchema.safeParse({
+    sectionId: emptyToUndefined(formData.get("sectionId")),
+    entries,
+  });
+  if (!parsed.success) return { ok: false, error: "invalidInput" };
+
+  const invalid: string[] = [];
+  const seen = new Set<string>();
+  const rows: ParsedRoll[] = [];
+  let duplicates = 0;
+  for (const entry of parsed.data.entries) {
+    const roll = parseRollInput(entry);
+    if (!roll) {
+      const trimmed = entry.trim();
+      if (trimmed) invalid.push(trimmed);
+      continue;
+    }
+    if (seen.has(roll.email)) {
+      duplicates += 1;
+      continue;
+    }
+    seen.add(roll.email);
+    rows.push(roll);
+  }
+
+  if (rows.length === 0) {
+    return {
+      ok: true,
+      enrolled: 0,
+      alreadyEnrolled: 0,
+      pending: 0,
+      duplicates,
+      invalid: invalid.slice(0, 200),
+    };
+  }
+
+  const { data: section } = await supabase
+    .from("sections")
+    .select("offering_id")
+    .eq("id", parsed.data.sectionId)
+    .maybeSingle();
+  if (!section) return { ok: false, error: "invalidReference" };
+
+  // Resolve profiles for both the canonical and the zero-padded variant so a
+  // sheet mangled by spreadsheet software still matches the right student.
+  const candidates: string[] = [];
+  for (const row of rows) {
+    candidates.push(row.email);
+    if (row.altEmail) candidates.push(row.altEmail);
+  }
+  const profileIdByEmail = new Map<string, string>();
+  for (let index = 0; index < candidates.length; index += 300) {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, email")
+      .eq("university_id", profile.university_id)
+      .in("email", candidates.slice(index, index + 300));
+    if (error) return { ok: false, error: mapError(error.code) };
+    for (const row of data ?? []) {
+      if (row.email) profileIdByEmail.set(row.email, row.id);
+    }
+  }
+
+  const { data: existingEnrollments, error: enrollmentsError } = await supabase
+    .from("enrollments")
+    .select("profile_id")
+    .eq("section_id", parsed.data.sectionId);
+  if (enrollmentsError) return { ok: false, error: mapError(enrollmentsError.code) };
+  const enrolledIds = new Set((existingEnrollments ?? []).map((row) => row.profile_id));
+
+  const { data: existingInvites, error: invitesError } = await supabase
+    .from("enrollment_invites")
+    .select("email")
+    .eq("section_id", parsed.data.sectionId)
+    .eq("status", "pending");
+  if (invitesError) return { ok: false, error: mapError(invitesError.code) };
+  const pendingEmails = new Set((existingInvites ?? []).map((row) => row.email));
+
+  const toEnroll: {
+    university_id: string;
+    created_by: string;
+    section_id: string;
+    profile_id: string;
+    status: string;
+  }[] = [];
+  const toInvite: {
+    university_id: string;
+    created_by: string;
+    section_id: string;
+    email: string;
+    alt_email: string | null;
+    roll_input: string;
+    status: string;
+  }[] = [];
+  let alreadyEnrolled = 0;
+  let pending = 0;
+
+  for (const row of rows) {
+    const profileId =
+      profileIdByEmail.get(row.email) ??
+      (row.altEmail ? profileIdByEmail.get(row.altEmail) : undefined);
+    if (profileId) {
+      if (enrolledIds.has(profileId)) {
+        alreadyEnrolled += 1;
+        continue;
+      }
+      enrolledIds.add(profileId);
+      toEnroll.push({
+        university_id: profile.university_id,
+        created_by: profile.id,
+        section_id: parsed.data.sectionId,
+        profile_id: profileId,
+        status: "active",
+      });
+    } else {
+      pending += 1;
+      if (!pendingEmails.has(row.email)) {
+        pendingEmails.add(row.email);
+        toInvite.push({
+          university_id: profile.university_id,
+          created_by: profile.id,
+          section_id: parsed.data.sectionId,
+          email: row.email,
+          alt_email: row.altEmail,
+          roll_input: row.input,
+          status: "pending",
+        });
+      }
+    }
+  }
+
+  if (toInvite.length > 0) {
+    const { error } = await supabase.from("enrollment_invites").insert(toInvite);
+    if (error) return { ok: false, error: mapError(error.code) };
+  }
+  if (toEnroll.length > 0) {
+    const { error } = await supabase.from("enrollments").insert(toEnroll);
+    if (error) return { ok: false, error: mapError(error.code) };
+  }
+
+  revalidatePath(`/app/offerings/${section.offering_id}`);
+  return {
+    ok: true,
+    enrolled: toEnroll.length,
+    alreadyEnrolled,
+    pending,
+    duplicates,
+    invalid: invalid.slice(0, 200),
+  };
+}
+
+/** Dismiss a pending invite that belongs to the offering's Students section. */
+export async function removeEnrollmentInviteAction(formData: FormData): Promise<void> {
+  const { supabase, profile } = await callerProfile();
+  if (!profile) return;
+
+  const inviteId = emptyToUndefined(formData.get("inviteId"));
+  const offeringId = emptyToUndefined(formData.get("offeringId"));
+  if (!inviteId || !offeringId) return;
+
+  await supabase.from("enrollment_invites").delete().eq("id", inviteId).eq("status", "pending");
+  revalidatePath(`/app/offerings/${offeringId}`);
 }
 
 /**

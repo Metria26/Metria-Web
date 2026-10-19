@@ -5,10 +5,12 @@ import { connection } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { EmptyState } from "@/components/states/empty-state";
 import { createClient } from "@/lib/supabase/server";
+import { removeEnrollmentInviteAction } from "@/features/academics/actions";
 import { loadOfferingAnalytics } from "@/features/academics/analytics";
 import { AssessmentForm, EnrollmentForm, SectionForm } from "@/features/academics/ui/forms";
 import { AnnouncementForm as AnnouncementComposer } from "@/features/academics/ui/announcement-editor";
 import { AnnouncementList } from "@/features/academics/ui/announcement-list";
+import { EnrollmentImportPanel } from "@/features/academics/ui/enrollment-import-panel";
 import { TaAnalytics } from "@/features/academics/ui/ta-analytics";
 
 export const metadata: Metadata = {
@@ -36,6 +38,12 @@ type AnnouncementRow = {
   body_html: string;
   section_id: string;
   created_at: string;
+};
+type PendingInviteRow = {
+  id: string;
+  email: string;
+  roll_input: string | null;
+  section_id: string;
 };
 
 export default async function OfferingDetailPage({
@@ -161,6 +169,22 @@ export default async function OfferingDetailPage({
       : { data: [] as AnnouncementRow[] };
   const announcements = (announcementsRes.data ?? []) as AnnouncementRow[];
   const sectionCodeById = new Map(sections.map((section) => [section.id, section.section_code]));
+
+  // Bulk-enrollment invites awaiting the student's first sign-in (staff-only;
+  // RLS already fails closed for everyone else).
+  const pendingInvitesRes =
+    viewerIsStaff && sections.length > 0
+      ? await supabase
+          .from("enrollment_invites")
+          .select("id, email, roll_input, section_id")
+          .in(
+            "section_id",
+            sections.map((section) => section.id),
+          )
+          .eq("status", "pending")
+          .order("created_at")
+      : { data: [] as PendingInviteRow[] };
+  const pendingInvites = (pendingInvitesRes.data ?? []) as PendingInviteRow[];
 
   // T-A005 TA analytics: RPC raises 42501 for non-staff, so only staff attempt
   // it; a failure hides the section rather than failing the whole page.
@@ -330,6 +354,45 @@ export default async function OfferingDetailPage({
             })}
           </ul>
         )}
+        {viewerIsStaff && pendingInvites.length > 0 ? (
+          <div className="grid gap-2">
+            <h3 className="text-base font-semibold">{t("enrollImport.pendingTitle")}</h3>
+            <p className="text-sm text-muted-foreground">{t("enrollImport.pendingHintList")}</p>
+            <ul className="grid gap-2" data-testid="pending-invites-list">
+              {pendingInvites.map((invite) => (
+                <li
+                  key={invite.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed bg-card px-4 py-3"
+                  data-testid="pending-invite-item"
+                >
+                  <span className="grid gap-0.5">
+                    <span className="font-medium">{invite.roll_input ?? invite.email}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {invite.email}
+                      {sectionCodeById.get(invite.section_id)
+                        ? ` · ${sectionCodeById.get(invite.section_id)}`
+                        : ""}
+                    </span>
+                  </span>
+                  <form action={removeEnrollmentInviteAction}>
+                    <input type="hidden" name="inviteId" value={invite.id} />
+                    <input type="hidden" name="offeringId" value={offeringId} />
+                    <button
+                      type="submit"
+                      className="inline-flex h-9 items-center rounded-lg border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
+                      data-testid="pending-invite-remove"
+                    >
+                      {t("enrollImport.remove")}
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {viewerIsStaff && sectionOptions.length > 0 ? (
+          <EnrollmentImportPanel sections={sectionOptions} />
+        ) : null}
         {sectionOptions.length > 0 ? (
           <EnrollmentForm sections={sectionOptions} />
         ) : (

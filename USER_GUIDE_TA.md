@@ -7,7 +7,7 @@ This guide walks you through everything a TA can do in Metria today, screen by s
 ## 1. What you can do as a TA
 
 - Set up a course: create the course, open it as an offering for a term, add sections and assessments.
-- Enroll students into sections using their university email.
+- Enroll students into sections using their university email, or import a whole class from a CSV of roll numbers.
 - Post announcements to a section (they appear on students' dashboards).
 - Enter marks by hand or import them from a CSV file.
 - See class analytics for your offering (averages, distributions, per-section comparisons).
@@ -112,6 +112,31 @@ If you see:
 
 - **"No student with that email was found in your university"** — check the spelling, and make sure the student has signed in to Metria at least once.
 - **"That student is already enrolled in this section."** — nothing to do; they are already in.
+
+### Enrolling a whole class from a CSV
+
+Below the student list, use the **Import students from CSV** panel. This is the fastest way to enroll a full section.
+
+**Prepare your file** — one column of roll numbers (a header row like `roll` is optional):
+
+```
+roll
+24L-0612
+24L-0613
+24L-0614
+```
+
+Full university emails also work. Limits: up to **2 MB** and **1000 students** per import.
+
+Roll numbers are converted automatically: `24L-0612` becomes `l240612@lhr.nu.edu.pk`.
+
+1. Pick the **Section**.
+2. Click **Choose CSV file** and pick your file. The panel shows how many rows are ready, duplicated, or not recognised.
+3. Click **Enroll students**. The result box shows **Enrolled now**, **Already enrolled**, **Pending sign-in**, **Duplicates** and **Invalid rows**.
+
+Students who have not signed in to Metria yet cannot be enrolled immediately. They appear under **Pending (awaiting first sign-in)** and are enrolled automatically the first time they sign in with their university Google account. Use **Remove** next to a pending student to cancel that invite.
+
+Re-importing the same list is safe — existing enrollments and pending students are skipped.
 
 ---
 
@@ -233,6 +258,7 @@ Cancellations close automatically **cutoff hours before** each slot starts; afte
 | "You do not have permission to do this." | Your account is not set up as course staff. Contact the platform administrator. |
 | "No student with that email was found in your university." | Check the spelling; ask the student to sign in to Metria once, then retry. |
 | "That student is already enrolled in this section." | No action needed. |
+| "Pending (awaiting first sign-in)" | The student has not signed in yet; they are enrolled automatically on their first sign-in. |
 | "That already exists. Use a different code or value." | The course/offering/section code is already used. Choose another. |
 | "Some fields are invalid. Check the values and try again." | Look for empty or wrongly formatted fields. Codes allow letters, numbers and hyphens only. |
 | "The score cannot be higher than the assessment total." | Lower the score, or correct the assessment's total marks. |
@@ -260,7 +286,7 @@ Cancellations close automatically **cutoff hours before** each slot starts; afte
 | Courses → New offering | **Save course**, **Save offering** |
 | Offering page → Sections | **Save section** |
 | Offering page → Assessments | **Save assessment**, **Enter marks** |
-| Offering page → Students | **Enroll student** |
+| Offering page → Students | **Enroll student**, **Enroll students** (CSV import), **Remove** (pending invite) |
 | Offering page → Announcements | **Post announcement** |
 | Marks page | **Save** (per student), **Import from CSV**, **Preview import**, **Confirm import**, **Download error rows**, **Start over** |
 | Bookings | **New period**, **Create period**, **View**, **Add slot** |

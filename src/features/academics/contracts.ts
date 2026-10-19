@@ -61,6 +61,23 @@ export type EnrollmentInput = z.infer<typeof enrollmentInputSchema>;
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
+export const bulkEnrollmentInputSchema = z.object({
+  sectionId: z.string().uuid("sectionRequired"),
+  entries: z.array(z.string()).min(1, "entriesRequired").max(1000, "entriesMax"),
+});
+export type BulkEnrollmentInput = z.infer<typeof bulkEnrollmentInputSchema>;
+
+export type BulkEnrollmentResult =
+  | {
+      ok: true;
+      enrolled: number;
+      alreadyEnrolled: number;
+      pending: number;
+      duplicates: number;
+      invalid: string[];
+    }
+  | { ok: false; error: string };
+
 export const announcementInputSchema = z.object({
   sectionId: z.string().uuid("sectionRequired"),
   title: z.string().trim().min(2, "titleMin").max(200, "titleMax"),

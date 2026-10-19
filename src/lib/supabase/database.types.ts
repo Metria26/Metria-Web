@@ -215,6 +215,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"audit_log": {
+                  Row: {
+                    "actor_id": string | null,"created_at": string,"created_by": string | null,"event_type": string,"id": string,"payload": NonNullable<Json>,"target_id": string | null,"target_type": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "actor_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"event_type": string,"id"?: string,"payload": NonNullable<Json>,"target_id"?: string | null,"target_type": string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "actor_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"event_type"?: string,"id"?: string,"payload"?: NonNullable<Json>,"target_id"?: string | null,"target_type"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "audit_log_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"bookings": {
                   Row: {
                     "created_at": string,"created_by": string | null,"id": string,"period_id": string,"slot_id": string,"status": string,"student_id": string,"university_id": string,"updated_at": string
@@ -353,6 +373,32 @@ isOneToOne: false
                   Relationships: [
                     {
       foreignKeyName: "earnings_entries_university_fk"
+      columns: ["university_id"]
+isOneToOne: false
+      referencedRelation: "universities"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"enrollment_invites": {
+                  Row: {
+                    "alt_email": string | null,"applied_at": string | null,"applied_profile_id": string | null,"created_at": string,"created_by": string | null,"email": string,"id": string,"roll_input": string | null,"section_id": string,"status": string,"university_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "alt_email"?: string | null,"applied_at"?: string | null,"applied_profile_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"email": string,"id"?: string,"roll_input"?: string | null,"section_id": string,"status"?: string,"university_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "alt_email"?: string | null,"applied_at"?: string | null,"applied_profile_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"email"?: string,"id"?: string,"roll_input"?: string | null,"section_id"?: string,"status"?: string,"university_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "enrollment_invites_section_id_tenant_fk"
+      columns: ["university_id","section_id"]
+isOneToOne: false
+      referencedRelation: "sections"
+      referencedColumns: ["university_id","id"]
+    },{
+      foreignKeyName: "enrollment_invites_university_fk"
       columns: ["university_id"]
 isOneToOne: false
       referencedRelation: "universities"
