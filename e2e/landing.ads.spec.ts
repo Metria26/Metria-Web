@@ -140,6 +140,7 @@ test.describe("landing ads (SS11)", () => {
 
   test("[ads-safety] defaults: no ad markup with ads shipped dark", async ({ page }) => {
     await setFlags(ADS_FLAGS_OFF, uniId);
+    await page.waitForTimeout(KILL_TTL_GRACE_MS);
     await page.context().clearCookies();
     await page.goto("/");
     await expect(page.locator("main h1")).toBeVisible();
@@ -149,6 +150,7 @@ test.describe("landing ads (SS11)", () => {
 
   test("[ads-safety] flags on without consent: banner shown, zero ad markup", async ({ page }) => {
     await setFlags(ADS_FLAGS_ON, uniId);
+    await page.waitForTimeout(KILL_TTL_GRACE_MS);
     await page.context().clearCookies();
     await page.goto("/");
     await expect(page.getByTestId("consent-banner")).toBeVisible();
@@ -159,6 +161,7 @@ test.describe("landing ads (SS11)", () => {
     page,
   }) => {
     await setFlags(ADS_FLAGS_ON, uniId);
+    await page.waitForTimeout(KILL_TTL_GRACE_MS);
     await page.context().addCookies([consentCookie(true)]);
     await page.goto("/");
 
@@ -194,6 +197,7 @@ test.describe("landing ads (SS11)", () => {
 
   test("[ads-safety] consent denied: zero ad markup, site still usable", async ({ page }) => {
     await setFlags(ADS_FLAGS_ON, uniId);
+    await page.waitForTimeout(KILL_TTL_GRACE_MS);
     await page.context().addCookies([consentCookie(false)]);
     await page.goto("/");
     expect(await adsterraMarkupCount(page)).toBe(0);
@@ -202,6 +206,7 @@ test.describe("landing ads (SS11)", () => {
 
   test("[ads-safety] forbidden routes never carry Adsterra markup", async ({ page }) => {
     await setFlags(ADS_FLAGS_ON, uniId);
+    await page.waitForTimeout(KILL_TTL_GRACE_MS);
     await page.context().addCookies([consentCookie(true)]);
 
     for (const path of ["/app", "/auth/sign-in", "/admin/ads", "/does-not-exist"]) {
@@ -212,6 +217,7 @@ test.describe("landing ads (SS11)", () => {
 
   test("[ads-safety] legal pages carry at most the native unit", async ({ page }) => {
     await setFlags(ADS_FLAGS_ON, uniId);
+    await page.waitForTimeout(KILL_TTL_GRACE_MS);
     await page.context().addCookies([consentCookie(true)]);
     await page.goto("/privacy");
 
@@ -222,6 +228,7 @@ test.describe("landing ads (SS11)", () => {
 
   test("[ads-safety] per-network kill darkens the landing page", async ({ page }) => {
     await setFlags(ADS_FLAGS_ON, uniId);
+    await page.waitForTimeout(KILL_TTL_GRACE_MS);
     await page.context().addCookies([consentCookie(true)]);
     await setNetworkKill(uniId, true);
     await page.waitForTimeout(KILL_TTL_GRACE_MS);
