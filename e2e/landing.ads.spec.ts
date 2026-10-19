@@ -13,6 +13,9 @@ import { serviceRest } from "./helpers/auth";
  *  (d) forbidden routes (/app, /auth/*, /admin/*, 404) never carry Adsterra,
  *  (e) per-network kill darkens the landing page again,
  *  (f) master kill darkens the landing page again.
+ *
+ * Every test aborts requests to https://bauval.org so the suite asserts the
+ * reviewed markup without loading live creatives (no artificial impressions).
  */
 
 const ADSTERRA_HOST = "https://bauval.org";
@@ -123,6 +126,15 @@ async function adsterraMarkupCount(page: import("@playwright/test").Page): Promi
 
 test.describe("landing ads (SS11)", () => {
   test.describe.configure({ mode: "serial" });
+
+  test.beforeEach(async ({ page }) => {
+    // Never contact the live ad network from tests: assertions target the
+    // reviewed markup, and loading real creatives would create artificial
+    // impressions. Aborted requests still leave the script/iframe elements in
+    // the DOM, which is exactly what this suite inspects.
+    await page.route(/bauval\.org/, (route) => route.abort());
+  });
+
   let uniId = "";
 
   test.beforeAll(async () => {
