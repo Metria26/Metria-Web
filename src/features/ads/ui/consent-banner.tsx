@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   CONSENT_COOKIE,
@@ -25,6 +26,7 @@ export type ConsentBannerProps = {
 
 export function ConsentBanner({ policyVersion, initialConsentCookie = null }: ConsentBannerProps) {
   const t = useTranslations("Ads.consent");
+  const router = useRouter();
   const [decided, setDecided] = useState(() =>
     hasCurrentConsent(initialConsentCookie, policyVersion),
   );
@@ -37,6 +39,9 @@ export function ConsentBanner({ policyVersion, initialConsentCookie = null }: Co
       serializeConsentState(state),
     )}; Path=/; Max-Age=${CONSENT_COOKIE_MAX_AGE_SECONDS}; SameSite=Lax`;
     setDecided(true);
+    // The ad surface is resolved on the server from this cookie; refresh so an
+    // accepted choice mounts ads immediately without requiring navigation.
+    router.refresh();
   };
 
   return (

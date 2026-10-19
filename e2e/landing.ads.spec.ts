@@ -10,7 +10,7 @@ import { serviceRest } from "./helpers/auth";
  *  (a) shipped defaults (ads off) -> zero Adsterra markup anywhere,
  *  (b) flags on + no consent -> zero ad markup, consent banner visible,
  *  (c) consent granted -> banner/native/social units render with exact codes,
- *  (d) forbidden routes (/app, /auth/*, /admin/*, 404) never carry Adsterra,
+ *  (d) unauthenticated /app, /auth/*, /admin/* and 404 never carry Adsterra,
  *  (e) per-network kill darkens the landing page again,
  *  (f) master kill darkens the landing page again.
  *
@@ -216,7 +216,12 @@ test.describe("landing ads (SS11)", () => {
     await expect(page.locator("main h1")).toBeVisible();
   });
 
-  test("[ads-safety] forbidden routes never carry Adsterra markup", async ({ page }) => {
+  // Authenticated /app pages now intentionally mount Adsterra (covered by
+  // e2e/ads.safety.spec.ts). Without a session /app redirects to /auth, so it
+  // stays ad-free here along with the admin and error routes.
+  test("[ads-safety] unauthenticated app, auth, admin and error routes stay ad-free", async ({
+    page,
+  }) => {
     await setFlags(ADS_FLAGS_ON, uniId);
     await page.waitForTimeout(KILL_TTL_GRACE_MS);
     await page.context().addCookies([consentCookie(true)]);

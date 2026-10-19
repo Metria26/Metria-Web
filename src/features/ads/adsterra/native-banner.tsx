@@ -12,9 +12,11 @@ import { ADSTERRA_UNITS } from "./config";
  * the script is appended once after mount (never during render) and the div
  * keeps Adsterra's exact id. Reserved min-height prevents layout shift.
  *
- * Rendering is already gated server-side (`public-surface.ts`); this component
- * is only mounted when `surface.open && consentGranted && path allowed`. The
- * `data-ad-network-script` marker is what the Playwright safety tests key on.
+ * Rendering is gated server-side by `public-surface.ts` on public pages and by
+ * `app-surface.ts` in the authenticated app shell; this component is only
+ * mounted when the surface is open, consent is granted and (on public pages)
+ * the path is allowed. The `data-ad-network-script` marker is what the
+ * Playwright safety tests key on.
  */
 
 const UNIT = ADSTERRA_UNITS.native_banner;

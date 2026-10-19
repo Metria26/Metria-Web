@@ -17,8 +17,10 @@ import {
  *      persists; reserved geometry keeps >= 16px clear of booking actions,
  *  (c) cumulative layout shift stays near zero while the sponsor loads,
  *  (d) a broken/aborted creative fails to the empty reserved box, page intact,
- *  (e) marks sit behind tap-to-reveal while ads serve (R1), and
- *  (f) a kill flip darkens the surface again (master kill, short TTL).
+ *  (e) marks sit behind tap-to-reveal while ads serve (R1),
+ *  (f) a kill flip darkens the surface again (master kill, short TTL), and
+ *  (g) every authenticated /app page mounts the three Adsterra units while
+ *      the private surface is open (owner request 2026-10-19).
  *
  * It mutates GLOBAL state (feature flags + one sponsor fixture): page_types
  * keys are globally unique, so no tenant-scoped variant exists. CI runs it in
@@ -81,8 +83,25 @@ async function setFlags(flags: Array<[string, boolean]>, universityId: string): 
   }
 }
 
+/** The private Adsterra gate needs the network row live, not just the flags. */
+async function setNetworkEnabled(enabled: boolean): Promise<void> {
+  const rows = await serviceRest<{ id: string }[]>("ad_networks?key=eq.adsterra&select=id");
+  const id = rows[0]?.id;
+  if (!id) throw new Error("seeded adsterra network not found");
+  await serviceRest(`ad_networks?id=eq.${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ enabled }),
+  });
+}
+
 test.describe("ads safety (T-B003)", () => {
   test.describe.configure({ mode: "serial" });
+
+  // Never contact the live ad network: assertions only inspect the reviewed
+  // markup, and real creatives would create artificial impressions.
+  test.beforeEach(async ({ page }) => {
+    await page.route(/bauval\.org/, (route) => route.abort());
+  });
 
   let universityId = "";
   let offeringId = "";
@@ -136,8 +155,9 @@ test.describe("ads safety (T-B003)", () => {
       }),
     });
 
-    // Ads live: flags on, master kill released.
+    // Ads live: flags on, master kill released, reviewed network enabled.
     await setFlags(ADS_FLAGS_ON, universityId);
+    await setNetworkEnabled(true);
 
     // One active direct-sponsor creative targeted at the dashboard page type.
     const pageTypes = await serviceRest<{ id: string }[]>(
@@ -189,6 +209,7 @@ test.describe("ads safety (T-B003)", () => {
   test.afterAll(async () => {
     // Shipped defaults first so no other suite can observe the flipped state.
     if (universityId) await setFlags(ADS_FLAGS_OFF, universityId);
+    await setNetworkEnabled(false).catch(() => undefined);
     if (sponsorIds.slot) {
       await serviceRest(`sponsor_slots?id=eq.${sponsorIds.slot}`, { method: "DELETE" });
     }
@@ -206,6 +227,7 @@ test.describe("ads safety (T-B003)", () => {
     for (const path of ["/auth/sign-in", "/auth/access-denied"]) {
       await page.goto(path);
       await expect(page.getByTestId("ad-slot")).toHaveCount(0);
+      await expect(page.getByTestId("app-adsterra-units")).toHaveCount(0);
       await expect(page.getByTestId("consent-banner")).toHaveCount(0);
       await expect(page.locator("script[data-ad-network-script]")).toHaveCount(0);
       await expect(page.locator("iframe[data-ad-network-frame]")).toHaveCount(0);
@@ -218,6 +240,29 @@ test.describe("ads safety (T-B003)", () => {
     expect(headers["content-security-policy-report-only"]).toContain("img-src");
     expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
     expect(headers["permissions-policy"]).toContain("geolocation=()");
+  });
+
+  test("[ads-safety] every authenticated app page mounts all three Adsterra units", async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    await page.context().addCookies([consentCookie()]);
+    await signInE2E(page);
+
+    for (const path of ["/app", "/app/marks", "/app/offerings", "/app/bookings"]) {
+      await page.goto(path);
+      await expect(page.getByTestId("app-adsterra-units"), `${path} app ad wrapper`).toBeVisible();
+      await expect(page.getByTestId("adsterra-banner-468"), `${path} banner`).toBeVisible();
+      await expect(page.getByTestId("adsterra-native"), `${path} native`).toBeVisible();
+      await expect(
+        page.locator('script[data-ad-unit-id="31803282"]'),
+        `${path} native script`,
+      ).toHaveCount(1);
+      await expect(
+        page.locator('script[data-ad-unit-id="31803283"]'),
+        `${path} social bar script`,
+      ).toHaveCount(1);
+    }
   });
 
   test("[ads-safety] consent banner asks once and the choice persists", async ({ page }) => {
@@ -328,6 +373,7 @@ test.describe("ads safety (T-B003)", () => {
     await signInE2E(page);
     await page.goto("/app");
     await expect(page.getByTestId("ad-slot")).toHaveCount(0);
+    await expect(page.getByTestId("app-adsterra-units")).toHaveCount(0);
     await expect(page.getByTestId("consent-banner")).toHaveCount(0);
   });
 });

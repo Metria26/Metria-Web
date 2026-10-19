@@ -13,6 +13,8 @@ import createNextIntlPlugin from "next-intl/plugin";
  *   script-src, frame-src and connect-src only. Adsterra creatives load further
  *   resources from rotating CDNs that cannot be enumerated statically, so the
  *   policy stays Report-Only and /api/csp-report is the monitoring channel.
+ *   The reviewed units render on public pages and, behind the private surface
+ *   gate, in the authenticated /app shell. /auth/* and /admin/* stay ad-free.
  * - Permissions-Policy disables powerful features (ad code has no business
  *   calling them; interest-cohort/topics explicitly off).
  * - Referrer-Policy: strict-origin-when-cross-origin — outbound sponsor links

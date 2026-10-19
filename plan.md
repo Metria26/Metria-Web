@@ -511,6 +511,8 @@ Ads without traffic earn ~nothing. Immediately after the ads gate, take traffic 
 
 ## 11. Adsterra landing integration (recorded 2026-10-18; implementation starts next)
 
+> **Revision 2026-10-19 (owner request):** all three units now also render on every authenticated `/app` page (dashboard, marks, courses, bookings, forms) through `app-surface.ts` + `AppAdsterraUnits` in `(app)/app/layout.tsx`. Still gated by `ads.enabled` + `ads.private.enabled` + kill switches + per-network kill + consent; All three units are page-level scripts, so the privacy/terms copy now discloses in-app advertising. `/auth/*` and `/admin/*` remain ad-free. Flags stay OFF by default until the owner enables them.
+
 > **Source of truth for this work:** `adsterra-integration.md` (repo root, **gitignored** — contains the approved unit codes; never commit). Site approved on Adsterra (website ID 6133098). Three units in scope only: Native Banner 31803282, Social Bar 31803283, Banner 468×60 31803284 (script host `https://bauval.org`). Popunder + Smartlink must NOT be implemented.
 
 **Findings (investigation done 2026-10-18):**
@@ -526,12 +528,12 @@ Ads without traffic earn ~nothing. Immediately after the ads gate, take traffic 
 2. `src/features/ads/public-surface.ts` — server-only helper: single-tenant university lookup via service role (read-only, cached, exactly-one else fail closed) + cached kill state (existing `loadAdKillState`) + consent cookie → `{ open, consentGranted }`.
 3. Components: `native-banner.tsx` (script into host div, reserved min-height, below-fold lazy), `banner-468.tsx` (sandboxed `srcDoc` iframe 468×60, title "Advertisement"), `social-bar.tsx` (body script, idle-loaded); all labeled via `Ads.slotLabel`, `data-ad-network-script`/`-frame` markers, clean unmount.
 4. Landing `src/app/page.tsx`: ~300 words real content + footer (legal links) + placements (Banner468 top centered, Native bottom, SocialBar once) + `ConsentBanner` mounted while the public surface is open; i18n in `messages/en.json`.
-5. Legal pages `(public)/`: `/privacy` (names Adsterra, consent mechanics, no ads inside the authenticated app), `/terms`, `/about`, `/contact` (uses `BOOTSTRAP_ADMIN_EMAIL`).
+5. Legal pages `(public)/`: `/privacy` (names Adsterra, consent mechanics, explains that advertising may also appear inside the authenticated app), `/terms`, `/about`, `/contact` (uses `BOOTSTRAP_ADMIN_EMAIL`).
 6. CSP (`next.config.ts`): add `https://bauval.org` to `script-src`, `frame-src`, `connect-src`; no new unsafe-inline/wildcards. Creative CDNs cannot be statically enumerated — Report-Only + `/api/csp-report` monitoring; owner informed.
-7. Tests: vitest (config/guard/component gating) + new `e2e/landing.ads.spec.ts` — flags off → zero markup; on + consent → containers; consent denied → zero + banner; kill flip → dark; `/app`, `/auth/*`, `/admin/*`, 404 → zero Adsterra markup; existing suites must stay green.
+7. Tests: vitest (config/guard/component gating) + `e2e/landing.ads.spec.ts` — flags off → zero markup; on + consent → containers; consent denied → zero + banner; kill flip → dark; `/auth/*`, `/admin/*`, 404 → zero Adsterra markup; authenticated `/app` coverage lives in `e2e/ads.safety.spec.ts`; existing suites must stay green.
 8. Delivery: small commits on `hassan-dev`, pushed there only; PR → `main` with required notes (what was added / exact CSP lines / consent + kill-switch behavior / ad pages / unverified items). No `main` push, no `docs/` edits.
 
-**Owner actions after merge + deploy (task §8):** enable `adsterra` network + `ads.public.enabled` in `/admin/ads` when ready; incognito check with consent granted; confirm impressions in the Adsterra dashboard. Never click own ads.
+**Owner actions after merge + deploy (task §8):** enable `adsterra` network + `ads.public.enabled` (public pages) and `ads.private.enabled` (authenticated `/app` shell) in `/admin/ads` when ready; incognito check with consent granted; confirm impressions in the Adsterra dashboard. Never click own ads.
 
 ---
 

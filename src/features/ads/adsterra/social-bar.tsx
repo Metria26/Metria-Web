@@ -10,10 +10,10 @@ import { ADSTERRA_UNITS } from "./config";
  * after mount and removed on unmount so client navigations never accumulate
  * copies. It renders nothing itself.
  *
- * Safety: this is the only unit that injects outside a reserved box, so it is
- * mounted exactly once, on the landing page only, and only while the public ad
- * surface is open with consent. The e2e suite asserts it never appears on
- * /app, /auth/*, /admin/* or error pages.
+ * Safety: this is the only unit that injects outside a reserved box. It is
+ * mounted exactly once per ad surface: on the landing page by the public gate
+ * and in the app shell by AppAdsterraUnits (private gate). Both require
+ * consent; /auth/* and /admin/* never mount it.
  */
 
 const UNIT = ADSTERRA_UNITS.social_bar;

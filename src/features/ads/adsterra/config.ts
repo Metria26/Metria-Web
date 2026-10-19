@@ -10,6 +10,11 @@
  * network) and the anonymous public layer is deferred in code, so the Adsterra
  * components in this folder reuse the SAME gates through `public-surface.ts`
  * instead of going through `AdSlot` (plan.md §11 findings).
+ *
+ * Public mounts are limited to the reviewed path allowlists below. The
+ * authenticated app shell mounts the same units from `(app)/app/layout.tsx`
+ * through `app-surface.ts` (private layer), on every /app page. `/auth/*` and
+ * `/admin/*` use different layouts and never mount them.
  */
 
 export const ADSTERRA_SCRIPT_HOST = "https://bauval.org";
@@ -58,9 +63,11 @@ export const ADSTERRA_UNITS = {
 export const ADSTERRA_BANNER_468_KEY = "166ca6f5db0d4f74e14b5e11e470ec29";
 
 /**
- * Hard path allowlist. The components are only mounted on approved pages, and
- * this guard is the second line of defence: even if a future edit mounts one on
- * `/app`, `/auth/*`, `/admin/*` or an error page, no script is injected.
+ * Hard path allowlist for PUBLIC mounts. The components on public pages are
+ * only mounted on approved paths, and this guard is the second line of defence
+ * for accidental public mounts. The authenticated app shell is scoped by its
+ * layout instead (`(app)/app/layout.tsx`); /auth/*, /admin/* and error pages
+ * never import these components.
  */
 export function isAdsterraPathAllowed(unitKey: AdsterraUnitKey, pathname: string): boolean {
   const unit = ADSTERRA_UNITS[unitKey];
