@@ -21,7 +21,7 @@ All services run on free tiers; the project must fit within free-tier limits wit
 
 Track DB size, egress, connection saturation, p95 query latency, queue age, retries, ad RPM, consent rate, CWV and cost per 1,000 sessions weekly. Act before sustained 70% storage/egress/connection budget, p95 DB >300 ms for critical RPCs, or queue oldest age >5 minutes. Configure pooling, indexes, retention/purge jobs and aggregates before considering any capacity change. Verify current provider free-tier limits, terms, privacy terms, payout rules and ad-network terms at execution time; they change.
 
-Backups: daily backups enabled where the plan allows; restore drill before launch and quarterly. Separate staging and production projects. Never use production student data in performance fixtures.
+Backups: daily backups enabled where the plan allows; restore drill before launch and quarterly. **Staging-as-prod (ADR-010, D18 amended 2026-10-19):** local + one cloud project serve as staging and production, so take a snapshot/backup before schema changes and never run destructive performance fixtures against the cloud project. Never use production student data in performance fixtures.
 
 ## Self-check
 - [x] Header and audience are stated.

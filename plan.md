@@ -31,12 +31,18 @@ wins. This plan never invents requirements — it only sequences, initializes, a
   (see §9), because ads earn nothing without traffic.
 - Admin moderation extras, reviews, chatbot, TA tools.
 
-### Deployment strategy (locked with founder)
-1. Build **Marks + Booking + Ads code** with ads fully flag-gated: `ads.enabled=false`,
-   `ads.public.enabled=false`, `ads.private.enabled=false`, `ads.global_kill=true` at seed.
-2. Deploy **Marks + Booking** to production first. Verify stability.
-3. **Only then** configure the ad network, set placement config, and flip flags on in production
-   (admin action or audited SQL). Kill switch tested before flip.
+### Deployment strategy (updated 2026-10-19 — ads live in production)
+1. ✅ Build **Marks + Booking + Ads code** with ads flag-gated (historical; flags now activated).
+2. ✅ Deploy **Marks + Booking** to production first (Netlify Free, live since 2026-10-18).
+3. ✅ **Ads are live in production since 2026-10-19** (owner decision — ads MUST NOT be switched
+   off in production): `ads.enabled=true`, `ads.public.enabled=true`, `ads.private.enabled=true`,
+   `ads.global_kill=false`, `adsterra` network enabled. The seed now mirrors this activation so
+   resets/fresh deploys do not silently go dark.
+4. ⛔ **Blocked target (owner/time):** formal kill-switch rehearsal + 1-week post-enable
+   monitoring. No code work remains; the kill switches remain the emergency darkening control.
+5. **Staging-as-prod accepted (2026-10-19):** the single cloud Supabase project
+   (`tixpnfbfordadffhqsqs`) is the production database (ADR-010, D18 amended). No second project
+   is planned; free-tier limits remain the constraint.
 
 ### Investment-free constraint
 No Vercel, no paid plans anywhere. Hosting = free self-hostable target chosen at deploy time
@@ -255,10 +261,10 @@ then `docs/08-delivery/lane-a/tasks/t-a002-auth-and-tenant-membership.md`.
 - Apply: `pnpm exec supabase db reset`. Then generate types: `pnpm run db:types`.
 - Seed: `docs/03-database/seed/foundation-auth.sql` → FAST-NUCES Lahore tenant, allowed domain
   `lhr.nu.edu.pk`, role catalog (`student`, `ta`, `teacher`), permissions catalog
-  (registry `Permissions` section), role_permissions mappings, and **feature flags seeded with
-  `ads.enabled=false`, `ads.public.enabled=false`, `ads.private.enabled=false`,
-  `ads.global_kill=true`** (verify actual flag rows in the seed SQL; adjust the seed if it
-  ships different defaults — flag defaults must be OFF for MVP deploy strategy).
+  (registry `Permissions` section), role_permissions mappings, and **feature flags** (historical
+  F1 note: ads flags were seeded dark at foundation time; **superseded 2026-10-19 by ADR-010** —
+  the seed now ships the ads activation set ON: `ads.enabled/public/private=true`,
+  `ads.global_kill=false`, `adsterra` enabled, so resets and fresh deploys keep ads live).
 
 ### F2 — pgTAP foundation tests
 - Copy `docs/03-database/tests/foundation-auth.test.sql` → `supabase/tests/`, run
@@ -281,17 +287,21 @@ then `docs/08-delivery/lane-a/tasks/t-a002-auth-and-tenant-membership.md`.
 - `next-intl` scaffold: no hard-coded UI strings (L12).
 
 ### F5 — Foundation Gate checklist (from `docs/08-delivery/milestones-and-gates.md` P0 row)
-- [ ] Repo/tooling/CI green on clean clone
-- [ ] Local Supabase up; migrations apply clean; `db:types` generated
-- [ ] Auth tenant skeleton: Google login + domain denial + bootstrap admin
-- [ ] RLS helpers present (`private.current_university_ids()`, `has_role()`,
+- [x] Repo/tooling/CI green on clean clone
+- [x] Local Supabase up; migrations apply clean; `db:types` generated
+- [x] Auth tenant skeleton: Google login + domain denial + bootstrap admin
+- [x] RLS helpers present (`private.current_university_ids()`, `has_role()`,
       `is_offering_staff()`, `is_enrolled()`, `is_platform_admin()`) — `search_path=''`
-- [ ] Seeds applied (university, domains, roles, permissions, flags-off)
-- [ ] pgTAP harness running (foundation tests pass)
-- [ ] Design tokens + app shell render on mobile viewport
-- [ ] Secrets inventory recorded; `.env.example` matches reality
+- [x] Seeds applied (university, domains, roles, permissions, flags-off at F5 time)
+- [x] pgTAP harness running (foundation tests pass)
+- [x] Design tokens + app shell render on mobile viewport
+- [x] Secrets inventory recorded; `.env.example` matches reality
 
-**Do not start feature cards until this checklist passes.**
+**F5 status 2026-10-19: SIGNED.** Google OAuth smoke passed on the live site and every
+agent-side item was already green. Ads were activated later the same day (§7).
+
+**Do not start feature cards until this checklist passes.** (Historical note: Phase 1 was
+green-lit early on 2026-10-15 while the external OAuth smoke was pending.)
 
 ---
 
@@ -428,32 +438,36 @@ Card: `docs/08-delivery/lane-b/tasks/t-b003-direct-sponsors-and-ad-isolation.md`
 ## 7. Deployment (free) + ads gate
 
 ### DEP-1 — Choose and configure the free deployment target (founder decides, agent executes)
-Candidates to verify at execution (free-tier terms change — check R9): a free-tier VM with
-Docker (self-host `next start` standalone + hosted Supabase free project), or a free-tier PaaS
-that runs Next.js. Requirements whichever is chosen: HTTPS domain, Docker or Node runtime,
-persistent background process (ISR/revalidation + scheduled jobs via `pg_cron`/cron), fits
-free egress/memory limits. Record the decision in `DECISIONS.md` as an ADR (docs are
-implementation-agnostic here by design).
+**✅ COMPLETE 2026-10-18.** Target = **Netlify Free** (ADR-009 amended); live at
+`https://metria-web.netlify.app`. **Staging-as-prod accepted 2026-10-19 (ADR-010):** the
+staging Supabase project is promoted to production; no second project is created.
 
 ### DEP-2 — Production checklist (MVP subset of `docs/10-ops/launch-checklist.md`)
-- [ ] Hosted Supabase production project; all migrations applied via CLI (never dashboard, L4)
-- [ ] `BOOTSTRAP_ADMIN_EMAIL` admin bootstrapped once, audited (D20)
-- [ ] Google OAuth production origins/redirects + domain hook configured
-- [ ] Env secrets in hosting secret store; `.env.example` in sync; service role never in bundle
-- [ ] CSP Report-Only on; robots/meta noindex on all `/app`, `/auth`, `/admin`
-- [ ] Cross-tenant + booking concurrency + CSV idempotency tests green in staging
+- [x] Hosted Supabase project (**staging-as-prod**, D18 amended 2026-10-19); all 9 migrations
+      applied via CLI (never dashboard, L4)
+- [x] `BOOTSTRAP_ADMIN_EMAIL` admin bootstrapped once, audited (D20); live Google sign-in smoke passed
+- [x] Google OAuth production origins/redirects + domain hook configured
+- [x] Env secrets in hosting secret store; `.env.example` in sync; service role never in bundle
+- [x] CSP Report-Only on; robots/meta noindex on all `/app`, `/auth`, `/admin`
+- [ ] Cross-tenant + booking concurrency + CSV idempotency tests green against the hosted DB
+      — **remaining DEP-2 verification** (all green locally/CI; hosted run pending)
 - [ ] Sentry (if added) scrubbing PII; uptime monitor on; backup + restore drill documented
-- [ ] **Ads flags OFF** in production (`ads.enabled=false`, `ads.global_kill=true`)
+      — **owner/ops target**
+- [x] **Ads ON in production** (`ads.enabled=true`, `ads.public.enabled=true`,
+      `ads.private.enabled=true`, `ads.global_kill=false`, `adsterra` enabled) — 2026-10-19.
+      **Ads MUST NOT be switched off in production**; use kill switches only for incidents.
+- [ ] **Blocked target:** formal kill-switch rehearsal + 1-week post-activation monitoring
+      (owner/time; no code blocker).
 
-### GATE — Ads enablement (only after Marks + Booking are live and stable in production)
-1. Ad provider business account created (Adsterra first per brief), category blocks configured
-   (adult/gambling/dating/VPN), per-network setup checklist from
-   `docs/06-growth-and-ads/ad-network-setup-checklists.md`.
-2. Insert network + placement config (admin UI or documented SQL), still behind `ads.enabled`.
-3. Manual ad QA pass: auth pages clean, spacing/CLS checks green, kill switch rehearsed.
-4. Flip `ads.enabled` + layer flags on for **public/safe page types first**; private marks-page
-   formats last and only with isolation mode verified (R1).
-5. Monitor: Search Console security issues, Safe Browsing, CWV, error rates (R2) for 1 week.
+### GATE — Ads enablement (ACTIVATED 2026-10-19; monitoring/rehearsal blocked)
+1. [x] Ad provider business account created (Adsterra), category blocks configured.
+2. [x] Network + placement config inserted; `adsterra` enabled.
+3. [ ] Manual ad QA pass: auth pages clean, spacing/CLS checks green, **kill switch rehearsed**
+       — **BLOCKED TARGET (owner/time)**.
+4. [x] `ads.enabled` + public/private layer flags flipped ON; all three Adsterra units live on
+       public pages and every authenticated `/app` page. **Ads stay ON in production.**
+5. [ ] Monitor Search Console security issues, Safe Browsing, CWV, error rates (R2) for 1 week
+       — **BLOCKED TARGET (owner/time)**.
 
 ---
 
@@ -476,27 +490,21 @@ implementation-agnostic here by design).
 
 ---
 
-## 9. Post-MVP priority (revenue reality, keep small)
+## 9. Post-MVP priority
 
-Ads without traffic earn ~nothing. Immediately after the ads gate, take traffic cards next:
-1. **T-B001** Public publication + legal pages (11.1, 11.2) — home, about, legal, university
-   hub, course catalog pages (ISR, `public_*` views, canonical/structured data).
-2. **T-B004** SEO calculators (11.3, 11.5) — GPA/CGPA, FAST absolute/relative, finals-needed,
-   attendance per `docs/06-growth-and-ads/calculators-spec.md` (client-only, share links,
-   WhatsApp). Highest organic potential, fully free.
-3. **T-B005 → T-B006** visits/attribution → revenue share/payouts (10.7–10.9) when ad revenue
-   starts landing; terms must state revenue share before activation (D15).
-4. Then backfill deferred lanes: T-A008 objections, T-A007 social booking, T-A009+ etc.
+**Moved to `README.md` → "Post-MVP roadmap"** (this file may be deleted; README is the living
+record). Priorities are unchanged: T-B001 public publication + legal pages, then T-B004 SEO
+calculators, then T-B005 → T-B006 attribution/revenue share, then deferred lanes.
 
 ---
 
 ## 10. Execution checklist (update as work completes)
 
-- [ ] **Step 0** founder setup (tools, accounts, secrets, `.env.example`) — all done except Google Console redirect URI for the local Supabase OAuth callback (see README "F5 sign-off status")
+- [x] **Step 0** founder setup (tools, accounts, secrets, `.env.example`) — complete 2026-10-19 (Google Console/OAuth smoke passed; see README)
 - [x] **Phase 0 init** scaffold + libraries + folder structure + local Supabase + tests + CI (§2)
 - [x] **Foundation migration** applied, types generated, seeds loaded, pgTAP green (§3 F1–F2)
-- [x] **Auth** Google login + domain denial + bootstrap admin + app shell (§3 F3–F4) — done 2026-10-14; founder deviation: bootstrap admin email exempt from domain allowlist (D20); real Google roundtrip pending founder Console redirect URI; CI green on new repo (run 38619640718)
-- [ ] **Foundation Gate** checklist signed (§3 F5) — agent-side items ALL verified green 2026-10-15 (lint/typecheck/vitest/build/db-reset/pgTAP 29/29/e2e 10/10); blocked ONLY on founder Google OAuth smoke + both-founders sign-off; RLS helpers `is_offering_staff()`/`is_enrolled()` shipped later in T-A003 (2026-10-15). Full status: README "F5 sign-off status — READ FIRST in a new session"
+- [x] **Auth** Google login + domain denial + bootstrap admin + app shell (§3 F3–F4) — done 2026-10-14; founder deviation: bootstrap admin email exempt from domain allowlist (D20); real Google roundtrip completed 2026-10-19 (live smoke; F5 signed); CI green on new repo (run 38619640718)
+- [x] **Foundation Gate** checklist signed (§3 F5) — **SIGNED 2026-10-19**; Google OAuth smoke passed live + both founders signed. Agent-side items were green 2026-10-15 (lint/typecheck/vitest/build/db-reset/pgTAP/e2e). Full status: README "F5 sign-off status"
 - [x] **T-A003** catalog/enrollment + migration `a_core_academics` (§4 A1) — done 2026-10-15: migration + 6 documented deviations (incl. F1 `auth_uid()` helper fix + `has_permission` registry delta), seed section 9, pgTAP 58/58, regenerated types, `/app/offerings/*` CRUD (contracts/actions/forms/i18n), e2e journey 12/12; gates all green (README phase log)
 - [x] **T-A004** marks + CSV importer + marksheet (§4 A2) — done 2026-10-16: migration `a_marks_import` + 5 documented deviations (D-g…D-k incl. public RPC wrappers for PostgREST), registry delta, `/app/marks*` + importer + marksheet UI, vitest 47/47, pgTAP 127/127, e2e 14/14; gates all green (README phase log)
 - [x] **T-A005** dashboard + announcements + TA analytics (§4 A3) — done 2026-10-16: migration `a_announcements_dashboard` (narrow announcements RLS + `private.student_dashboard()` + `private.offering_analytics()` with k>=5 suppression, public wrappers), `/app` dashboard (one bounded RPC), Tiptap announcement editor + sanitize on write AND render, section announcements list, staff-only lazy-Recharts analytics; vitest 58/58, pgTAP 148/148 (new file plan(21)), e2e dashboard journey 2/2 (standalone), build ✅; gates re-verified 2026-10-16 post-completion — vitest 58/58, db reset clean (5 migrations), pgTAP 148/148, e2e 2/2 (1 worker)
@@ -504,14 +512,15 @@ Ads without traffic earn ~nothing. Immediately after the ads gate, take traffic 
 - [x] **T-B002** ads schema + resolver + consent + kill switches (§6 AD1) — done 2026-10-16: migration `b_monetization_ads` (all 20 monetization tables verbatim + 6 documented deviations D-B2-a…f: duplicate `created_by` fix, R3 auth-page CHECK, kill-switch shape + partial uniques, immutable config versions, definer wrappers, sanitized resolver RPCs), seed section 11 (registries + dev placements, ads dark), `src/features/ads/` (Zod contracts, pure resolver with all gates + D13 pop cap, consent/visitor cookies, TTL-capped server loader, consent banner), registry delta (`build_ad_config`/`ad_config_snapshot`/`ad_kill_state` + public wrappers), vitest 113/113, pgTAP 294/294 (new file plan(82)); gates all green (README phase log)
 - [x] **T-B003** AdSlot + isolation + sponsors + Playwright ad safety (§6 AD2) — done 2026-10-17: migration `b_monetization_sponsor_slots` (public `page_sponsor_slots` wrapper per D-k; window/expiry/active + R3 `NOT is_auth` + https-only URL filter D-B3-a; sanitized payload; registry delta first), seed `booking` page_type + `booking-top` placement (6 page types / 3 placements), `resolveAdSlots` contract + `<AdSlot>`/`AdSlotView` reserved geometry (fail empty) + `<TapToReveal>` on marksheet (R1), adapter interface (`resolve`/`mount`/`destroy`/`report`) with empty ADR-008 allowlist (D-B3-b), CSP Report-Only + `/api/csp-report` + Permissions-Policy/Referrer-Policy, consent banner mounted behind `privateAdSurfaceOpen`, mounts on dashboard/booking/marksheet, vitest 145/145 (new file +32), pgTAP 327/327 (new file plan(33)), e2e `ads.safety.spec.ts` 7/7 `[ads-safety]`-isolated (CI grep split + `AD_CONFIG_CACHE_TTL_SECONDS=1`) + main suite 20/20 `--workers=1`; gates all green (README phase log)
 - [x] **Admin ads slice** config + kill switch UI + audit (§6 AD3) — done 2026-10-17: migration `b_admin_ads_audit` (`audit_log` pulled forward from T-B008 per plan §6, D-B4-a; table/indexes/trigger/policy/revokes verbatim from docs `schema|rls/admin.sql`; no registry delta — symbols pre-registered), `src/features/ads/admin/` + `(admin)/admin/ads` (`requireAdmin()` mirrors `is_platform_admin` via `platform_admins.profile_id = profiles.id`; 6 Zod-gated server actions — placement/network/flag/kill toggles, publish via `ad_config_snapshot` → `publishableConfig`, append-only rollback — each writing `ad.config.changed`/`ad.kill_switch.changed` audit rows; `AdsAdminView` + `AdminAds` i18n, button toggles, noindex + `instant=false` + `connection()`), proxy `session.ts` gates `/admin/*`, vitest 158/158 (new file +13), pgTAP 345/345 (new file plan(18)), e2e `admin.ads.spec.ts` 3/3 + main suite 23/23 `--workers=1` + `ads.safety` 7/7 isolated; gates all green (README phase log)
-- [ ] **DEP-1/2** — DEP-1 ✅ 2026-10-18 (Netlify Free site live + cloud Supabase migrated 9/9, seeded, verified, Google sign-in smoke passed; README "Hosting — Netlify (DEP-1)"); remaining: DEP-2 staging verification + production Supabase project + prod flags OFF (§7)
-- [ ] **Adsterra landing integration** (§11) — planned 2026-10-18; components reuse resolver gates; `ads.*` flags stay OFF
-- [ ] **GATE** Marks + Booking stable in prod → ad QA → enable ads (§7)
-- [ ] **Post-MVP** T-B001 → T-B004 traffic cards (§9)
+- [x] **DEP-1** deployment target — ✅ 2026-10-18 (Netlify Free live + cloud Supabase migrated 9/9, seeded, verified; README "Hosting — Netlify")
+- [ ] **DEP-2** production checklist — hosted cross-tenant/concurrency/CSV verification + Sentry/uptime/backup drill outstanding; staging-as-prod accepted (D18/ADR-010); **ads ON**; rehearsal/monitoring **blocked target** (§7)
+- [x] **Adsterra integration** (§11) — complete 2026-10-18/19; three units live on public pages and every `/app` page; `/auth` + `/admin` ad-free
+- [ ] **GATE** — **ACTIVATED 2026-10-19** (ads ON in production, must stay ON); kill-switch rehearsal + 1-week monitoring = **blocked target** (§7)
+- [ ] **Post-MVP** T-B001 → T-B004 traffic cards — priorities now in README "Post-MVP roadmap"
 
-## 11. Adsterra landing integration (recorded 2026-10-18; implementation starts next)
+## 11. Adsterra integration (COMPLETE 2026-10-19; ads live in production)
 
-> **Revision 2026-10-19 (owner request):** all three units now also render on every authenticated `/app` page (dashboard, marks, courses, bookings, forms) through `app-surface.ts` + `AppAdsterraUnits` in `(app)/app/layout.tsx`. Still gated by `ads.enabled` + `ads.private.enabled` + kill switches + per-network kill + consent; All three units are page-level scripts, so the privacy/terms copy now discloses in-app advertising. `/auth/*` and `/admin/*` remain ad-free. Flags stay OFF by default until the owner enables them.
+> **Revision 2026-10-19 (owner request):** all three units now also render on every authenticated `/app` page (dashboard, marks, courses, bookings, forms) through `app-surface.ts` + `AppAdsterraUnits` in `(app)/app/layout.tsx`. Still gated by `ads.enabled` + `ads.private.enabled` + kill switches + per-network kill + consent; all three units are page-level scripts, so the privacy/terms copy now discloses in-app advertising. `/auth/*` and `/admin/*` remain ad-free. **Flags and the `adsterra` network are ON in production and in seed (2026-10-19). Ads MUST NOT be switched off in production; kill switches are incident-only.**
 
 > **Source of truth for this work:** `adsterra-integration.md` (repo root, **gitignored** — contains the approved unit codes; never commit). Site approved on Adsterra (website ID 6133098). Three units in scope only: Native Banner 31803282, Social Bar 31803283, Banner 468×60 31803284 (script host `https://bauval.org`). Popunder + Smartlink must NOT be implemented.
 
@@ -521,7 +530,7 @@ Ads without traffic earn ~nothing. Immediately after the ads gate, take traffic 
   1. The public/anonymous ad layer is explicitly deferred in code (`page-ads.ts:74`, `viewer.ts:10` — "when Track A lands"); anonymous requests fail closed today.
   2. `adapters.ts` has one script URL per network — cannot express three per-unit scripts, and the registry has no per-unit script column; the ad-system-spec "never page edits" ideal path (data + adapter only) is not practical now.
 - Chosen path: dedicated Adsterra components reusing the SAME gates — `ads.enabled` + `ads.public.enabled` + `!global_kill` + `!university kill` + per-network kill (`killed_networks` excludes `adsterra`) + consent cookie + pathname allowlist — with e2e locking every boundary. No `docs/` edits; the deviation is explained in the PR description.
-- **GATE untouched (§7):** `ads.*` flags stay OFF; this ships provider code ahead of the GATE and the owner enables when ready.
+- **GATE activated 2026-10-19 (§7):** `ads.*` flags and the `adsterra` network are ON in production and seed. Kill-switch rehearsal + 1-week monitoring remain a blocked owner/time target.
 
 **Plan (order):**
 1. `src/features/ads/adsterra/config.ts` — reviewed registry: 3 unit codes + script URLs (host-reviewed `https://bauval.org`), sizes, allowed paths (`/` for banner + social bar; `/`, `/privacy`, `/terms`, `/about`, `/contact` for native).
@@ -533,7 +542,7 @@ Ads without traffic earn ~nothing. Immediately after the ads gate, take traffic 
 7. Tests: vitest (config/guard/component gating) + `e2e/landing.ads.spec.ts` — flags off → zero markup; on + consent → containers; consent denied → zero + banner; kill flip → dark; `/auth/*`, `/admin/*`, 404 → zero Adsterra markup; authenticated `/app` coverage lives in `e2e/ads.safety.spec.ts`; existing suites must stay green.
 8. Delivery: small commits on `hassan-dev`, pushed there only; PR → `main` with required notes (what was added / exact CSP lines / consent + kill-switch behavior / ad pages / unverified items). No `main` push, no `docs/` edits.
 
-**Owner actions after merge + deploy (task §8):** enable `adsterra` network + `ads.public.enabled` (public pages) and `ads.private.enabled` (authenticated `/app` shell) in `/admin/ads` when ready; incognito check with consent granted; confirm impressions in the Adsterra dashboard. Never click own ads.
+**Owner actions after merge + deploy (task §8):** ✅ `adsterra` network + `ads.public.enabled` + `ads.private.enabled` are enabled (2026-10-19). Remaining **blocked target:** incognito QA + confirm impressions in the Adsterra dashboard; then kill-switch rehearsal and 1-week monitoring. Never click own ads.
 
 ---
 

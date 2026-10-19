@@ -43,14 +43,6 @@ const ADS_FLAGS_ON: Array<[string, boolean]> = [
   ["ads.private.enabled", true],
   ["ads.global_kill", false],
 ];
-/** Shipped defaults (seed Section 6): layers off, master kill engaged. */
-const ADS_FLAGS_OFF: Array<[string, boolean]> = [
-  ["ads.enabled", false],
-  ["ads.public.enabled", false],
-  ["ads.private.enabled", false],
-  ["ads.global_kill", true],
-];
-
 function consentCookie() {
   return {
     name: "metria_consent",
@@ -207,9 +199,10 @@ test.describe("ads safety (T-B003)", () => {
   });
 
   test.afterAll(async () => {
-    // Shipped defaults first so no other suite can observe the flipped state.
-    if (universityId) await setFlags(ADS_FLAGS_OFF, universityId);
-    await setNetworkEnabled(false).catch(() => undefined);
+    // Restore the shipped defaults (ads live since 2026-10-19) so no other
+    // suite observes the flipped state.
+    if (universityId) await setFlags(ADS_FLAGS_ON, universityId);
+    await setNetworkEnabled(true).catch(() => undefined);
     if (sponsorIds.slot) {
       await serviceRest(`sponsor_slots?id=eq.${sponsorIds.slot}`, { method: "DELETE" });
     }

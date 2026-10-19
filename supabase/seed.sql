@@ -114,8 +114,10 @@ WHERE u.slug = 'fast-nuces-lahore'
     WHERE rp.university_id = u.id AND rp.role_id = r.id AND rp.permission_id = p.id
   );
 
--- 6) Feature flags: all registry keys seeded OFF except ads.global_kill
---    (kill switch engaged = ads fully dead at foundation time; plan.md §3 F1).
+-- 6) Feature flags: all registry keys seeded OFF except the ads activation set
+--    (owner decision 2026-10-19: ads MUST be live in production). The master
+--    kill switch stays OFF and remains the emergency control. This mirrors the
+--    live production config so `db reset`/fresh deploys never silently go dark.
 INSERT INTO public.feature_flags (university_id, key, enabled, config)
 SELECT u.id, f.key, f.enabled, '{}'::jsonb
 FROM public.universities u
@@ -130,10 +132,10 @@ CROSS JOIN (VALUES
   ('ta.public_profile.enabled', false),
   ('ta.eligibility.enabled', false),
   ('teacher.reviews.enabled', false),
-  ('ads.enabled', false),
-  ('ads.public.enabled', false),
-  ('ads.private.enabled', false),
-  ('ads.global_kill', true),
+  ('ads.enabled', true),
+  ('ads.public.enabled', true),
+  ('ads.private.enabled', true),
+  ('ads.global_kill', false),
   ('analytics.visits.enabled', false),
   ('revenue.share.enabled', false),
   ('payouts.enabled', false),
@@ -340,9 +342,10 @@ WHERE u.slug = 'fast-nuces-lahore'
 
 
 -- Section 11: ads registries (T-B002 + T-B003) — page types, formats and one
--- network for the dev tenant, plus three dev placements. Ads stay dark:
--- ads.enabled=false and ads.global_kill=true (Section 6). Idempotent: registry
--- rows are guarded by the global key uniqueness, placements by slot_key + page
+-- network for the dev tenant, plus three dev placements. Ads are LIVE per the
+-- 2026-10-19 owner decision: ads.enabled/public/private=true and
+-- ads.global_kill=false (Section 6), and the adsterra network is enabled.
+-- Idempotent: registry rows are guarded by the global key uniqueness, placements by slot_key + page
 -- type. `booking` page type + `booking-top` placement added by T-B003 so the
 -- booking period page can reserve ad geometry next to Book/Cancel (R1).
 
@@ -376,7 +379,7 @@ WHERE u.slug = 'fast-nuces-lahore'
 ON CONFLICT (key) DO NOTHING;
 
 INSERT INTO public.ad_networks (university_id, key, name, enabled)
-SELECT u.id, 'adsterra', 'Adsterra', false
+SELECT u.id, 'adsterra', 'Adsterra', true
 FROM public.universities u
 WHERE u.slug = 'fast-nuces-lahore'
 ON CONFLICT (key) DO NOTHING;

@@ -164,10 +164,10 @@ SELECT is(jsonb_array_length(current_setting('test.snap_other')::jsonb->'placeme
 
 SELECT is(current_setting('test.kill_pre')::jsonb->>'global', 'false','no global kill row yet');
 SELECT is(jsonb_array_length(current_setting('test.kill_pre')::jsonb->'killed_networks'), 0,'no killed networks yet');
-SELECT is(current_setting('test.kill_pre')::jsonb->'flags'->>'enabled', 'false','ads.enabled flag off');
-SELECT is(current_setting('test.kill_pre')::jsonb->'flags'->>'public_enabled', 'false','ads.public.enabled flag off');
-SELECT is(current_setting('test.kill_pre')::jsonb->'flags'->>'private_enabled', 'false','ads.private.enabled flag off');
-SELECT is(current_setting('test.kill_pre')::jsonb->'flags'->>'global_kill', 'true','ads.global_kill flag on');
+SELECT is(current_setting('test.kill_pre')::jsonb->'flags'->>'enabled', 'true','ads.enabled flag on (production activation 2026-10-19)');
+SELECT is(current_setting('test.kill_pre')::jsonb->'flags'->>'public_enabled', 'true','ads.public.enabled flag on');
+SELECT is(current_setting('test.kill_pre')::jsonb->'flags'->>'private_enabled', 'true','ads.private.enabled flag on');
+SELECT is(current_setting('test.kill_pre')::jsonb->'flags'->>'global_kill', 'false','ads.global_kill flag off');
 
 INSERT INTO public.ad_kill_switches (university_id, is_global, enabled)
 SELECT u.id, true, true FROM public.universities u WHERE u.slug = 'fast-nuces-lahore';

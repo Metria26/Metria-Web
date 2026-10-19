@@ -7,8 +7,8 @@ import { serviceRest } from "./helpers/auth";
  * it in the isolated single-worker pass after the main suite.
  *
  * Coverage:
- *  (a) shipped defaults (ads off) -> zero Adsterra markup anywhere,
- *  (b) flags on + no consent -> zero ad markup, consent banner visible,
+ *  (a) flags off -> zero Adsterra markup anywhere,
+ *  (b) live defaults (ads on) + no consent -> zero ad markup, consent banner visible,
  *  (c) consent granted -> banner/native/social units render with exact codes,
  *  (d) unauthenticated /app, /auth/*, /admin/* and 404 never carry Adsterra,
  *  (e) per-network kill darkens the landing page again,
@@ -145,12 +145,13 @@ test.describe("landing ads (SS11)", () => {
   test.afterAll(async () => {
     if (uniId) {
       await setNetworkKill(uniId, false).catch(() => undefined);
-      await setFlags(ADS_FLAGS_OFF, uniId).catch(() => undefined);
+      // Restore the shipped live defaults (2026-10-19).
+      await setFlags(ADS_FLAGS_ON, uniId).catch(() => undefined);
     }
-    await setNetworkEnabled(false).catch(() => undefined);
+    await setNetworkEnabled(true).catch(() => undefined);
   });
 
-  test("[ads-safety] defaults: no ad markup with ads shipped dark", async ({ page }) => {
+  test("[ads-safety] flags off: no ad markup and no consent banner", async ({ page }) => {
     await setFlags(ADS_FLAGS_OFF, uniId);
     await page.waitForTimeout(KILL_TTL_GRACE_MS);
     await page.context().clearCookies();
