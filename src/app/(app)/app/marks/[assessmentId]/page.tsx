@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/states/empty-state";
 import { createClient } from "@/lib/supabase/server";
 import { ImportPanel } from "@/features/marks/ui/import-panel";
 import { MarksEntry } from "@/features/marks/ui/marks-entry";
+import { ReleaseToggle } from "@/features/marks/ui/release-toggle";
 
 export const metadata: Metadata = {
   title: "Marks",
@@ -129,6 +130,8 @@ export default async function MarksEntryPage({
           })}
         </p>
       </div>
+
+      <ReleaseToggle assessmentId={assessmentId} released={assessment.visibility === "students"} />
 
       <section className="grid gap-3" aria-labelledby="entry-heading">
         <h2 id="entry-heading" className="text-lg font-semibold">

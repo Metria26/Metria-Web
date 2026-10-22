@@ -339,6 +339,14 @@
       "importSection": "Import from CSV",
       "notStaffedTitle": "Marks entry unavailable",
       "notStaffedBody": "You are not staffed on this offering. Ask a teacher to add you.",
+      "release": {
+        "title": "Visibility to students",
+        "releasedBody": "Released — students can see their scores for this assessment.",
+        "privateBody": "Hidden — scores stay private until you release them.",
+        "release": "Release to students",
+        "hide": "Hide from students",
+        "saving": "Saving…"
+      },
       "errors": {
         "notAuthorized": "You do not have permission to record marks.",
         "invalidInput": "Some values are invalid. Check the score and try again.",

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { markInputSchema, type ActionResult } from "./contracts";
+import { assessmentReleaseSchema, markInputSchema, type ActionResult } from "./contracts";
 
 /** i18n-safe error keys returned to forms (never leak Postgres details). */
 type ErrorKey =
@@ -105,5 +105,42 @@ export async function saveMarkAction(formData: FormData): Promise<ActionResult> 
   revalidatePath(`/app/offerings/${assessment.offering_id}`);
   revalidatePath(`/app/offerings/${assessment.offering_id}/marksheet`);
   revalidatePath("/app/marks");
+  revalidatePath("/app");
+  return { ok: true };
+}
+
+/**
+ * Release (or hide) an assessment's marks for students. Student-facing reads
+ * all filter `assessments.visibility = 'students'`, so without this a saved
+ * mark stays invisible forever. RLS assessments_manage gates the update to
+ * offering managers (staff without the permission see no offering_staff row).
+ */
+export async function setAssessmentReleaseAction(formData: FormData): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "notAuthorized" };
+
+  const parsed = assessmentReleaseSchema.safeParse({
+    assessmentId: emptyToUndefined(formData.get("assessmentId")),
+    visibility: emptyToUndefined(formData.get("visibility")),
+  });
+  if (!parsed.success) return { ok: false, error: "invalidInput" };
+
+  const { data: updated, error } = await supabase
+    .from("assessments")
+    .update({ visibility: parsed.data.visibility })
+    .eq("id", parsed.data.assessmentId)
+    .select("id, offering_id")
+    .maybeSingle();
+  if (error) return { ok: false, error: mapError(error.code) };
+  if (!updated) return { ok: false, error: "notAuthorized" };
+
+  revalidatePath(`/app/marks/${updated.id}`);
+  revalidatePath(`/app/offerings/${updated.offering_id}`);
+  revalidatePath(`/app/offerings/${updated.offering_id}/marksheet`);
+  revalidatePath("/app/marks");
+  revalidatePath("/app");
   return { ok: true };
 }

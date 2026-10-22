@@ -27,6 +27,16 @@ export const markInputSchema = z.object({
 });
 export type MarkInput = z.infer<typeof markInputSchema>;
 
+/**
+ * Release toggle (staff). `assessments.visibility = 'students'` is the only
+ * switch student-facing reads honour (own marks RLS, dashboard, marksheet).
+ */
+export const assessmentReleaseSchema = z.object({
+  assessmentId: z.string().uuid("assessmentRequired"),
+  visibility: z.enum(["private", "students"]),
+});
+export type AssessmentReleaseInput = z.infer<typeof assessmentReleaseSchema>;
+
 /** One client-pre-parsed CSV data row (Papaparse). Row-level semantics are
  *  validated server-side in import-logic so bad rows become counted statuses
  *  instead of failing the whole request. */

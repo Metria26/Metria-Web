@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  assessmentReleaseSchema,
   CSV_MAX_BYTES,
   CSV_MAX_ROWS,
   importPreviewRequestSchema,
@@ -51,6 +52,23 @@ describe("markInputSchema", () => {
   it("rejects non-uuid ids", () => {
     expect(
       markInputSchema.safeParse({ assessmentId: "nope", studentId: STUDENT_ID, score: "5" })
+        .success,
+    ).toBe(false);
+  });
+});
+
+describe("assessmentReleaseSchema", () => {
+  it("accepts the two visibility states", () => {
+    for (const visibility of ["private", "students"] as const) {
+      expect(
+        assessmentReleaseSchema.safeParse({ assessmentId: ASSESSMENT_ID, visibility }).success,
+      ).toBe(true);
+    }
+  });
+
+  it("rejects unknown visibility values", () => {
+    expect(
+      assessmentReleaseSchema.safeParse({ assessmentId: ASSESSMENT_ID, visibility: "public" })
         .success,
     ).toBe(false);
   });
