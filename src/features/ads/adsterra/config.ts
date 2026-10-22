@@ -76,10 +76,62 @@ export function isAdsterraPathAllowed(unitKey: AdsterraUnitKey, pathname: string
   return allowed.includes(normalized);
 }
 
+/** postMessage source id used by the banner fill watchdog (parent + frame). */
+export const BANNER_468_MESSAGE_SOURCE = "adsterra-banner-468";
+
+/** How long the watchdog waits for Adsterra to inject a creative. */
+export const BANNER_468_FILL_TIMEOUT_MS = 8000;
+
+/**
+ * Runs inside the srcdoc iframe. Adsterra renders a blank body when it has no
+ * fill (or the request is blocked), so the parent has no way to tell success
+ * from an empty slot. Watch for an injected creative and report either state;
+ * the parent collapses the whole slot on `empty` instead of leaving a white box.
+ */
+const BANNER_468_WATCHDOG = `
+(function () {
+  var source = ${JSON.stringify(BANNER_468_MESSAGE_SOURCE)};
+  var reported = false;
+  function send(status) {
+    if (reported) return;
+    reported = true;
+    try { parent.postMessage({ source: source, status: status }, "*"); } catch (e) {}
+  }
+  function hasVisibleCreative() {
+    var nodes = document.body ? document.body.querySelectorAll("iframe, img, ins, a") : [];
+    for (var i = 0; i < nodes.length; i += 1) {
+      var el = nodes[i];
+      if (el.tagName === "IMG" && (!el.complete || el.naturalWidth === 0)) continue;
+      var rect = el.getBoundingClientRect();
+      if (rect.width >= 10 && rect.height >= 10) return true;
+    }
+    var all = document.body ? document.body.querySelectorAll("*") : [];
+    for (var j = 0; j < all.length; j += 1) {
+      var tag = all[j].tagName;
+      if (tag === "SCRIPT" || tag === "STYLE" || tag === "LINK") continue;
+      var box = all[j].getBoundingClientRect();
+      if (box.width >= 50 && box.height >= 20) return true;
+    }
+    return false;
+  }
+  var started = Date.now();
+  var timer = setInterval(function () {
+    if (hasVisibleCreative()) {
+      clearInterval(timer);
+      send("filled");
+    } else if (Date.now() - started >= ${BANNER_468_FILL_TIMEOUT_MS}) {
+      clearInterval(timer);
+      send("empty");
+    }
+  }, 500);
+})();
+`;
+
 /**
  * Source for the 468x60 unit. Adsterra's loader uses document.write, which does
  * not work when a script is injected into the live document, so it runs inside
- * a sandboxed `srcDoc` iframe (task §4.1). Exported for unit tests.
+ * a sandboxed `srcDoc` iframe (task §4.1). The watchdog reports whether the
+ * unit actually painted. Exported for unit tests.
  */
 export function buildBanner468SrcDoc(): string {
   const unit = ADSTERRA_UNITS.banner_468;
@@ -99,6 +151,7 @@ export function buildBanner468SrcDoc(): string {
     "<style>html,body{margin:0;padding:0;overflow:hidden;background:transparent}</style>",
     "</head>",
     "<body>",
+    `<script>${BANNER_468_WATCHDOG}</script>`,
     `<script>atOptions=${options};</script>`,
     `<script src="${unit.scriptUrl}"></script>`,
     "</body>",

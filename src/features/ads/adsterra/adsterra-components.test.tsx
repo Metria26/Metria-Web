@@ -56,6 +56,8 @@ describe("AdsterraBanner468", () => {
     expect(frame.getAttribute("data-ad-unit-id")).toBe("31803284");
     expect(frame.getAttribute("srcdoc")).toContain(ADSTERRA_UNITS.banner_468.scriptUrl);
     expect(frame.getAttribute("srcdoc")).toContain("atOptions");
+    expect(frame.getAttribute("srcdoc")).toContain("adsterra-banner-468");
+    expect(screen.getByTestId("adsterra-banner-468").getAttribute("data-state")).toBe("loading");
   });
 });
 

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { ADSTERRA_UNITS, buildBanner468SrcDoc, isAdsterraPathAllowed } from "./config";
+import {
+  ADSTERRA_UNITS,
+  BANNER_468_MESSAGE_SOURCE,
+  buildBanner468SrcDoc,
+  isAdsterraPathAllowed,
+} from "./config";
 import {
   ADSTERRA_NETWORK_KEY,
   evaluatePublicSurface,
@@ -94,6 +99,8 @@ describe("adsterra config", () => {
     expect(doc).toContain('"height":60');
     expect(doc).toContain('"format":"iframe"');
     expect(doc).toContain(ADSTERRA_UNITS.banner_468.scriptUrl);
+    expect(doc).toContain(BANNER_468_MESSAGE_SOURCE);
+    expect(doc).toContain("postMessage");
     expect(doc).not.toContain("document.write");
   });
 });
