@@ -1,5 +1,11 @@
 import { expect, test } from "./helpers/test";
-import { ensureE2EUser, signInE2E } from "./helpers/auth";
+import {
+  E2E_SIGNOUT_EMAIL,
+  E2E_SIGNOUT_PASSWORD,
+  ensureE2ESignOutUser,
+  ensureE2EUser,
+  signInE2E,
+} from "./helpers/auth";
 
 test("sign-in page renders with Google button and noindex", async ({ page }) => {
   const response = await page.goto("/auth/sign-in");
@@ -43,7 +49,13 @@ test.describe("authenticated", () => {
   });
 
   test("sign out returns to sign-in", async ({ page }) => {
-    await signInE2E(page);
+    // Global sign-out only affects this fixture, not the student sessions used
+    // by the other parallel specs.
+    await ensureE2ESignOutUser();
+    await signInE2E(page, {
+      email: E2E_SIGNOUT_EMAIL,
+      password: E2E_SIGNOUT_PASSWORD,
+    });
     await page.getByTestId("sign-out").first().click();
     await expect(page).toHaveURL(/\/auth\/sign-in/);
   });

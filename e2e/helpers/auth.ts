@@ -14,6 +14,13 @@ export const E2E_EMAIL = "e2e.student@lhr.nu.edu.pk";
 export const E2E_PASSWORD = "e2e-Password123!";
 export const E2E_TA_EMAIL = "ta.e2e@lhr.nu.edu.pk";
 export const E2E_TA_PASSWORD = "e2e-Password123!";
+/**
+ * Dedicated sign-out fixture. Supabase signOut() defaults to global scope, so
+ * signing the shared student fixture out would invalidate every parallel test
+ * session for that user.
+ */
+export const E2E_SIGNOUT_EMAIL = "e2e.signout@lhr.nu.edu.pk";
+export const E2E_SIGNOUT_PASSWORD = E2E_PASSWORD;
 /** Second student fixture: capacity races need two distinct bookers (T-A006). */
 export const E2E_STUDENT2_EMAIL = "e2e.student2@lhr.nu.edu.pk";
 /** Platform-admin fixture for the /admin/ads console (AD3). */
@@ -31,6 +38,12 @@ export async function ensureE2EUser(): Promise<void> {
   // (private.current_university_ids) only admits active members, so promote
   // to a plain active member — no roles, hence no manage permission.
   await promoteMembership(authUserId, "student");
+}
+
+/** Creates the isolated fixture used only by the sign-out test. */
+export async function ensureE2ESignOutUser(): Promise<void> {
+  const authUserId = await ensureAuthUser(E2E_SIGNOUT_EMAIL, E2E_SIGNOUT_PASSWORD, "E2E Sign Out");
+  await promoteMembership(authUserId, "sign-out");
 }
 
 /** Promotes the F3-provisioned pending membership to active; returns the profile. */
@@ -137,7 +150,7 @@ export async function ensureE2ETa(): Promise<void> {
 /** Signs in through the test-only route (requires the Playwright dev server with E2E_MODE=1). */
 export async function signInE2E(
   page: Page,
-  creds: { email?: string; password?: string } = {},
+  creds: { email?: string; password?: string; dismissAdsConsent?: boolean } = {},
 ): Promise<void> {
   const email = creds.email ?? E2E_EMAIL;
   const password = creds.password ?? E2E_PASSWORD;
@@ -151,6 +164,25 @@ export async function signInE2E(
       document.head.appendChild(style);
     });
   });
+  // Seed a conservative consent choice before the first app render. Clicking
+  // the banner afterwards triggers a router.refresh() that can race the test's
+  // next navigation (notably the "sign-in bounces authenticated users" case).
+  // Never overwrite an explicit cookie planted by the ads-safety suite.
+  if (creds.dismissAdsConsent !== false) {
+    const cookies = await page.context().cookies("http://localhost:3000");
+    if (!cookies.some((cookie) => cookie.name === "metria_consent")) {
+      await page.context().addCookies([
+        {
+          name: "metria_consent",
+          value: encodeURIComponent(
+            JSON.stringify({ policyVersion: "v1", categories: { analytics: false, ads: false } }),
+          ),
+          url: "http://localhost:3000",
+        },
+      ]);
+    }
+  }
+
   const sessionUrl = `/auth/e2e-session?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&next=/app`;
   await page.goto(sessionUrl);
   // Under parallel workers the dev server can transiently fail the GoTrue
@@ -160,6 +192,17 @@ export async function signInE2E(
     await page.goto(sessionUrl);
   }
   await expect(page).toHaveURL(/\/app$/, { timeout: 10_000 });
+
+  // Ads are seeded live and the private consent banner is a fixed bottom
+  // dialog. It overlays sidebar actions and form buttons, so every shell test
+  // that is not explicitly exercising consent must dismiss it first.
+  if (creds.dismissAdsConsent !== false) {
+    const banner = page.getByTestId("consent-banner");
+    if ((await banner.count()) > 0) {
+      await page.getByTestId("consent-reject").click();
+      await expect(banner).toHaveCount(0);
+    }
+  }
 }
 
 /** Creates the second student fixture (F3 triggers, then promote membership). */

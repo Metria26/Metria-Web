@@ -53,6 +53,7 @@ test.describe("dashboard and announcements journey", () => {
     await page.getByTestId("offering-term").selectOption({ index: 1 });
     await page.getByTestId("offering-code").fill(offeringCode);
     await page.getByTestId("offering-submit").click();
+    await expect(page.getByTestId("offering-submit")).toBeEnabled({ timeout: 15_000 });
     await expect(page.getByTestId("offering-form-error")).toBeHidden();
 
     await expect(async () => {

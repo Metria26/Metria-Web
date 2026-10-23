@@ -5,6 +5,7 @@ import {
   E2E_TA_EMAIL,
   E2E_TA_PASSWORD,
   ensureE2ETa,
+  ensureE2EUser,
   signInE2E,
 } from "./helpers/auth";
 
@@ -14,6 +15,9 @@ const SEED_STUDENT_EMAIL = "student.dev@lhr.nu.edu.pk";
 test.describe("TA academics journey", () => {
   test.beforeAll(async () => {
     await ensureE2ETa();
+    // The second test signs in as the plain student fixture; create it here so
+    // it never depends on another spec file having run first in parallel mode.
+    await ensureE2EUser();
   });
 
   test("TA creates course → offering → section → assessment → enrolls student", async ({
@@ -51,6 +55,10 @@ test.describe("TA academics journey", () => {
     await page.getByTestId("offering-term").selectOption({ index: 1 });
     await page.getByTestId("offering-code").fill(offeringCode);
     await page.getByTestId("offering-submit").click();
+    // The action disables the button while the insert is in flight; the hidden
+    // error node alone is true immediately and would let the test navigate away
+    // before the row commits.
+    await expect(page.getByTestId("offering-submit")).toBeEnabled({ timeout: 15_000 });
     await expect(page.getByTestId("offering-form-error")).toBeHidden();
 
     // --- 3. Open the new offering from the list.

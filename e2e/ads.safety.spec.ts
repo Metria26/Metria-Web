@@ -259,7 +259,7 @@ test.describe("ads safety (T-B003)", () => {
   });
 
   test("[ads-safety] consent banner asks once and the choice persists", async ({ page }) => {
-    await signInE2E(page);
+    await signInE2E(page, { dismissAdsConsent: false });
     await expect(page.getByTestId("consent-banner")).toBeVisible();
     await expect(page.getByTestId("ad-slot").first()).toHaveAttribute(
       "data-state",

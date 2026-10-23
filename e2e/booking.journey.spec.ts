@@ -70,6 +70,7 @@ test.describe("booking journey", () => {
     await page.getByTestId("offering-term").selectOption({ index: 1 });
     await page.getByTestId("offering-code").fill(offeringCode);
     await page.getByTestId("offering-submit").click();
+    await expect(page.getByTestId("offering-submit")).toBeEnabled({ timeout: 15_000 });
     await expect(page.getByTestId("offering-form-error")).toBeHidden();
 
     await expect(async () => {
@@ -127,7 +128,11 @@ test.describe("booking journey", () => {
     await page.goto("/app/bookings");
     const periodRow = page.getByTestId("booking-period").filter({ hasText: periodTitle });
     await expect(periodRow).toBeVisible({ timeout: 15_000 });
-    await periodRow.getByTestId("booking-period-link").click();
+    // Full navigation avoids the dev-server client-router race where a soft
+    // transition is dropped while a revalidate refresh is still in flight.
+    const periodHref = await periodRow.getByTestId("booking-period-link").getAttribute("href");
+    expect(periodHref).toMatch(/\/app\/bookings\/[0-9a-f-]+$/);
+    await page.goto(periodHref!);
     await expect(page.getByTestId("period-title")).toHaveText(periodTitle);
     await expect(page.getByTestId("no-slots")).toBeVisible();
 
@@ -155,7 +160,9 @@ test.describe("booking journey", () => {
     await page.goto("/app/bookings");
     const periodRow = page.getByTestId("booking-period").filter({ hasText: periodTitle });
     await expect(periodRow).toBeVisible({ timeout: 15_000 });
-    await periodRow.getByTestId("booking-period-link").click();
+    const periodHref = await periodRow.getByTestId("booking-period-link").getAttribute("href");
+    expect(periodHref).toMatch(/\/app\/bookings\/[0-9a-f-]+$/);
+    await page.goto(periodHref!);
     await expect(page.getByTestId("period-title")).toHaveText(periodTitle);
 
     const slotRow = page.getByTestId("booking-slot").filter({ hasText: slotLocation });

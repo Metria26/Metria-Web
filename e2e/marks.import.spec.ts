@@ -58,6 +58,7 @@ test.describe("TA marks import journey", () => {
     await page.getByTestId("offering-term").selectOption({ index: 1 });
     await page.getByTestId("offering-code").fill(offeringCode);
     await page.getByTestId("offering-submit").click();
+    await expect(page.getByTestId("offering-submit")).toBeEnabled({ timeout: 15_000 });
     await expect(page.getByTestId("offering-form-error")).toBeHidden();
 
     await expect(async () => {
@@ -192,6 +193,9 @@ test.describe("TA marks import journey", () => {
     expect(marksheetHref).toMatch(/\/app\/offerings\/[0-9a-f-]+\/marksheet$/);
 
     await page.goto(marksheetHref!);
+    // Marks stay behind tap-to-reveal while the ad surface is live (R1).
+    await page.getByTestId("reveal-button").click();
+    await expect(page.getByTestId("sensitive-gate")).toHaveAttribute("data-state", "revealed");
     await expect(page.getByTestId("marksheet-row")).toContainText("E2M Quiz 1");
     // Imported score is visible on the released row.
     await expect(page.getByTestId("cell-score")).toHaveText(/8\s*\/\s*10/);
