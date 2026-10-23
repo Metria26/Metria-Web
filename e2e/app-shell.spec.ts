@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./helpers/test";
 import { ensureE2EUser, signInE2E } from "./helpers/auth";
 
 // Design system: 360 px baseline, no horizontal page scroll (design-system.md L11)

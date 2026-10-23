@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./helpers/test";
 import { ensureE2EUser, signInE2E } from "./helpers/auth";
 
 test("sign-in page renders with Google button and noindex", async ({ page }) => {
