@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { rpcTransport } from "@/lib/supabase/rpc";
 import {
   bookingInputSchema,
   cancelBookingInputSchema,
@@ -145,4 +146,33 @@ export async function cancelBookingAction(formData: FormData): Promise<ActionRes
   revalidatePath(`/app/bookings/${parsed.data.periodId}`);
   revalidatePath("/app");
   return { ok: true };
+}
+
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function formUuid(formData: FormData, key: string): string | null {
+  const value = emptyToUndefined(formData.get(key));
+  return value && uuidPattern.test(value) ? value : null;
+}
+
+/** Staff: delete a period and its slots, bookings and waitlist entries. */
+export async function deletePeriodAction(formData: FormData): Promise<void> {
+  const periodId = formUuid(formData, "periodId");
+  if (!periodId) return;
+  const supabase = await createClient();
+  await rpcTransport(supabase).rpc("delete_evaluation_period", { p_period_id: periodId });
+  revalidatePath("/app/bookings");
+  revalidatePath(`/app/bookings/${periodId}`);
+  revalidatePath("/app");
+}
+
+/** Staff: delete one slot and its bookings/waitlist entries. */
+export async function deleteSlotAction(formData: FormData): Promise<void> {
+  const slotId = formUuid(formData, "slotId");
+  const periodId = formUuid(formData, "periodId");
+  if (!slotId || !periodId) return;
+  const supabase = await createClient();
+  await rpcTransport(supabase).rpc("delete_slot", { p_slot_id: slotId });
+  revalidatePath(`/app/bookings/${periodId}`);
+  revalidatePath("/app/bookings");
 }

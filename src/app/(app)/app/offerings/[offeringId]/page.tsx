@@ -5,7 +5,14 @@ import { connection } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { EmptyState } from "@/components/states/empty-state";
 import { createClient } from "@/lib/supabase/server";
-import { removeEnrollmentInviteAction } from "@/features/academics/actions";
+import {
+  deleteAnnouncementAction,
+  deleteAssessmentAction,
+  deleteEnrollmentAction,
+  deleteSectionAction,
+  removeEnrollmentInviteAction,
+} from "@/features/academics/actions";
+import { ConfirmDeleteButton } from "@/components/ui/confirm-delete-button";
 import { loadOfferingAnalytics } from "@/features/academics/analytics";
 import { AssessmentForm, EnrollmentForm, SectionForm } from "@/features/academics/ui/forms";
 import { AnnouncementForm as AnnouncementComposer } from "@/features/academics/ui/announcement-editor";
@@ -169,6 +176,10 @@ export default async function OfferingDetailPage({
       : { data: [] as AnnouncementRow[] };
   const announcements = (announcementsRes.data ?? []) as AnnouncementRow[];
   const sectionCodeById = new Map(sections.map((section) => [section.id, section.section_code]));
+  // Students only see assessments released to them; staff see everything.
+  const visibleAssessments = viewerIsStaff
+    ? assessments
+    : assessments.filter((assessment) => assessment.visibility === "students");
 
   // Bulk-enrollment invites awaiting the student's first sign-in (staff-only;
   // RLS already fails closed for everyone else).
@@ -246,30 +257,43 @@ export default async function OfferingDetailPage({
                 data-testid="section-item"
               >
                 <span className="font-medium">{section.section_code}</span>
-                <span className="text-sm text-muted-foreground">
-                  {section.capacity != null
-                    ? t("capacityLabel", { count: section.capacity })
-                    : t("capacityUnlimited")}
+                <span className="flex flex-wrap items-center gap-3">
+                  <span className="text-sm text-muted-foreground">
+                    {section.capacity != null
+                      ? t("capacityLabel", { count: section.capacity })
+                      : t("capacityUnlimited")}
+                  </span>
+                  {viewerIsStaff ? (
+                    <form action={deleteSectionAction}>
+                      <input type="hidden" name="sectionId" value={section.id} />
+                      <input type="hidden" name="offeringId" value={offeringId} />
+                      <ConfirmDeleteButton
+                        label={t("actions.deleteSection")}
+                        confirmMessage={t("confirm.deleteSection")}
+                        testId="delete-section"
+                      />
+                    </form>
+                  ) : null}
                 </span>
               </li>
             ))}
           </ul>
         )}
-        <SectionForm offeringId={offeringId} />
+        {viewerIsStaff ? <SectionForm offeringId={offeringId} /> : null}
       </section>
 
       <section className="grid gap-3" aria-labelledby="assessments-heading">
         <h2 id="assessments-heading" className="text-lg font-semibold">
           {t("sections.assessments")}
         </h2>
-        {assessments.length === 0 ? (
+        {visibleAssessments.length === 0 ? (
           <EmptyState
             title={t("empty.assessmentsTitle")}
             description={t("empty.assessmentsBody")}
           />
         ) : (
           <ul className="grid gap-2" data-testid="assessments-list">
-            {assessments.map((assessment) => (
+            {visibleAssessments.map((assessment) => (
               <li
                 key={assessment.id}
                 className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card px-4 py-3"
@@ -283,19 +307,32 @@ export default async function OfferingDetailPage({
                   </span>
                 </span>
                 {viewerIsStaff ? (
-                  <Link
-                    href={`/app/marks/${assessment.id}`}
-                    className="inline-flex h-9 shrink-0 items-center rounded-lg border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
-                    data-testid="marks-link"
-                  >
-                    {t("enterMarks")}
-                  </Link>
+                  <span className="flex flex-wrap items-center gap-2">
+                    <Link
+                      href={`/app/marks/${assessment.id}`}
+                      className="inline-flex h-9 shrink-0 items-center rounded-lg border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
+                      data-testid="marks-link"
+                    >
+                      {t("enterMarks")}
+                    </Link>
+                    <form action={deleteAssessmentAction}>
+                      <input type="hidden" name="assessmentId" value={assessment.id} />
+                      <input type="hidden" name="offeringId" value={offeringId} />
+                      <ConfirmDeleteButton
+                        label={t("actions.deleteAssessment")}
+                        confirmMessage={t("confirm.deleteAssessment")}
+                        testId="delete-assessment"
+                      />
+                    </form>
+                  </span>
                 ) : null}
               </li>
             ))}
           </ul>
         )}
-        <AssessmentForm offeringId={offeringId} sections={sectionOptions} />
+        {viewerIsStaff ? (
+          <AssessmentForm offeringId={offeringId} sections={sectionOptions} />
+        ) : null}
       </section>
 
       <section className="grid gap-3" aria-labelledby="announcements-heading">
@@ -316,6 +353,21 @@ export default async function OfferingDetailPage({
               context: sectionCodeById.get(announcement.section_id),
               createdAt: announcement.created_at,
             }))}
+            renderActions={
+              viewerIsStaff
+                ? (announcement) => (
+                    <form action={deleteAnnouncementAction}>
+                      <input type="hidden" name="announcementId" value={announcement.id} />
+                      <input type="hidden" name="offeringId" value={offeringId} />
+                      <ConfirmDeleteButton
+                        label={t("actions.deleteAnnouncement")}
+                        confirmMessage={t("confirm.deleteAnnouncement")}
+                        testId="delete-announcement"
+                      />
+                    </form>
+                  )
+                : undefined
+            }
           />
         )}
         {viewerIsStaff && sectionOptions.length > 0 ? (
@@ -349,6 +401,17 @@ export default async function OfferingDetailPage({
                   <span className="text-sm text-muted-foreground">
                     {section?.section_code} · {enrollment.status}
                   </span>
+                  {viewerIsStaff ? (
+                    <form action={deleteEnrollmentAction}>
+                      <input type="hidden" name="enrollmentId" value={enrollment.id} />
+                      <input type="hidden" name="offeringId" value={offeringId} />
+                      <ConfirmDeleteButton
+                        label={t("actions.removeStudent")}
+                        confirmMessage={t("confirm.removeStudent")}
+                        testId="delete-enrollment"
+                      />
+                    </form>
+                  ) : null}
                 </li>
               );
             })}
@@ -393,11 +456,13 @@ export default async function OfferingDetailPage({
         {viewerIsStaff && sectionOptions.length > 0 ? (
           <EnrollmentImportPanel sections={sectionOptions} />
         ) : null}
-        {sectionOptions.length > 0 ? (
-          <EnrollmentForm sections={sectionOptions} />
-        ) : (
-          <p className="text-sm text-muted-foreground">{t("enrollmentNeedsSection")}</p>
-        )}
+        {viewerIsStaff ? (
+          sectionOptions.length > 0 ? (
+            <EnrollmentForm sections={sectionOptions} />
+          ) : (
+            <p className="text-sm text-muted-foreground">{t("enrollmentNeedsSection")}</p>
+          )
+        ) : null}
       </section>
 
       {viewerIsStaff && analytics ? (

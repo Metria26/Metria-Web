@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 import { loadPeriodBookingOverview } from "@/features/booking/overview";
 import { cancelState, remainingSeats } from "@/features/booking/rules";
 import { BookButton, CancelButton, SlotForm } from "@/features/booking/ui/forms";
+import { deletePeriodAction, deleteSlotAction } from "@/features/booking/actions";
+import { ConfirmDeleteButton } from "@/components/ui/confirm-delete-button";
 import { AdSlot } from "@/features/ads/ui/ad-slot";
 
 export const metadata: Metadata = {
@@ -74,6 +76,16 @@ export default async function BookingPeriodPage({
         <p className="text-sm text-muted-foreground">
           {t("cutoffNote", { hours: period.cutoff_hours })}
         </p>
+        {canManage ? (
+          <form action={deletePeriodAction}>
+            <input type="hidden" name="periodId" value={period.id} />
+            <ConfirmDeleteButton
+              label={t("actions.deletePeriod")}
+              confirmMessage={t("confirm.deletePeriod")}
+              testId="delete-period"
+            />
+          </form>
+        ) : null}
       </div>
 
       {/* T-B003: reserved ad geometry (booking-top) as its own section — never
@@ -164,6 +176,15 @@ export default async function BookingPeriodPage({
                           ))}
                         </ul>
                       )}
+                      <form action={deleteSlotAction}>
+                        <input type="hidden" name="slotId" value={slot.id} />
+                        <input type="hidden" name="periodId" value={period.id} />
+                        <ConfirmDeleteButton
+                          label={t("actions.deleteSlot")}
+                          confirmMessage={t("confirm.deleteSlot")}
+                          testId="delete-slot"
+                        />
+                      </form>
                     </div>
                   ) : null}
                 </li>

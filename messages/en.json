@@ -145,7 +145,13 @@
       "savePeriod": "Create period",
       "saveSlot": "Add slot",
       "book": "Book slot",
-      "cancel": "Cancel booking"
+      "cancel": "Cancel booking",
+      "deletePeriod": "Delete period",
+      "deleteSlot": "Delete slot"
+    },
+    "confirm": {
+      "deletePeriod": "Delete this period? All slots, bookings and waitlist entries in it will also be deleted.",
+      "deleteSlot": "Delete this slot? Its bookings and waitlist entries will also be deleted."
     },
     "statuses": {
       "active": "booked",
@@ -226,7 +232,17 @@
       "saveOffering": "Save offering",
       "saveSection": "Save section",
       "saveAssessment": "Save assessment",
-      "enrollStudent": "Enroll student"
+      "enrollStudent": "Enroll student",
+      "deleteSection": "Delete section",
+      "deleteAssessment": "Delete assessment",
+      "deleteAnnouncement": "Delete announcement",
+      "removeStudent": "Remove student"
+    },
+    "confirm": {
+      "deleteSection": "Delete this section? Its enrollments, announcements, assessments, marks, periods, slots and bookings will also be deleted.",
+      "deleteAssessment": "Delete this assessment? All marks, mark history and import batches for it will also be deleted.",
+      "deleteAnnouncement": "Delete this announcement?",
+      "removeStudent": "Remove this student from the section?"
     },
     "empty": {
       "title": "No offerings yet",

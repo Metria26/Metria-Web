@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { EmptyState } from "@/components/states/empty-state";
+import { UnderConstruction } from "@/components/states/under-construction";
 import { createClient } from "@/lib/supabase/server";
 import { marksheetSchema } from "@/features/marks/contracts";
 import { privateRpc } from "@/features/marks/rpc";
@@ -39,7 +39,9 @@ export default async function MarksheetPage({
     offering_code: string;
     courses: { code: string; title: string } | null;
   } | null;
-  if (!offering) notFound();
+  if (!offering) {
+    return <UnderConstruction pageName="Marksheet" />;
+  }
 
   const { data, error } = await privateRpc(supabase).rpc("offering_marksheet", {
     p_offering_id: offeringId,

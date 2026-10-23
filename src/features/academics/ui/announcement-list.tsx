@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { sanitizeAnnouncementHtml } from "@/features/academics/sanitize";
 
 export type AnnouncementListItem = {
@@ -19,7 +20,13 @@ const displayDateFormat = new Intl.DateTimeFormat("en-PK", {
  * write path already sanitized, but rendering must never trust stored HTML.
  * Server component: no client JS ships for a read-only list.
  */
-export function AnnouncementList({ announcements }: { announcements: AnnouncementListItem[] }) {
+export function AnnouncementList({
+  announcements,
+  renderActions,
+}: {
+  announcements: AnnouncementListItem[];
+  renderActions?: (announcement: AnnouncementListItem) => ReactNode;
+}) {
   if (announcements.length === 0) return null;
   return (
     <ul className="grid gap-2" data-testid="announcements-list">
@@ -41,6 +48,9 @@ export function AnnouncementList({ announcements }: { announcements: Announcemen
             // Sanitized above on every render — never raw stored HTML.
             dangerouslySetInnerHTML={{ __html: sanitizeAnnouncementHtml(announcement.bodyHtml) }}
           />
+          {renderActions ? (
+            <div className="flex justify-end">{renderActions(announcement)}</div>
+          ) : null}
         </li>
       ))}
     </ul>

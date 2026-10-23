@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { rpcTransport } from "@/lib/supabase/rpc";
 import {
   announcementInputSchema,
   assessmentInputSchema,
@@ -441,6 +442,67 @@ export async function removeEnrollmentInviteAction(formData: FormData): Promise<
 
   await supabase.from("enrollment_invites").delete().eq("id", inviteId).eq("status", "pending");
   revalidatePath(`/app/offerings/${offeringId}`);
+}
+
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function formUuid(formData: FormData, key: string): string | null {
+  const value = emptyToUndefined(formData.get(key));
+  return value && uuidPattern.test(value) ? value : null;
+}
+
+async function deleteViaRpc(
+  fn: "delete_announcement" | "delete_assessment" | "delete_enrollment" | "delete_section_cascade",
+  idKey: string,
+  id: string,
+): Promise<boolean> {
+  const supabase = await createClient();
+  const { error } = await rpcTransport(supabase).rpc(fn, { [idKey]: id });
+  return !error;
+}
+
+/** Delete an announcement (author or offering staff). */
+export async function deleteAnnouncementAction(formData: FormData): Promise<void> {
+  const announcementId = formUuid(formData, "announcementId");
+  const offeringId = formUuid(formData, "offeringId");
+  if (!announcementId || !offeringId) return;
+  await deleteViaRpc("delete_announcement", "p_announcement_id", announcementId);
+  revalidatePath(`/app/offerings/${offeringId}`);
+  revalidatePath("/app");
+}
+
+/** Delete an assessment, its marks and mark history, and any import batches. */
+export async function deleteAssessmentAction(formData: FormData): Promise<void> {
+  const assessmentId = formUuid(formData, "assessmentId");
+  const offeringId = formUuid(formData, "offeringId");
+  if (!assessmentId || !offeringId) return;
+  await deleteViaRpc("delete_assessment", "p_assessment_id", assessmentId);
+  revalidatePath(`/app/offerings/${offeringId}`);
+  revalidatePath(`/app/marks/${assessmentId}`);
+  revalidatePath("/app/marks");
+}
+
+/** Remove one student from a section. */
+export async function deleteEnrollmentAction(formData: FormData): Promise<void> {
+  const enrollmentId = formUuid(formData, "enrollmentId");
+  const offeringId = formUuid(formData, "offeringId");
+  if (!enrollmentId || !offeringId) return;
+  await deleteViaRpc("delete_enrollment", "p_enrollment_id", enrollmentId);
+  revalidatePath(`/app/offerings/${offeringId}`);
+}
+
+/**
+ * Delete a section and everything that belongs to it: enrollments,
+ * announcements, assessments/marks, periods/slots/bookings and invites.
+ */
+export async function deleteSectionAction(formData: FormData): Promise<void> {
+  const sectionId = formUuid(formData, "sectionId");
+  const offeringId = formUuid(formData, "offeringId");
+  if (!sectionId || !offeringId) return;
+  await deleteViaRpc("delete_section_cascade", "p_section_id", sectionId);
+  revalidatePath(`/app/offerings/${offeringId}`);
+  revalidatePath("/app/bookings");
+  revalidatePath("/app");
 }
 
 /**
