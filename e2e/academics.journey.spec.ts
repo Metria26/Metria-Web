@@ -90,6 +90,7 @@ test.describe("TA academics journey", () => {
     await page.getByTestId("assessment-total").fill("10");
     await page.getByTestId("assessment-weight").fill("15");
     await page.getByTestId("assessment-submit").click();
+    await expect(page.getByTestId("assessment-submit")).toBeEnabled({ timeout: 15_000 });
     await expect(page.getByTestId("assessment-form-error")).toBeHidden();
     const assessmentItem = page.getByTestId("assessment-item").filter({ hasText: "E2E Quiz 1" });
     await expect(assessmentItem).toBeVisible();
