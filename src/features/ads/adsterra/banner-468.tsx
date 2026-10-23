@@ -4,20 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ADSTERRA_UNITS, BANNER_468_MESSAGE_SOURCE, buildBanner468SrcDoc } from "./config";
 
-/**
- * Adsterra Banner 468x60 (unit 31803284, SS11).
- *
- * This unit uses `document.write`, which browsers ignore when a script is
- * injected into an already-parsed document — the standard fix is a `srcDoc`
- * iframe (task §4.1). The iframe is sandboxed, referrer-less and fixed to
- * 468x60 so it reserves its own geometry (no CLS). `max-width: 100%` keeps the
- * 360px viewport free of horizontal scroll.
- *
- * Adsterra leaves the iframe blank when it has no fill or the request is
- * blocked. The watchdog inside the srcdoc posts `filled`/`empty`; on `empty`
- * the whole slot (label included) unmounts instead of leaving an empty box.
- */
-
 const UNIT = ADSTERRA_UNITS.banner_468;
 const SRC_DOC = buildBanner468SrcDoc();
 
@@ -39,7 +25,6 @@ export function AdsterraBanner468({ className }: { className?: string }) {
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
-      // Only trust messages from our own frame, not any other window on the page.
       if (event.source !== frameRef.current?.contentWindow) return;
       if (!isBannerMessage(event.data)) return;
       setState(event.data.status as FillState);
@@ -47,8 +32,6 @@ export function AdsterraBanner468({ className }: { className?: string }) {
 
     window.addEventListener("message", onMessage);
 
-    // Parent-side safety net in case the srcdoc script itself never runs
-    // (CSP, blocked frame, ancient browser) — still collapse the empty box.
     const fallback = window.setTimeout(() => {
       setState((current) => (current === "loading" ? "empty" : current));
     }, 12000);
@@ -59,7 +42,7 @@ export function AdsterraBanner468({ className }: { className?: string }) {
     };
   }, []);
 
-  if (state === "empty") return null;
+  if (state !== "filled") return null;
 
   return (
     <aside

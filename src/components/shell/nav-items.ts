@@ -27,6 +27,7 @@ export const sidebarNav: NavItem[] = [
 /** Persistent mobile bottom nav for core student flows (design-system.md L11). */
 export const bottomNav: NavItem[] = [
   { key: "dashboard", href: "/app", icon: LayoutDashboard },
+  { key: "courses", href: "/app/offerings", icon: GraduationCap },
   { key: "bookings", href: "/app/bookings", icon: CalendarCheck },
   { key: "calendar", href: "/app/calendar", icon: CalendarDays },
   { key: "messages", href: "/app/messages", icon: MessageSquare },

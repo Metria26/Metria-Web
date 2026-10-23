@@ -51,6 +51,16 @@ Names in this file are canonical. SQL, API, UI, tests and task cards must use th
 ### Platform Admin
 `audit_log`, `rate_limit_counters`, `data_deletion_requests`.
 
+### Admin Management
+`private.get_pending_memberships(university_id)` (2026-10-19 admin function; pending membership list),
+`private.approve_membership(profile_id,university_id)` (approve membership),
+`private.reject_membership(profile_id,university_id)` (reject membership),
+`private.get_memberships_with_roles(university_id)` (members + roles),
+`private.assign_role(profile_id,university_id,role_name,assigned_by)` (grant role),
+`private.revoke_role(profile_id,university_id,role_name)` (revoke role),
+`private.get_roles_with_holders(university_id,role_name)` (holders list),
+`private.get_profile_details(profile_id,university_id)` (profile view).
+
 ### Cross-cutting tables
 `audit_log`, `outbox_jobs`, `dead_letters`, `rate_limit_counters`, `data_deletion_requests`, `course_meetings`, `consent_records`, `objection_rate_limits`, `ad_impressions`. Internal (private schema, not API-exposed): `auth_security_events`.
 

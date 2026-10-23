@@ -8,16 +8,6 @@ import type { ConsentCategories } from "../contracts";
 import type { AdSlotSponsor, AdSlotModel } from "../slots";
 import type { AdUnit } from "../resolver";
 
-/**
- * Reserved ad geometry (T-B003, R1/R2): the server resolves the slot and this
- * view renders a fixed box that reserves the exact aspect ratio before any
- * content arrives — sponsor images carry width/height and object-contain, so
- * loading or failing never shifts the page (CLS guard). Failure paths all drop
- * back to the empty reserved box: image error, adapter error, not allowlisted
- * (ADR-008), isolation mode without content. Never overlaps adjacent actions —
- * pages place it as its own flex section with normal spacing tokens.
- */
-
 export type AdSlotViewProps = {
   model: AdSlotModel;
   consent: ConsentCategories;
@@ -26,8 +16,10 @@ export type AdSlotViewProps = {
   scriptAllowlist?: Readonly<Record<string, string>>;
 };
 
-const BOX_CLASS =
-  "relative mx-auto aspect-[728/90] min-h-[72px] w-full overflow-hidden rounded-lg border border-dashed bg-muted/30";
+const FILLED_CLASS =
+  "relative mx-auto aspect-[728/90] min-h-[72px] w-full overflow-hidden rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30";
+const EMPTY_CLASS =
+  "relative mx-auto aspect-[728/90] min-h-[72px] w-full overflow-hidden opacity-0 pointer-events-none";
 
 export function AdSlotView({ model, consent, className, scriptAllowlist }: AdSlotViewProps) {
   const t = useTranslations("Ads");
@@ -37,6 +29,8 @@ export function AdSlotView({ model, consent, className, scriptAllowlist }: AdSlo
   const sponsor = model.sponsor && !sponsorFailed ? model.sponsor : null;
   const filled = sponsor !== null || networkMounted;
 
+  const baseClass = filled ? FILLED_CLASS : EMPTY_CLASS;
+
   return (
     <aside
       data-testid="ad-slot"
@@ -44,7 +38,7 @@ export function AdSlotView({ model, consent, className, scriptAllowlist }: AdSlo
       data-isolation={model.isolationMode}
       data-state={filled ? "filled" : "empty"}
       aria-label={t("slotLabel")}
-      className={className ? `${BOX_CLASS} ${className}` : BOX_CLASS}
+      className={className ? `${baseClass} ${className}` : baseClass}
     >
       {sponsor ? (
         <SponsorCreative sponsor={sponsor} onImageError={() => setSponsorFailed(true)} />
@@ -85,8 +79,6 @@ function SponsorCreative({
       >
         {t("sponsored")}
       </span>
-      {/* unoptimized: sponsor URLs are admin-managed external/relative paths —
-          no remotePatterns wildcard (ADR-008 stays strict), fixed 728x90 box. */}
       <Image
         src={sponsor.imageUrl}
         alt=""
@@ -150,7 +142,6 @@ function NetworkUnit({
 
     const host = hostRef.current;
     if (host && typeof IntersectionObserver === "undefined") {
-      // Test environments (jsdom) have no IO — mount immediately, still gated.
       tryMount();
     } else if (host) {
       observer = new IntersectionObserver(

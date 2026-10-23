@@ -621,5 +621,22 @@
       "invalidReference": "That item no longer exists.",
       "generic": "Something went wrong. Try again."
     }
+  },
+  "AdminLayout": {
+    "title": "Administration",
+    "subtitle": "Platform administration console",
+    "ads": "Ads",
+    "memberships": "Memberships",
+    "roles": "Roles"
+  },
+  "AdminRoles": {
+    "title": "Roles Administration",
+    "subtitle": "Manage role assignments and permissions across the university.",
+    "capability": "Requires platform administrator privileges."
+  },
+  "AdminMemberships": {
+    "title": "Memberships Administration",
+    "subtitle": "Manage university member accounts, status, and approvals.",
+    "capability": "Requires platform administrator privileges."
   }
 }
