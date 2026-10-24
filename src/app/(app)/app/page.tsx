@@ -34,13 +34,67 @@ export default async function DashboardPage() {
   const t = await getTranslations("Dashboard");
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: userProfile } = user
+    ? await supabase.from("profiles").select("id").eq("auth_user_id", user.id).maybeSingle()
+    : { data: null };
+
+  const { data: adminRow } = userProfile
+    ? await supabase
+        .from("platform_admins")
+        .select("id")
+        .eq("profile_id", userProfile.id)
+        .is("revoked_at", null)
+        .maybeSingle()
+    : { data: null };
+
+  const isAdmin = !!adminRow;
+
+  let offeringQuery = supabase
+    .from("course_offerings")
+    .select("id, offering_code, courses ( code, title )")
+    .order("created_at", { ascending: false });
+
+  if (!isAdmin && userProfile) {
+    const { data: staffRows } = await supabase
+      .from("offering_staff")
+      .select("offering_id")
+      .eq("profile_id", userProfile.id);
+    const staffOfferingIds = (staffRows ?? []).map((r) => r.offering_id);
+
+    if (staffOfferingIds.length > 0) {
+      offeringQuery = offeringQuery.in("id", staffOfferingIds);
+    } else {
+      const { data: myEnrollments } = await supabase
+        .from("enrollments")
+        .select("section_id")
+        .eq("profile_id", userProfile.id);
+      const sectionIds = (myEnrollments ?? []).map((e) => e.section_id);
+
+      let enrolledOfferingIds: string[] = [];
+      if (sectionIds.length > 0) {
+        const { data: secs } = await supabase
+          .from("sections")
+          .select("offering_id")
+          .in("id", sectionIds);
+        enrolledOfferingIds = (secs ?? []).map((s) => s.offering_id);
+      }
+
+      if (enrolledOfferingIds.length > 0) {
+        offeringQuery = offeringQuery.in("id", enrolledOfferingIds);
+      } else {
+        offeringQuery = offeringQuery.eq("id", "00000000-0000-0000-0000-000000000000");
+      }
+    }
+  }
+
   // Load dashboard data and user offerings concurrently
   const [dashboard, offeringsRes] = await Promise.all([
     loadStudentDashboard(supabase),
-    supabase
-      .from("course_offerings")
-      .select("id, offering_code, courses ( code, title )")
-      .order("created_at", { ascending: false }),
+    offeringQuery,
   ]);
 
   const offerings = (offeringsRes.data ?? []) as unknown as CourseOfferingRow[];
