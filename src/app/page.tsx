@@ -10,7 +10,6 @@ import { CONSENT_COOKIE, policyVersionFromEnv } from "@/features/ads/consent";
 import { loadPublicAdSurface } from "@/features/ads/public-surface";
 import { publicUnitAllowed } from "@/features/ads/public-surface-rules";
 import { ConsentBanner } from "@/features/ads/ui/consent-banner";
-import { AdsterraBanner468 } from "@/features/ads/adsterra/banner-468";
 import { AdsterraNativeBanner } from "@/features/ads/adsterra/native-banner";
 import { AdsterraSocialBar } from "@/features/ads/adsterra/social-bar";
 import { isAdsterraPathAllowed } from "@/features/ads/adsterra/config";
@@ -36,10 +35,9 @@ export default async function Home() {
   const cookieStore = await cookies();
   const initialConsentCookie = cookieStore.get(CONSENT_COOKIE)?.value ?? null;
 
-  const adsAllowed = (unit: "banner_468" | "native_banner" | "social_bar") =>
+  const adsAllowed = (unit: "native_banner" | "social_bar") =>
     publicUnitAllowed(surface, "/", (path) => isAdsterraPathAllowed(unit, path));
 
-  const showBanner = adsAllowed("banner_468");
   const showNative = adsAllowed("native_banner");
   const showSocialBar = adsAllowed("social_bar");
 
@@ -55,12 +53,6 @@ export default async function Home() {
             <ArrowRight aria-hidden />
           </Button>
         </section>
-
-        {showBanner ? (
-          <div className="mx-auto w-full max-w-5xl px-4 pb-8 md:px-6">
-            <AdsterraBanner468 />
-          </div>
-        ) : null}
 
         <section className="mx-auto w-full max-w-3xl px-4 pb-16 md:px-6">
           <h2 className="text-xl font-semibold tracking-tight">{t("whatTitle")}</h2>

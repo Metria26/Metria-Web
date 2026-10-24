@@ -1,6 +1,5 @@
 import { loadPrivateAdSurface } from "../app-surface";
 import { privateSurfaceAllows } from "../private-surface-rules";
-import { AdsterraBanner468 } from "./banner-468";
 import { AdsterraNativeBanner } from "./native-banner";
 import { AdsterraSocialBar } from "./social-bar";
 
@@ -20,7 +19,6 @@ export async function AppAdsterraUnits() {
 
   return (
     <div data-testid="app-adsterra-units" className="mb-8 flex flex-col gap-6">
-      <AdsterraBanner468 />
       <AdsterraNativeBanner />
       <AdsterraSocialBar />
     </div>
