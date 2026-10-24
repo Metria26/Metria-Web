@@ -42,7 +42,7 @@ export function AdsterraBanner468({ className }: { className?: string }) {
     };
   }, []);
 
-  if (state !== "filled") return null;
+  if (state === "empty") return null;
 
   return (
     <aside
