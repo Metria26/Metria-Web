@@ -1,21 +1,21 @@
-# Migration for admin membership management and role assignments
-# Author: Hassan
-# Date: 2026-10-19
-#
-# This migration provides database functions for:
-# 1. Managing platform membership approvals (admin function)
-# 2. Managing role assignments for users (admin function)
-# 3. Adding member role assignment and revocation capabilities
-#
-# These functions enable the new admin console interface for:
-# - Viewing pending memberships
-# - Approving/rejecting membership requests
-# - Managing user roles (TA, teacher, student)
-#
-# Migration scope: admin management functions only (no table changes)
-# Dependencies: existing university_memberships, role_assignments tables
-# Dependencies: existing platform_admins table (RLS enforced)
-#
+-- Migration for admin membership management and role assignments
+-- Author: Hassan
+-- Date: 2026-10-19
+--
+-- This migration provides database functions for:
+-- 1. Managing platform membership approvals (admin function)
+-- 2. Managing role assignments for users (admin function)
+-- 3. Adding member role assignment and revocation capabilities
+--
+-- These functions enable the new admin console interface for:
+-- - Viewing pending memberships
+-- - Approving/rejecting membership requests
+-- - Managing user roles (TA, teacher, student)
+--
+-- Migration scope: admin management functions only (no table changes)
+-- Dependencies: existing university_memberships, role_assignments tables
+-- Dependencies: existing platform_admins table (RLS enforced)
+--
 -- ============================================================================
 -- Section 1: Admin membership management functions
 -- ============================================================================
