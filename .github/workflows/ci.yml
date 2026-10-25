@@ -102,19 +102,27 @@ jobs:
 
       - name: Start local stack
         run: |
-          supabase start || {
-            echo "=== supabase start failed; dumping container states + logs ==="
-            sudo bash -c 'ulimit -n 200000' || true
-            {
-              sudo docker ps -a --format "{{.Names}} {{.Status}}"
-              for c in $(sudo docker ps -aq | head -20); do
-                echo "===== container $c ====="
-                sudo docker logs --tail 40 "$c" 2>&1 || true
-              done
-            } > supabase-start-failure.txt
-            tail -n 60 supabase-start-failure.txt || true
-            exit 1
-          }
+          set -o pipefail
+          supabase start 2>&1 | tee supabase-start-out.txt
+
+      - name: Dump stack failure diagnostics
+        if: failure()
+        run: |
+          {
+            echo "=== supabase start output ==="
+            cat supabase-start-out.txt 2>/dev/null || true
+            echo ""
+            echo "=== docker containers ==="
+            sudo docker ps -a 2>&1 || true
+            echo ""
+            echo "=== container logs (last 40 lines each) ==="
+            for c in $(sudo docker ps -aq 2>/dev/null | head -20); do
+              echo "===== container $c ====="
+              sudo docker logs --tail 40 "$c" 2>&1 || true
+            done
+          } > supabase-start-failure.txt
+          # Job summaries are public: this puts the real error on the run page.
+          cat supabase-start-failure.txt >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload stack failure diagnostics
         if: failure() && hashFiles('supabase-start-failure.txt') != ''
@@ -183,18 +191,34 @@ jobs:
 
       - name: Start local stack
         run: |
-          supabase start || {
-            echo "=== supabase start failed; dumping container states + logs ==="
-            {
-              sudo docker ps -a --format "{{.Names}} {{.Status}}"
-              for c in $(sudo docker ps -aq | head -20); do
-                echo "===== container $c ====="
-                sudo docker logs --tail 40 "$c" 2>&1 || true
-              done
-            } > supabase-start-failure.txt
-            tail -n 60 supabase-start-failure.txt || true
-            exit 1
-          }
+          set -o pipefail
+          supabase start 2>&1 | tee supabase-start-out.txt
+
+      - name: Dump stack failure diagnostics
+        if: failure()
+        run: |
+          {
+            echo "=== supabase start output ==="
+            cat supabase-start-out.txt 2>/dev/null || true
+            echo ""
+            echo "=== docker containers ==="
+            sudo docker ps -a 2>&1 || true
+            echo ""
+            echo "=== container logs (last 40 lines each) ==="
+            for c in $(sudo docker ps -aq 2>/dev/null | head -20); do
+              echo "===== container $c ====="
+              sudo docker logs --tail 40 "$c" 2>&1 || true
+            done
+          } > supabase-start-failure.txt
+          cat supabase-start-failure.txt >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload stack failure diagnostics
+        if: failure() && hashFiles('supabase-start-failure.txt') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-start-diagnostics
+          path: supabase-start-failure.txt
+          if-no-files-found: ignore
 
       - name: Apply migrations (clean)
         run: supabase db reset
