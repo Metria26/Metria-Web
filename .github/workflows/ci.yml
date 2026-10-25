@@ -87,8 +87,42 @@ jobs:
           # dev uses). Bump deliberately, together with supabase CLI updates.
           version: v2.115.0
 
+      - name: Raise nofile limits for Supabase containers
+        run: |
+          # Docker 29 on the October 2026 runner-image release re-broke the
+          # container RLIMIT_NOFILE dance (supabase/cli#4443 class of
+          # failures: a core container cannot raise its open-files limit and
+          # dies unhealthy). Raise host + daemon defaults above Supabase's
+          # 100000 before starting the stack.
+          sudo bash -c 'ulimit -n 200000'
+          node -e "const fs=require('fs');const p='/etc/docker/daemon.json';let j={};try{j=JSON.parse(fs.readFileSync(p,'utf8'))}catch(e){};j['default-ulimits']={nofile:{Name:'nofile',Hard:200000,Soft:200000}};fs.writeFileSync('/tmp/daemon.json',JSON.stringify(j))"
+          sudo mv /tmp/daemon.json /etc/docker/daemon.json
+          sudo systemctl restart docker
+          timeout 30 sh -c 'until docker info > /dev/null 2>&1; do sleep 1; done'
+
       - name: Start local stack
-        run: supabase start
+        run: |
+          supabase start || {
+            echo "=== supabase start failed; dumping container states + logs ==="
+            sudo bash -c 'ulimit -n 200000' || true
+            {
+              sudo docker ps -a --format "{{.Names}} {{.Status}}"
+              for c in $(sudo docker ps -aq | head -20); do
+                echo "===== container $c ====="
+                sudo docker logs --tail 40 "$c" 2>&1 || true
+              done
+            } > supabase-start-failure.txt
+            tail -n 60 supabase-start-failure.txt || true
+            exit 1
+          }
+
+      - name: Upload stack failure diagnostics
+        if: failure() && hashFiles('supabase-start-failure.txt') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-start-diagnostics
+          path: supabase-start-failure.txt
+          if-no-files-found: ignore
 
       - name: Apply migrations (clean)
         run: supabase db reset
@@ -138,8 +172,29 @@ jobs:
         with:
           version: v2.115.0
 
+      - name: Raise nofile limits for Supabase containers
+        run: |
+          # See the ci job step: Docker 29 container RLIMIT_NOFILE breakage.
+          sudo bash -c 'ulimit -n 200000'
+          node -e "const fs=require('fs');const p='/etc/docker/daemon.json';let j={};try{j=JSON.parse(fs.readFileSync(p,'utf8'))}catch(e){};j['default-ulimits']={nofile:{Name:'nofile',Hard:200000,Soft:200000}};fs.writeFileSync('/tmp/daemon.json',JSON.stringify(j))"
+          sudo mv /tmp/daemon.json /etc/docker/daemon.json
+          sudo systemctl restart docker
+          timeout 30 sh -c 'until docker info > /dev/null 2>&1; do sleep 1; done'
+
       - name: Start local stack
-        run: supabase start
+        run: |
+          supabase start || {
+            echo "=== supabase start failed; dumping container states + logs ==="
+            {
+              sudo docker ps -a --format "{{.Names}} {{.Status}}"
+              for c in $(sudo docker ps -aq | head -20); do
+                echo "===== container $c ====="
+                sudo docker logs --tail 40 "$c" 2>&1 || true
+              done
+            } > supabase-start-failure.txt
+            tail -n 60 supabase-start-failure.txt || true
+            exit 1
+          }
 
       - name: Apply migrations (clean)
         run: supabase db reset
