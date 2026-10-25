@@ -79,7 +79,10 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Pinned: "latest" drift broke `supabase start` after run 16
+          # (v2.115.0 is the version the last green CI ran and what local
+          # dev uses). Bump deliberately, together with supabase CLI updates.
+          version: v2.115.0
 
       - name: Start local stack
         run: supabase start
@@ -130,7 +133,7 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: v2.115.0
 
       - name: Start local stack
         run: supabase start
