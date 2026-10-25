@@ -20,7 +20,10 @@ env:
 
 jobs:
   ci:
-    runs-on: ubuntu-latest
+    # ubuntu-latest migrated to Ubuntu 26 on 2026-10-19 (runner-images#14748);
+    # `supabase start` is broken on the new image. Stay on the 24.04 image
+    # until Supabase local is verified on 26.04.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -100,7 +103,7 @@ jobs:
 
   e2e:
     if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: ci
     # Real local-stack values (default demo keys are public, not secrets) so
     # auth-gated shell tests can create a fixture user via the admin API.
