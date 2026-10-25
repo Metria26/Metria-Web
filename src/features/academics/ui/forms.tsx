@@ -35,12 +35,14 @@ function SelectField({
   options,
   required = true,
   testId,
+  defaultValue = "",
 }: {
   name: string;
   label: string;
   options: SelectOption[];
   required?: boolean;
   testId?: string;
+  defaultValue?: string;
 }) {
   const t = useTranslations("Offerings");
   return (
@@ -49,7 +51,7 @@ function SelectField({
       <select
         name={name}
         required={required}
-        defaultValue=""
+        defaultValue={defaultValue}
         className={fieldClass}
         data-testid={testId}
       >
@@ -205,9 +207,11 @@ export function SectionForm({ offeringId }: { offeringId: string }) {
 export function AssessmentForm({
   offeringId,
   sections,
+  defaultSectionId,
 }: {
   offeringId: string;
   sections: SelectOption[];
+  defaultSectionId?: string;
 }) {
   const t = useTranslations("Offerings");
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
@@ -275,6 +279,7 @@ export function AssessmentForm({
           label={t("fields.section")}
           options={sections}
           required={false}
+          defaultValue={defaultSectionId}
         />
       ) : null}
       <FormError state={state} testId="assessment-form-error" />
@@ -290,7 +295,13 @@ export function AssessmentForm({
   );
 }
 
-export function EnrollmentForm({ sections }: { sections: SelectOption[] }) {
+export function EnrollmentForm({
+  sections,
+  defaultSectionId,
+}: {
+  sections: SelectOption[];
+  defaultSectionId?: string;
+}) {
   const t = useTranslations("Offerings");
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
     async (_prev, formData) => enrollStudentAction(formData),
@@ -304,6 +315,7 @@ export function EnrollmentForm({ sections }: { sections: SelectOption[] }) {
         label={t("fields.section")}
         options={sections}
         testId="enrollment-section"
+        defaultValue={defaultSectionId}
       />
       <label className="grid gap-1.5">
         <span className={labelClass}>{t("fields.studentEmail")}</span>

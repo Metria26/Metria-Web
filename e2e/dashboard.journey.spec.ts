@@ -67,13 +67,16 @@ test.describe("dashboard and announcements journey", () => {
     expect(offeringHref).toMatch(/\/app\/offerings\/[0-9a-f-]+$/);
     await page.goto(offeringHref!);
 
+    // --- Add a section (the offering opens the section picker), then open
+    // the section-scoped hub.
     await page.getByTestId("section-code").fill("ANN-A");
     await page.getByTestId("section-capacity").fill("60");
     await page.getByTestId("section-submit").click();
     await expect(page.getByTestId("section-form-error")).toBeHidden();
-    await expect(page.getByTestId("section-item").filter({ hasText: "ANN-A" })).toBeVisible({
-      timeout: 20_000,
-    });
+    const sectionCard = page.getByTestId("section-item").filter({ hasText: "ANN-A" });
+    await expect(sectionCard).toBeVisible({ timeout: 20_000 });
+    await sectionCard.click();
+    await page.getByTestId("hub-announcements").click();
 
     // --- Post a rich-text announcement to the section.
     await page
@@ -94,11 +97,15 @@ test.describe("dashboard and announcements journey", () => {
     await expect(announcementItem).toBeVisible({ timeout: 15_000 });
     await expect(announcementItem).toContainText("Bring calculators to the quiz.");
 
-    // --- Class analytics section is staff-only and renders after the RPC.
-    await expect(page.getByRole("heading", { name: "Class analytics" })).toBeVisible();
+    // --- Class analytics view is staff-only and renders after the RPC.
+    await page.getByTestId("hub-back").click();
+    await page.getByTestId("hub-analytics").click();
+    await expect(page.getByRole("heading", { name: "Analytics & Reports" })).toBeVisible();
     await expect(page.getByTestId("analytics-empty-assessments")).toBeVisible();
 
     // --- Enroll the e2e member so the student dashboard has data.
+    await page.getByTestId("hub-back").click();
+    await page.getByTestId("hub-students").click();
     await page.getByTestId("enrollment-section").selectOption({ label: "ANN-A" });
     await page.getByTestId("enrollment-email").fill(E2E_EMAIL);
     await page.getByTestId("enrollment-submit").click();

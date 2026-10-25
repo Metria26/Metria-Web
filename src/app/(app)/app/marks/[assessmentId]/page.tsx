@@ -6,7 +6,7 @@ import { getTranslations } from "next-intl/server";
 import { EmptyState } from "@/components/states/empty-state";
 import { createClient } from "@/lib/supabase/server";
 import { ImportPanel } from "@/features/marks/ui/import-panel";
-import { MarksEntry } from "@/features/marks/ui/marks-entry";
+import { MarksEntry, type MarkEntryGroup } from "@/features/marks/ui/marks-entry";
 import { ReleaseToggle } from "@/features/marks/ui/release-toggle";
 
 export const metadata: Metadata = {
@@ -15,14 +15,6 @@ export const metadata: Metadata = {
 
 // Per-user, RLS-scoped data behind auth: request-time only.
 export const instant = false;
-
-type MarkRow = {
-  studentId: string;
-  name: string;
-  email: string;
-  score: number | null;
-  status: string;
-};
 
 export default async function MarksEntryPage({
   params,
@@ -39,7 +31,7 @@ export default async function MarksEntryPage({
 
   const { data: assessment } = await supabase
     .from("assessments")
-    .select("id, title, assessment_type, total, weight, visibility, offering_id")
+    .select("id, title, assessment_type, total, weight, visibility, offering_id, section_id")
     .eq("id", assessmentId)
     .maybeSingle();
   if (!assessment || !user) notFound();
@@ -70,18 +62,30 @@ export default async function MarksEntryPage({
     );
   }
 
-  const { data: sections } = await supabase
-    .from("sections")
-    .select("id")
-    .eq("offering_id", assessment.offering_id);
-  const sectionIds = (sections ?? []).map((section) => section.id);
+  // Section scope: an assessment tied to a section lists only that section's
+  // roster; an all-section assessment groups students per section so marks for
+  // one section never mix with another (R10-friendly: RLS unchanged).
+  const sectionScoped = assessment.section_id != null;
+  const { data: sectionsData } = sectionScoped
+    ? await supabase
+        .from("sections")
+        .select("id, section_code")
+        .in("id", [assessment.section_id])
+        .order("section_code")
+    : await supabase
+        .from("sections")
+        .select("id, section_code")
+        .eq("offering_id", assessment.offering_id)
+        .order("section_code");
+  const scopedSections = (sectionsData ?? []) as { id: string; section_code: string }[];
+  const scopedSectionIds = scopedSections.map((section) => section.id);
 
   const { data: enrollments } =
-    sectionIds.length > 0
+    scopedSectionIds.length > 0
       ? await supabase
           .from("enrollments")
           .select("profile_id, section_id")
-          .in("section_id", sectionIds)
+          .in("section_id", scopedSectionIds)
           .eq("status", "active")
       : { data: [] as { profile_id: string; section_id: string }[] };
 
@@ -104,16 +108,26 @@ export default async function MarksEntryPage({
       (mark) => [mark.student_id, mark],
     ),
   );
+  const studentById = new Map(students.map((student) => [student.id, student]));
 
-  const rows: MarkRow[] = students
-    .map((student) => ({
-      studentId: student.id,
-      name: student.display_name,
-      email: student.email,
-      score: marksByStudent.get(student.id)?.score ?? null,
-      status: marksByStudent.get(student.id)?.status ?? "pending",
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const groups: MarkEntryGroup[] = scopedSections.map((section) => ({
+    sectionId: section.id,
+    sectionCode: section.section_code,
+    rows: (enrollments ?? [])
+      .filter((enrollment) => enrollment.section_id === section.id)
+      .map((enrollment) => studentById.get(enrollment.profile_id))
+      .filter((student): student is { id: string; display_name: string; email: string } =>
+        Boolean(student),
+      )
+      .map((student) => ({
+        studentId: student.id,
+        name: student.display_name,
+        email: student.email,
+        score: marksByStudent.get(student.id)?.score ?? null,
+        status: marksByStudent.get(student.id)?.status ?? "pending",
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  }));
 
   return (
     <div className="flex flex-col gap-10">
@@ -128,6 +142,9 @@ export default async function MarksEntryPage({
             total: assessment.total,
             weight: assessment.weight,
           })}
+          {sectionScoped && scopedSections[0] !== undefined
+            ? ` · ${t("sectionHeading", { code: scopedSections[0].section_code })}`
+            : ""}
         </p>
       </div>
 
@@ -137,7 +154,7 @@ export default async function MarksEntryPage({
         <h2 id="entry-heading" className="text-lg font-semibold">
           {t("listTitle")}
         </h2>
-        <MarksEntry assessmentId={assessmentId} rows={rows} />
+        <MarksEntry assessmentId={assessmentId} groups={groups} />
       </section>
 
       <section

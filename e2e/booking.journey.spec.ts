@@ -95,6 +95,10 @@ test.describe("booking journey", () => {
     });
 
     // --- Enroll the e2e member so the student can see and book the period.
+    // Section creation leaves the page on the section picker; enter the
+    // section-scoped hub, then the students view.
+    await page.getByTestId("section-item").filter({ hasText: sectionCode }).click();
+    await page.getByTestId("hub-students").click();
     await page.getByTestId("enrollment-section").selectOption({ label: sectionCode });
     await page.getByTestId("enrollment-email").fill(E2E_EMAIL);
     await page.getByTestId("enrollment-submit").click();
