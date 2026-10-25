@@ -56,7 +56,7 @@ export async function saveMarkAction(formData: FormData): Promise<ActionResult> 
 
   const { data: assessment } = await supabase
     .from("assessments")
-    .select("id, offering_id, total, university_id")
+    .select("id, offering_id, total, university_id, section_id")
     .eq("id", parsed.data.assessmentId)
     .maybeSingle();
   if (!assessment || assessment.university_id !== profile.university_id) {
@@ -66,16 +66,20 @@ export async function saveMarkAction(formData: FormData): Promise<ActionResult> 
     return { ok: false, error: "scoreTooHigh" };
   }
 
-  // A mark may only exist for a student actively enrolled in the offering.
+  // A mark may only exist for a student actively enrolled in the offering —
+  // and when the assessment targets one section, only in that section.
   const { data: enrollment } = await supabase
     .from("enrollments")
-    .select("id, sections!inner(offering_id)")
+    .select("id, section_id, sections!inner(offering_id)")
     .eq("profile_id", parsed.data.studentId)
     .eq("status", "active")
     .eq("sections.offering_id", assessment.offering_id)
     .limit(1)
     .maybeSingle();
   if (!enrollment) return { ok: false, error: "notEnrolled" };
+  if (assessment.section_id != null && enrollment.section_id !== assessment.section_id) {
+    return { ok: false, error: "notEnrolled" };
+  }
 
   const score = parsed.data.score;
   const status = score === null ? "pending" : "graded";

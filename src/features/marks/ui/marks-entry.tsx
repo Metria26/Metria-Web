@@ -13,6 +13,12 @@ type MarkRow = {
   status: string;
 };
 
+export type MarkEntryGroup = {
+  sectionId: string;
+  sectionCode: string;
+  rows: MarkRow[];
+};
+
 const fieldClass =
   "h-9 w-24 rounded-lg border border-input bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-ring";
 const buttonClass =
@@ -66,25 +72,51 @@ function RowForm({ assessmentId, row }: { assessmentId: string; row: MarkRow }) 
   );
 }
 
-export function MarksEntry({ assessmentId, rows }: { assessmentId: string; rows: MarkRow[] }) {
+/**
+ * Marks are grouped per section: an assessment for one section shows that
+ * section only; an all-section assessment renders one list per section so a
+ * TA never mixes rosters while entering scores (R10).
+ */
+export function MarksEntry({
+  assessmentId,
+  groups,
+}: {
+  assessmentId: string;
+  groups: MarkEntryGroup[];
+}) {
   const t = useTranslations("Marks.entry");
   return (
-    <ul className="grid gap-2" data-testid="marks-entry-list">
-      {rows.map((row) => (
-        <li
-          key={row.studentId}
-          className="rounded-lg border bg-card px-4 py-3"
-          data-testid="mark-row"
-          data-email={row.email}
-        >
-          <RowForm assessmentId={assessmentId} row={row} />
-        </li>
+    <div className="grid gap-6" data-testid="marks-entry-groups">
+      {groups.map((group) => (
+        <section key={group.sectionId} className="grid gap-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-base font-semibold" data-testid="marks-section-heading">
+              {t("sectionHeading", { code: group.sectionCode })}
+            </h3>
+            <span className="text-sm text-muted-foreground" data-testid="marks-section-count">
+              {t("studentsCount", { count: group.rows.length })}
+            </span>
+          </div>
+          <ul className="grid gap-2" data-testid="marks-entry-list">
+            {group.rows.map((row) => (
+              <li
+                key={row.studentId}
+                className="rounded-lg border bg-card px-4 py-3"
+                data-testid="mark-row"
+                data-section={group.sectionCode}
+                data-email={row.email}
+              >
+                <RowForm assessmentId={assessmentId} row={row} />
+              </li>
+            ))}
+            {group.rows.length === 0 ? (
+              <li className="text-sm text-muted-foreground" data-testid="marks-entry-empty">
+                {t("noStudentsSection")}
+              </li>
+            ) : null}
+          </ul>
+        </section>
       ))}
-      {rows.length === 0 ? (
-        <li className="text-sm text-muted-foreground" data-testid="marks-entry-empty">
-          {t("noStudents")}
-        </li>
-      ) : null}
-    </ul>
+    </div>
   );
 }

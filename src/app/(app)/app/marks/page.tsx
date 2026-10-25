@@ -46,7 +46,7 @@ export default async function MarksHubPage() {
     .eq("profile_id", profile.id);
   const staffOfferingIds = [...new Set((staffRows ?? []).map((row) => row.offering_id))];
 
-  const [offeringsRes, assessmentsRes] = await Promise.all([
+  const [offeringsRes, assessmentsRes, sectionsRes] = await Promise.all([
     staffOfferingIds.length > 0
       ? supabase
           .from("course_offerings")
@@ -56,17 +56,38 @@ export default async function MarksHubPage() {
     staffOfferingIds.length > 0
       ? supabase
           .from("assessments")
-          .select("id, title, offering_id, assessment_type")
+          .select("id, title, offering_id, assessment_type, section_id")
           .in("offering_id", staffOfferingIds)
           .order("created_at")
-      : Promise.resolve({ data: [] as { id: string; title: string; offering_id: string }[] }),
+      : Promise.resolve({
+          data: [] as {
+            id: string;
+            title: string;
+            offering_id: string;
+            section_id: string | null;
+          }[],
+        }),
+    staffOfferingIds.length > 0
+      ? supabase
+          .from("sections")
+          .select("id, section_code")
+          .in("offering_id", staffOfferingIds)
+          .order("section_code")
+      : Promise.resolve({ data: [] as { id: string; section_code: string }[] }),
   ]);
   const offerings = (offeringsRes.data ?? []) as OfferingRow[];
   const staffAssessments = (assessmentsRes.data ?? []) as {
     id: string;
     title: string;
     offering_id: string;
+    section_id: string | null;
   }[];
+  const sectionCodeById = new Map(
+    ((sectionsRes.data ?? []) as { id: string; section_code: string }[]).map((section) => [
+      section.id,
+      section.section_code,
+    ]),
+  );
 
   // --- Own marks (student read policy: released assessments, own rows only).
   const { data: ownMarks } = await supabase
@@ -141,17 +162,30 @@ export default async function MarksHubPage() {
                     <span className="text-sm text-muted-foreground">{t("noAssessments")}</span>
                   ) : (
                     <ul className="flex flex-wrap gap-2">
-                      {assessments.map((assessment) => (
-                        <li key={assessment.id}>
-                          <Link
-                            href={`/app/marks/${assessment.id}`}
-                            className="inline-flex h-9 items-center rounded-lg border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
-                            data-testid="hub-assessment-link"
-                          >
-                            {t("enterMarks", { title: assessment.title })}
-                          </Link>
-                        </li>
-                      ))}
+                      {assessments.map((assessment) => {
+                        const sectionCode = assessment.section_id
+                          ? sectionCodeById.get(assessment.section_id)
+                          : null;
+                        return (
+                          <li key={assessment.id} className="flex items-center gap-1">
+                            <Link
+                              href={`/app/marks/${assessment.id}`}
+                              className="inline-flex h-9 items-center rounded-lg border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
+                              data-testid="hub-assessment-link"
+                            >
+                              {t("enterMarks", { title: assessment.title })}
+                            </Link>
+                            {sectionCode ? (
+                              <span
+                                className="text-xs text-muted-foreground"
+                                data-testid="hub-assessment-section"
+                              >
+                                {sectionCode}
+                              </span>
+                            ) : null}
+                          </li>
+                        );
+                      })}
                     </ul>
                   )}
                 </li>

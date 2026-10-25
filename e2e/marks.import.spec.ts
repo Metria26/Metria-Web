@@ -73,12 +73,18 @@ test.describe("TA marks import journey", () => {
     createdOfferingId = offeringHref!.split("/").pop()!;
     await page.goto(offeringHref!);
 
+    // --- Add a section (the offering opens the section picker), then work
+    // inside it: the hub is section-scoped.
     await page.getByTestId("section-code").fill("IMP-A");
     await page.getByTestId("section-capacity").fill("40");
     await page.getByTestId("section-submit").click();
     await expect(page.getByTestId("section-form-error")).toBeHidden();
-    await expect(page.getByTestId("section-item").filter({ hasText: "IMP-A" })).toBeVisible();
+    const sectionCard = page.getByTestId("section-item").filter({ hasText: "IMP-A" });
+    await expect(sectionCard).toBeVisible();
+    await sectionCard.click();
+    await page.getByTestId("hub-assessments").click();
 
+    // --- 4. Add an assessment (the section select defaults to IMP-A).
     await page.getByTestId("assessment-title").fill("E2M Quiz 1");
     await page.getByTestId("assessment-total").fill("10");
     await page.getByTestId("assessment-weight").fill("10");
@@ -96,6 +102,8 @@ test.describe("TA marks import journey", () => {
 
     // Enroll the E2E student (profile from ensureE2EUser) plus the seed student
     // so the CSV can contain one resolvable and one unknown email.
+    await page.getByTestId("hub-back").click();
+    await page.getByTestId("hub-students").click();
     const sectionOption = page
       .getByTestId("enrollment-section")
       .locator("option", { hasText: "IMP-A" });

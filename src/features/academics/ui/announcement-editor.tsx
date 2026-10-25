@@ -49,7 +49,13 @@ function ToolbarButton({
  * sanitizes before persisting. Editing is intentionally minimal -- bold,
  * italic, lists -- matching the sanitize allowlist.
  */
-export function AnnouncementForm({ sections }: { sections: SectionOption[] }) {
+export function AnnouncementForm({
+  sections,
+  defaultSectionId,
+}: {
+  sections: SectionOption[];
+  defaultSectionId?: string;
+}) {
   const t = useTranslations("Announcements.form");
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
     async (_prev, formData) => createAnnouncementAction(formData),
@@ -79,7 +85,7 @@ export function AnnouncementForm({ sections }: { sections: SectionOption[] }) {
         <select
           name="sectionId"
           required
-          defaultValue=""
+          defaultValue={defaultSectionId ?? ""}
           className={fieldClass}
           data-testid="announcement-section"
         >

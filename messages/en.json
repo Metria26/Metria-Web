@@ -350,6 +350,9 @@
       },
       "listTitle": "Students",
       "noStudents": "No students are enrolled in this offering yet.",
+      "sectionHeading": "Section {code}",
+      "studentsCount": "{count} students",
+      "noStudentsSection": "No students are enrolled in this section yet.",
       "status": {
         "graded": "Graded",
         "pending": "Pending"

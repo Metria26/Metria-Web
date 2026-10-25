@@ -67,7 +67,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const { data: assessment } = await supabase
     .from("assessments")
-    .select("id, offering_id, total, university_id")
+    .select("id, offering_id, total, university_id, section_id")
     .eq("id", assessmentId)
     .maybeSingle();
   if (!assessment || assessment.university_id !== profile.university_id) {
@@ -101,6 +101,7 @@ export async function POST(request: Request): Promise<Response> {
     rows.map((row) => row.email),
     profile.university_id,
     assessment.offering_id,
+    assessment.section_id,
     assessmentId,
   );
   const classified = classifyRows(rows, {
@@ -176,6 +177,7 @@ async function buildResolvers(
   emails: string[],
   universityId: string,
   offeringId: string,
+  sectionId: string | null,
   assessmentId: string,
 ): Promise<{
   resolvedProfiles: Map<string, string>;
@@ -196,11 +198,20 @@ async function buildResolvers(
     }
   }
 
-  const { data: enrollmentRows } = await supabase
-    .from("enrollments")
-    .select("profile_id, sections!inner(offering_id)")
-    .eq("status", "active")
-    .eq("sections.offering_id", offeringId);
+  // Section-scoped assessments accept marks for that section's students only;
+  // all-section assessments keep the whole-offering resolver.
+  const { data: enrollmentRows } =
+    sectionId != null
+      ? await supabase
+          .from("enrollments")
+          .select("profile_id, section_id")
+          .eq("status", "active")
+          .eq("section_id", sectionId)
+      : await supabase
+          .from("enrollments")
+          .select("profile_id, sections!inner(offering_id)")
+          .eq("status", "active")
+          .eq("sections.offering_id", offeringId);
   const enrolledIds = new Set((enrollmentRows ?? []).map((row) => row.profile_id));
 
   const { data: markRows } = await supabase

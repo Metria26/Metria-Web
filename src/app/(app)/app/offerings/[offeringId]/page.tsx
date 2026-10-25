@@ -33,6 +33,7 @@ type AssessmentRow = {
   total: number;
   weight: number;
   visibility: string;
+  section_id: string | null;
 };
 type EnrollmentRow = { id: string; section_id: string; profile_id: string; status: string };
 type ProfileRow = { id: string; display_name: string; email: string };
@@ -112,7 +113,7 @@ export default async function OfferingDetailPage({
   const [assessmentsRes, enrollmentsRes, profilesRes] = await Promise.all([
     supabase
       .from("assessments")
-      .select("id, title, assessment_type, total, weight, visibility")
+      .select("id, title, assessment_type, total, weight, visibility, section_id")
       .eq("offering_id", offeringId)
       .order("created_at"),
     sections.length > 0
@@ -147,11 +148,6 @@ export default async function OfferingDetailPage({
       : { data: [] as { id: string }[] };
   const viewerHasMarks = (viewerMarks ?? []).length > 0;
 
-  const sectionOptions = sections.map((section) => ({
-    id: section.id,
-    label: section.section_code,
-  }));
-
   const announcementsRes =
     sections.length > 0
       ? await supabase
@@ -164,7 +160,6 @@ export default async function OfferingDetailPage({
           .order("created_at", { ascending: false })
       : { data: [] as AnnouncementRow[] };
   const announcements = (announcementsRes.data ?? []) as AnnouncementRow[];
-  const sectionCodeById = new Map(sections.map((section) => [section.id, section.section_code]));
   const visibleAssessments = viewerIsStaff
     ? assessments
     : assessments.filter((assessment) => assessment.visibility === "students");
@@ -235,6 +230,7 @@ export default async function OfferingDetailPage({
                   key={section.id}
                   href={`/app/offerings/${offeringId}?sectionId=${section.id}`}
                   className="flex items-center justify-between rounded-xl border bg-background p-4 transition-all hover:border-primary hover:bg-accent/50 focus-visible:outline-2 focus-visible:outline-ring"
+                  data-testid="section-item"
                 >
                   <div>
                     <span className="font-semibold text-base">{section.section_code}</span>
@@ -260,6 +256,25 @@ export default async function OfferingDetailPage({
       </div>
     );
   }
+
+  // Data scoped to the selected section: the hub opens per section, so every
+  // feature view must show only what belongs to that section. Assessments
+  // without a section (legacy/all-section) stay visible, labelled separately,
+  // so previously created work never disappears from the TA's view.
+  const sectionAssessments = visibleAssessments.filter(
+    (assessment) => assessment.section_id === sectionId,
+  );
+  const allSectionAssessments = visibleAssessments.filter(
+    (assessment) => assessment.section_id === null,
+  );
+  const scopedAnnouncements = announcements.filter(
+    (announcement) => announcement.section_id === sectionId,
+  );
+  const scopedEnrollments = enrollments.filter((enrollment) => enrollment.section_id === sectionId);
+  const scopedInvites = pendingInvites.filter((invite) => invite.section_id === sectionId);
+  // Within a section context every form targets that section: collapse the
+  // options to the single selected section and default the selects to it.
+  const selectedSectionOptions = [{ id: selectedSection.id, label: selectedSection.section_code }];
 
   // STEP 4: SPECIFIC FEATURE VIEW OR STEP 3: FEATURE HUB
   return (
@@ -308,6 +323,7 @@ export default async function OfferingDetailPage({
           <Link
             href={`/app/offerings/${offeringId}?sectionId=${sectionId}`}
             className="inline-flex items-center text-sm font-medium text-primary hover:underline"
+            data-testid="hub-back"
           >
             ← Back to Course Options Hub
           </Link>
@@ -417,18 +433,17 @@ export default async function OfferingDetailPage({
             </p>
           </div>
 
-          {announcements.length === 0 ? (
+          {scopedAnnouncements.length === 0 ? (
             <EmptyState
               title={t("empty.announcementsTitle")}
               description={t("empty.announcementsBody")}
             />
           ) : (
             <AnnouncementList
-              announcements={announcements.map((announcement) => ({
+              announcements={scopedAnnouncements.map((announcement) => ({
                 id: announcement.id,
                 title: announcement.title,
                 bodyHtml: announcement.body_html,
-                context: sectionCodeById.get(announcement.section_id),
                 createdAt: announcement.created_at,
               }))}
               renderActions={
@@ -449,10 +464,13 @@ export default async function OfferingDetailPage({
             />
           )}
 
-          {viewerIsStaff && sectionOptions.length > 0 ? (
+          {viewerIsStaff && selectedSectionOptions.length > 0 ? (
             <div className="mt-4 pt-6 border-t">
               <h3 className="text-sm font-semibold mb-3">Post New Announcement</h3>
-              <AnnouncementComposer sections={sectionOptions} />
+              <AnnouncementComposer
+                sections={selectedSectionOptions}
+                defaultSectionId={selectedSection.id}
+              />
             </div>
           ) : null}
         </div>
@@ -468,55 +486,115 @@ export default async function OfferingDetailPage({
             </p>
           </div>
 
-          {visibleAssessments.length === 0 ? (
+          {sectionAssessments.length === 0 && allSectionAssessments.length === 0 ? (
             <EmptyState
               title={t("empty.assessmentsTitle")}
               description={t("empty.assessmentsBody")}
             />
           ) : (
-            <ul className="grid gap-2" data-testid="assessments-list">
-              {visibleAssessments.map((assessment) => (
-                <li
-                  key={assessment.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card px-4 py-3"
-                  data-testid="assessment-item"
-                >
-                  <span className="grid gap-0.5">
-                    <span className="font-medium">{assessment.title}</span>
-                    <span className="text-sm text-muted-foreground" data-testid="assessment-meta">
-                      {t(`assessmentTypes.${assessment.assessment_type}`)} · {assessment.total} ·{" "}
-                      {assessment.weight}%
-                    </span>
-                  </span>
-                  {viewerIsStaff ? (
-                    <span className="flex flex-wrap items-center gap-2">
-                      <Link
-                        href={`/app/marks/${assessment.id}`}
-                        className="inline-flex h-9 shrink-0 items-center rounded-lg border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
-                        data-testid="marks-link"
+            <div className="grid gap-6">
+              {sectionAssessments.length > 0 ? (
+                <ul className="grid gap-2" data-testid="assessments-list">
+                  {sectionAssessments.map((assessment) => (
+                    <li
+                      key={assessment.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card px-4 py-3"
+                      data-testid="assessment-item"
+                    >
+                      <span className="grid gap-0.5">
+                        <span className="font-medium">{assessment.title}</span>
+                        <span
+                          className="text-sm text-muted-foreground"
+                          data-testid="assessment-meta"
+                        >
+                          {t(`assessmentTypes.${assessment.assessment_type}`)} · {assessment.total}{" "}
+                          · {assessment.weight}%
+                        </span>
+                      </span>
+                      {viewerIsStaff ? (
+                        <span className="flex flex-wrap items-center gap-2">
+                          <Link
+                            href={`/app/marks/${assessment.id}`}
+                            className="inline-flex h-9 shrink-0 items-center rounded-lg border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
+                            data-testid="marks-link"
+                          >
+                            {t("enterMarks")}
+                          </Link>
+                          <form action={deleteAssessmentAction}>
+                            <input type="hidden" name="assessmentId" value={assessment.id} />
+                            <input type="hidden" name="offeringId" value={offeringId} />
+                            <ConfirmDeleteButton
+                              label={t("actions.deleteAssessment")}
+                              confirmMessage={t("confirm.deleteAssessment")}
+                              testId="delete-assessment"
+                            />
+                          </form>
+                        </span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {allSectionAssessments.length > 0 ? (
+                <div className="grid gap-2">
+                  <h3 className="text-base font-semibold">Shared with all sections</h3>
+                  <p className="text-sm text-muted-foreground">
+                    These assessments were created without a section and apply to every section of
+                    the offering.
+                  </p>
+                  <ul className="grid gap-2">
+                    {allSectionAssessments.map((assessment) => (
+                      <li
+                        key={assessment.id}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed bg-card px-4 py-3"
+                        data-testid="assessment-item"
                       >
-                        {t("enterMarks")}
-                      </Link>
-                      <form action={deleteAssessmentAction}>
-                        <input type="hidden" name="assessmentId" value={assessment.id} />
-                        <input type="hidden" name="offeringId" value={offeringId} />
-                        <ConfirmDeleteButton
-                          label={t("actions.deleteAssessment")}
-                          confirmMessage={t("confirm.deleteAssessment")}
-                          testId="delete-assessment"
-                        />
-                      </form>
-                    </span>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+                        <span className="grid gap-0.5">
+                          <span className="font-medium">{assessment.title}</span>
+                          <span
+                            className="text-sm text-muted-foreground"
+                            data-testid="assessment-meta"
+                          >
+                            {t(`assessmentTypes.${assessment.assessment_type}`)} ·{" "}
+                            {assessment.total} · {assessment.weight}%
+                          </span>
+                        </span>
+                        {viewerIsStaff ? (
+                          <span className="flex flex-wrap items-center gap-2">
+                            <Link
+                              href={`/app/marks/${assessment.id}`}
+                              className="inline-flex h-9 shrink-0 items-center rounded-lg border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
+                              data-testid="marks-link"
+                            >
+                              {t("enterMarks")}
+                            </Link>
+                            <form action={deleteAssessmentAction}>
+                              <input type="hidden" name="assessmentId" value={assessment.id} />
+                              <input type="hidden" name="offeringId" value={offeringId} />
+                              <ConfirmDeleteButton
+                                label={t("actions.deleteAssessment")}
+                                confirmMessage={t("confirm.deleteAssessment")}
+                                testId="delete-assessment"
+                              />
+                            </form>
+                          </span>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
           )}
 
           {viewerIsStaff ? (
             <div className="mt-4 pt-6 border-t">
               <h3 className="text-sm font-semibold mb-3">Create Assessment</h3>
-              <AssessmentForm offeringId={offeringId} sections={sectionOptions} />
+              <AssessmentForm
+                offeringId={offeringId}
+                sections={selectedSectionOptions}
+                defaultSectionId={selectedSection.id}
+              />
             </div>
           ) : null}
         </div>
@@ -532,15 +610,12 @@ export default async function OfferingDetailPage({
             </p>
           </div>
 
-          {enrollments.length === 0 ? (
+          {scopedEnrollments.length === 0 ? (
             <EmptyState title={t("empty.studentsTitle")} description={t("empty.studentsBody")} />
           ) : (
             <ul className="grid gap-2" data-testid="enrollments-list">
-              {enrollments.map((enrollment) => {
+              {scopedEnrollments.map((enrollment) => {
                 const profile = profiles.get(enrollment.profile_id);
-                const section = sections.find(
-                  (candidate) => candidate.id === enrollment.section_id,
-                );
                 return (
                   <li
                     key={enrollment.id}
@@ -553,9 +628,7 @@ export default async function OfferingDetailPage({
                       </span>
                       <span className="text-sm text-muted-foreground">{profile?.email}</span>
                     </span>
-                    <span className="text-sm text-muted-foreground">
-                      {section?.section_code} · {enrollment.status}
-                    </span>
+                    <span className="text-sm text-muted-foreground">{enrollment.status}</span>
                     {viewerIsStaff ? (
                       <form action={deleteEnrollmentAction}>
                         <input type="hidden" name="enrollmentId" value={enrollment.id} />
@@ -573,12 +646,12 @@ export default async function OfferingDetailPage({
             </ul>
           )}
 
-          {viewerIsStaff && pendingInvites.length > 0 ? (
+          {viewerIsStaff && scopedInvites.length > 0 ? (
             <div className="grid gap-2">
               <h3 className="text-base font-semibold">{t("enrollImport.pendingTitle")}</h3>
               <p className="text-sm text-muted-foreground">{t("enrollImport.pendingHintList")}</p>
               <ul className="grid gap-2" data-testid="pending-invites-list">
-                {pendingInvites.map((invite) => (
+                {scopedInvites.map((invite) => (
                   <li
                     key={invite.id}
                     className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed bg-card px-4 py-3"
@@ -586,12 +659,7 @@ export default async function OfferingDetailPage({
                   >
                     <span className="grid gap-0.5">
                       <span className="font-medium">{invite.roll_input ?? invite.email}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {invite.email}
-                        {sectionCodeById.get(invite.section_id)
-                          ? ` · ${sectionCodeById.get(invite.section_id)}`
-                          : ""}
-                      </span>
+                      <span className="text-sm text-muted-foreground">{invite.email}</span>
                     </span>
                     <form action={removeEnrollmentInviteAction}>
                       <input type="hidden" name="inviteId" value={invite.id} />
@@ -610,18 +678,21 @@ export default async function OfferingDetailPage({
             </div>
           ) : null}
 
-          {viewerIsStaff && sectionOptions.length > 0 ? (
+          {viewerIsStaff && selectedSectionOptions.length > 0 ? (
             <div className="mt-4 pt-6 border-t">
               <h3 className="text-sm font-semibold mb-3">CSV Roster Import</h3>
-              <EnrollmentImportPanel sections={sectionOptions} />
+              <EnrollmentImportPanel sections={selectedSectionOptions} />
             </div>
           ) : null}
 
           {viewerIsStaff ? (
             <div className="mt-4 pt-6 border-t">
               <h3 className="text-sm font-semibold mb-3">Enroll Single Student</h3>
-              {sectionOptions.length > 0 ? (
-                <EnrollmentForm sections={sectionOptions} />
+              {selectedSectionOptions.length > 0 ? (
+                <EnrollmentForm
+                  sections={selectedSectionOptions}
+                  defaultSectionId={selectedSection.id}
+                />
               ) : (
                 <p className="text-sm text-muted-foreground">{t("enrollmentNeedsSection")}</p>
               )}

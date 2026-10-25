@@ -78,14 +78,20 @@ test.describe("TA academics journey", () => {
     await page.goto(offeringHref!);
     await expect(page.getByTestId("offering-meta")).toContainText(offeringCode);
 
-    // --- 4. Add a section.
+    // --- 4. Add a section (offering opens the section picker; the section
+    // form lives there until a section exists).
     await page.getByTestId("section-code").fill("E2E-A");
     await page.getByTestId("section-capacity").fill("35");
     await page.getByTestId("section-submit").click();
     await expect(page.getByTestId("section-form-error")).toBeHidden();
-    await expect(page.getByTestId("section-item").filter({ hasText: "E2E-A" })).toBeVisible();
+    const sectionCard = page.getByTestId("section-item").filter({ hasText: "E2E-A" });
+    await expect(sectionCard).toBeVisible();
+    // The hub is section-scoped: open the section, then the assessments view.
+    await sectionCard.click();
+    await page.getByTestId("hub-assessments").click();
 
-    // --- 5. Add an assessment.
+    // --- 5. Add an assessment (the section select defaults to the open
+    // section, so it is created inside E2E-A).
     await page.getByTestId("assessment-title").fill("E2E Quiz 1");
     await page.getByTestId("assessment-total").fill("10");
     await page.getByTestId("assessment-weight").fill("15");
@@ -96,7 +102,9 @@ test.describe("TA academics journey", () => {
     await expect(assessmentItem).toBeVisible();
     await expect(assessmentItem).toContainText("15%");
 
-    // --- 6. Enroll the seeded student by email (section select refreshes too).
+    // --- 6. Enroll the seeded student by email (section select defaults too).
+    await page.getByTestId("hub-back").click();
+    await page.getByTestId("hub-students").click();
     const sectionOption = page
       .getByTestId("enrollment-section")
       .locator("option", { hasText: "E2E-A" });
@@ -111,7 +119,6 @@ test.describe("TA academics journey", () => {
     // Dev-server first compile under parallel workers can push the server
     // action past the 5s default (button still shows Saving…, not an error).
     await expect(enrollmentItem).toBeVisible({ timeout: 15_000 });
-    await expect(enrollmentItem).toContainText("E2E-A");
 
     // --- 7. The offering shows up on the catalog page.
     await page.goto("/app/offerings");
