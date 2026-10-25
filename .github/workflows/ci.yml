@@ -121,8 +121,21 @@ jobs:
               sudo docker logs --tail 40 "$c" 2>&1 || true
             done
           } > supabase-start-failure.txt
-          # Job summaries are public: this puts the real error on the run page.
           cat supabase-start-failure.txt >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Surface stack error in annotations
+        if: failure()
+        run: |
+          # Check-run annotations are readable without admin access: emit the
+          # most relevant lines of the failing supabase start as errors.
+          if [ -f supabase-start-out.txt ]; then
+            LINES=$(grep -iaE "error|failed|unhealthy|refus|denied|rlimit|ulimit|pull|conflict|cannot|unable" supabase-start-out.txt | tail -8)
+            if [ -n "$LINES" ]; then
+              while IFS= read -r line; do echo "::error::$line"; done <<<"$(tail -8 <<<"$LINES")"
+            else
+              tail -6 supabase-start-out.txt | while IFS= read -r line; do echo "::error::$line"; done
+            fi
+          fi
 
       - name: Upload stack failure diagnostics
         if: failure() && hashFiles('supabase-start-failure.txt') != ''
