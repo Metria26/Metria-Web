@@ -33,7 +33,7 @@ wins. This plan never invents requirements — it only sequences, initializes, a
 
 ### Deployment strategy (updated 2026-10-19 — ads live in production)
 1. ✅ Build **Marks + Booking + Ads code** with ads flag-gated (historical; flags now activated).
-2. ✅ Deploy **Marks + Booking** to production first (Netlify Free, live since 2026-10-18).
+2. ✅ Deploy **Marks + Booking** to production first (Render Free primary since 2026-11-05; Netlify Free retained as fallback).
 3. ✅ **Ads are live in production since 2026-10-19** (owner decision — ads MUST NOT be switched
    off in production): `ads.enabled=true`, `ads.public.enabled=true`, `ads.private.enabled=true`,
    `ads.global_kill=false`, `adsterra` network enabled. The seed now mirrors this activation so
@@ -77,8 +77,8 @@ connections; optimize/archive before any capacity change.
 6. **Password manager** → record secrets inventory (Day 0 checklist in docs): OAuth client id/
    secret, Supabase anon key, service-role key, `BOOTSTRAP_ADMIN_EMAIL`, later Resend/Sentry/
    VAPID/CRON secrets. Never commit secrets.
-7. Domain registrar: optional for MVP (Google OAuth works with `localhost` in dev). Needed
-   before production deploy — decide the domain then.
+7. Domain registrar: optional for MVP (Google OAuth works with `localhost` in dev). Current
+   production uses the Render subdomain `metria-web.onrender.com`; a custom domain can be added later.
 
 ### 1.3 Environment contract
 Create `.env.example` (placeholders only) with at minimum the MVP subset of the registry env
@@ -438,8 +438,9 @@ Card: `docs/08-delivery/lane-b/tasks/t-b003-direct-sponsors-and-ad-isolation.md`
 ## 7. Deployment (free) + ads gate
 
 ### DEP-1 — Choose and configure the free deployment target (founder decides, agent executes)
-**✅ COMPLETE 2026-10-18.** Target = **Netlify Free** (ADR-009 amended); live at
-`https://metria-web.netlify.app`. **Staging-as-prod accepted 2026-10-19 (ADR-010):** the
+**✅ COMPLETE 2026-10-18; target moved to Render 2026-11-05.** Current target = **Render Free**
+(ADR-011); live at `https://metria-web.onrender.com`, with Netlify Free retained as fallback.
+**Staging-as-prod accepted 2026-10-19 (ADR-010):** the
 staging Supabase project is promoted to production; no second project is created.
 
 ### DEP-2 — Production checklist (MVP subset of `docs/10-ops/launch-checklist.md`)
@@ -451,7 +452,7 @@ staging Supabase project is promoted to production; no second project is created
 - [x] CSP Report-Only on; robots/meta noindex on all `/app`, `/auth`, `/admin`
 - [ ] Cross-tenant + booking concurrency + CSV idempotency tests green against the hosted DB
       — **remaining DEP-2 verification** (all green locally/CI; hosted run pending)
-- [ ] Sentry (if added) scrubbing PII; uptime monitor on; backup + restore drill documented
+- [ ] Sentry (if added) scrubbing PII; Render keep-alive monitor on `/api/health` (ADR-012; 3-5 minute interval, 750-hour budget guard); backup + restore drill documented
       — **owner/ops target**
 - [x] **Ads ON in production** (`ads.enabled=true`, `ads.public.enabled=true`,
       `ads.private.enabled=true`, `ads.global_kill=false`, `adsterra` enabled) — 2026-10-19.
@@ -513,8 +514,8 @@ calculators, then T-B005 → T-B006 attribution/revenue share, then deferred lan
 - [x] **T-B003** AdSlot + isolation + sponsors + Playwright ad safety (§6 AD2) — done 2026-10-17: migration `b_monetization_sponsor_slots` (public `page_sponsor_slots` wrapper per D-k; window/expiry/active + R3 `NOT is_auth` + https-only URL filter D-B3-a; sanitized payload; registry delta first), seed `booking` page_type + `booking-top` placement (6 page types / 3 placements), `resolveAdSlots` contract + `<AdSlot>`/`AdSlotView` reserved geometry (fail empty) + `<TapToReveal>` on marksheet (R1), adapter interface (`resolve`/`mount`/`destroy`/`report`) with empty ADR-008 allowlist (D-B3-b), CSP Report-Only + `/api/csp-report` + Permissions-Policy/Referrer-Policy, consent banner mounted behind `privateAdSurfaceOpen`, mounts on dashboard/booking/marksheet, vitest 145/145 (new file +32), pgTAP 327/327 (new file plan(33)), e2e `ads.safety.spec.ts` 7/7 `[ads-safety]`-isolated (CI grep split + `AD_CONFIG_CACHE_TTL_SECONDS=1`) + main suite 20/20 `--workers=1`; gates all green (README phase log)
 - [x] **Admin ads slice** config + kill switch UI + audit (§6 AD3) — done 2026-10-17: migration `b_admin_ads_audit` (`audit_log` pulled forward from T-B008 per plan §6, D-B4-a; table/indexes/trigger/policy/revokes verbatim from docs `schema|rls/admin.sql`; no registry delta — symbols pre-registered), `src/features/ads/admin/` + `(admin)/admin/ads` (`requireAdmin()` mirrors `is_platform_admin` via `platform_admins.profile_id = profiles.id`; 6 Zod-gated server actions — placement/network/flag/kill toggles, publish via `ad_config_snapshot` → `publishableConfig`, append-only rollback — each writing `ad.config.changed`/`ad.kill_switch.changed` audit rows; `AdsAdminView` + `AdminAds` i18n, button toggles, noindex + `instant=false` + `connection()`), proxy `session.ts` gates `/admin/*`, vitest 158/158 (new file +13), pgTAP 345/345 (new file plan(18)), e2e `admin.ads.spec.ts` 3/3 + main suite 23/23 `--workers=1` + `ads.safety` 7/7 isolated; gates all green (README phase log)
 - [x] **Bulk student CSV import + auto-enrollment invites** (academics, 2026-10-19) — one-column roll CSV (`24L-0612 → l240612@lhr.nu.edu.pk`, padded alternate), server action enrolls existing profiles + `enrollment_invites` for the rest; signup trigger auto-applies on first sign-in; staff pending list + Remove. Verified: db reset clean, pgTAP 345/345, typecheck, eslint on changed files (no new tests per owner request). Merged to `main` for production QA.
-- [x] **DEP-1** deployment target — ✅ 2026-10-18 (Netlify Free live + cloud Supabase migrated 9/9, seeded, verified; README "Hosting — Netlify")
-- [ ] **DEP-2** production checklist — hosted cross-tenant/concurrency/CSV verification + Sentry/uptime/backup drill outstanding; staging-as-prod accepted (D18/ADR-010); **ads ON**; rehearsal/monitoring **blocked target** (§7)
+- [x] **DEP-1** deployment target — ✅ 2026-10-18, moved to Render 2026-11-05 (Render Free live at `https://metria-web.onrender.com` + cloud Supabase migrated 9/9, seeded, verified; Netlify fallback retained; README "Hosting — Render (DEP-1)")
+- [ ] **DEP-2** production checklist — hosted cross-tenant/concurrency/CSV verification + Sentry/uptime/backup drill + Render keep-alive monitor setup (ADR-012) outstanding; staging-as-prod accepted (D18/ADR-010); **ads ON**; rehearsal/monitoring **blocked target** (§7)
 - [x] **Adsterra integration** (§11) — complete 2026-10-18/19; three units live on public pages and every `/app` page; `/auth` + `/admin` ad-free
 - [ ] **GATE** — **ACTIVATED 2026-10-19** (ads ON in production, must stay ON); kill-switch rehearsal + 1-week monitoring = **blocked target** (§7)
 - [ ] **Post-MVP** T-B001 → T-B004 traffic cards — priorities now in README "Post-MVP roadmap"

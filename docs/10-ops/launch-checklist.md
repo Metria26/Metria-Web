@@ -16,8 +16,9 @@
 ## Reliability
 - [ ] Backups enabled (within free-tier plan) and restore drill recorded.
 - [ ] Sentry, uptime, queue/DLQ, database capacity and CWV alerts routed to both founders.
+- [ ] Render keep-alive monitor active on `https://metria-web.onrender.com/api/health` (3-5 minute interval, never `/robots.txt`), monitor green after 20+ minutes idle, and Render instance-hour usage recorded (750/month cap; one always-awake free service only).
 - [ ] Login, ads, DB and email runbooks rehearsed.
-- [ ] Free-tier service limits and current provider terms verified.
+- [ ] Render Free + Netlify fallback service limits and current provider terms verified (including idle spin-down and `/robots.txt` behavior).
 
 ## Ads and SEO
 - [ ] Consent gating and network listing verified.

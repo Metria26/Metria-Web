@@ -9,6 +9,10 @@
 ## Adsterra initial setup
 Business account under company identity; verify publisher/domain ownership; configure adult, gambling, dating and VPN blocks; disable any unsupported unsafe format; document allowed script hosts and account owner; add only approved placement IDs to secret/config registry; verify consent behavior and kill switch in staging.
 
+## Hostname migration
+
+When the site moves to a new hostname (for example Netlify → Render), update the publisher website URL in the Adsterra dashboard, re-verify domain ownership, and confirm the approved units still serve. Keep the reviewed CSP/script host list unchanged unless the script host itself changes (the current reviewed host is `https://bauval.org`). If a fallback host is retained, document that ads are verified only for the primary domain.
+
 ## Subsequent network onboarding
 For Monetag or another approved provider, repeat domain/account ownership, terms review, category blocks, format inventory, script host review, privacy-policy listing, placement config, consent test, CSP report, mobile and low-bandwidth QA, screenshot evidence, and kill-switch drill. AdSense remains out of scope.
 

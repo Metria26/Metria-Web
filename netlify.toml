@@ -1,14 +1,19 @@
-# DEP-1 (ADR-009, amended 2026-10-18): Netlify Free deployment of Metria-Web.
+# Netlify FALLBACK deployment of Metria-Web (retired as primary 2026-11-05).
+# Current primary = Render Free (ADR-011); keep this site only as an emergency
+# fallback. Full context: README "Hosting — Render (DEP-1)".
 #
-# Cautions before changing (full context: README "Hosting — Netlify (DEP-1)"):
-# - Production deploys cost 15 of the 300 monthly credits (failed deploys and
-#   rollbacks are free) — batch merges to `main`.
-# - Staging runs on free branch deploys enabled in the Netlify UI
-#   (Site configuration -> Build & deploy -> Deploy contexts).
-# - A path-scoped [build] ignore rule (skip docs-only pushes) is planned AFTER
-#   first-deploy stability is confirmed; do not add one before that.
+# Cautions before using the fallback:
+# - Disable Netlify auto-deploy on `main` while Render is primary; otherwise
+#   every push triggers a 15-credit fallback deploy (failed deploys and
+#   rollbacks are free).
+# - If fallback deploys are re-enabled, staging runs on free branch deploys in
+#   the Netlify UI (Site configuration -> Build & deploy -> Deploy contexts).
+# - A path-scoped [build] ignore rule (skip docs-only pushes) is only worth
+#   adding if fallback deploys are re-enabled.
 # - Netlify's Next.js runtime auto-installs (detects the `next` dependency);
 #   the Next.js 16 cacheComponents support relies on it staying current.
+# - The fallback needs its own NEXT_PUBLIC_SITE_URL and Auth/OAuth redirects;
+#   Adsterra is currently verified against the Render domain only.
 
 [build]
   command = "pnpm build"
@@ -21,4 +26,4 @@
   # variables; scope "Builds", all contexts). Do NOT inline that variable's
   # comma-joined value here: the scanner scans env-var values, so a copy of
   # itself in this file fails every build (DEP-1 trap ③, 2026-10-19; full
-  # story in README "Hosting — Netlify").
+  # story in README "Hosting — Render (DEP-1)" Netlify fallback notes).

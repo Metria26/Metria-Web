@@ -7,6 +7,11 @@ import { updateSession } from "@/lib/supabase/session";
  */
 export default async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request });
+
+  if (request.nextUrl.pathname === "/api/health") {
+    return response;
+  }
+
   return updateSession(request, response);
 }
 
