@@ -23,7 +23,13 @@ vi.mock("next-intl", () => ({
 }));
 
 const openKill: AdKillState = {
-  flags: { enabled: true, public_enabled: true, private_enabled: true, global_kill: false },
+  flags: {
+    enabled: true,
+    public_enabled: true,
+    private_enabled: true,
+    popunder_enabled: true,
+    global_kill: false,
+  },
   global: false,
   killed_networks: [],
 };

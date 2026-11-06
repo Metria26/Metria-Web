@@ -50,7 +50,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           data-testid="app-main"
           className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-28 md:px-6 md:pb-10"
         >
-          {/* Owner request 2026-10-19: all three Adsterra units on every /app page. */}
+          {/* Owner requests 2026-10-19/2026-11-06: mounted Adsterra units on every /app page. */}
           <AppAdsterraUnits />
           {children}
         </main>

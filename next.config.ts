@@ -9,22 +9,30 @@ import createNextIntlPlugin from "next-intl/plugin";
  *   creatives, connect-src pins the Supabase origin, and violations post to
  *   /api/csp-report. With auth pages having zero ad markup (R3) and the
  *   allowlist empty, enforcement can flip later without markup changes.
- * - SS11 (Adsterra): the reviewed provider host https://bauval.org is added to
- *   script-src, frame-src and connect-src only. Adsterra creatives load further
- *   resources from rotating CDNs that cannot be enumerated statically, so the
- *   policy stays Report-Only and /api/csp-report is the monitoring channel.
- *   The reviewed units render on public pages and, behind the private surface
- *   gate, in the authenticated /app shell. /auth/* and /admin/* stay ad-free.
+ * - SS11 (Adsterra): the reviewed provider hosts https://bauval.org and
+ *   https://abscloud.org (popunder, ADR-013) are added to script-src, frame-src
+ *   and connect-src only. Adsterra creatives load further resources from
+ *   rotating CDNs that cannot be enumerated statically, so the policy stays
+ *   Report-Only and /api/csp-report is the monitoring channel. The reviewed
+ *   units render on public pages and, behind the private surface gate, in the
+ *   authenticated /app shell. /auth/* and /admin/* stay ad-free.
  * - Permissions-Policy disables powerful features (ad code has no business
  *   calling them; interest-cohort/topics explicitly off).
  * - Referrer-Policy: strict-origin-when-cross-origin — outbound sponsor links
  *   carry at most the origin (security checklist "strict referrer policy").
  */
 
-/** SS11: reviewed Adsterra script host (public ad codes, not a secret). */
+/** SS11: reviewed Adsterra script hosts (public ad codes, not secrets). */
 const ADSTERRA_ORIGIN = "https://bauval.org";
+const ADSTERRA_POPUNDER_ORIGIN = "https://abscloud.org";
+const ADSTERRA_ORIGINS = `${ADSTERRA_ORIGIN} ${ADSTERRA_POPUNDER_ORIGIN}`;
 
-const connectSrc = ["'self'", process.env.NEXT_PUBLIC_SUPABASE_URL, ADSTERRA_ORIGIN]
+const connectSrc = [
+  "'self'",
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  ADSTERRA_ORIGIN,
+  ADSTERRA_POPUNDER_ORIGIN,
+]
   .filter((entry): entry is string => Boolean(entry))
   .join(" ");
 
@@ -35,12 +43,12 @@ const cspReportOnly = [
   "frame-ancestors 'self'",
   // unsafe-eval matches Next dev tooling only — foreign script hosts still
   // violate 'self' and keep reporting; enforcement drops it later.
-  `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${ADSTERRA_ORIGIN}`,
+  `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${ADSTERRA_ORIGINS}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   `connect-src ${connectSrc}`,
-  `frame-src 'self' ${ADSTERRA_ORIGIN}`,
+  `frame-src 'self' ${ADSTERRA_ORIGINS}`,
   "media-src 'self'",
   "form-action 'self'",
   "report-uri /api/csp-report",

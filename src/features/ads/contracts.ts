@@ -55,6 +55,11 @@ export const adKillStateSchema = z.object({
     enabled: z.boolean(),
     public_enabled: z.boolean(),
     private_enabled: z.boolean(),
+    /**
+     * Independent popunder switch (ADR-013). Older kill-state payloads do not
+     * include it; a missing flag fails closed.
+     */
+    popunder_enabled: z.boolean().default(false),
     global_kill: z.boolean(),
   }),
   global: z.boolean(),

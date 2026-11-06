@@ -19,8 +19,8 @@ import {
  *  (d) a broken/aborted creative fails to the empty reserved box, page intact,
  *  (e) marks sit behind tap-to-reveal while ads serve (R1),
  *  (f) a kill flip darkens the surface again (master kill, short TTL), and
- *  (g) every authenticated /app page mounts the three Adsterra units while
- *      the private surface is open (owner request 2026-10-19).
+ *  (g) every authenticated /app page mounts the reviewed Adsterra units while
+ *      the private surface is open (owner requests 2026-10-19/2026-11-06).
  *
  * It mutates GLOBAL state (feature flags + one sponsor fixture): page_types
  * keys are globally unique, so no tenant-scoped variant exists. CI runs it in
@@ -41,6 +41,7 @@ const ADS_FLAGS_ON: Array<[string, boolean]> = [
   ["ads.enabled", true],
   ["ads.public.enabled", true],
   ["ads.private.enabled", true],
+  ["ads.popunder.enabled", true],
   ["ads.global_kill", false],
 ];
 function consentCookie() {
@@ -92,7 +93,7 @@ test.describe("ads safety (T-B003)", () => {
   // Never contact the live ad network: assertions only inspect the reviewed
   // markup, and real creatives would create artificial impressions.
   test.beforeEach(async ({ page }) => {
-    await page.route(/bauval\.org/, (route) => route.abort());
+    await page.route(/bauval\.org|abscloud\.org/, (route) => route.abort());
   });
 
   let universityId = "";
@@ -235,9 +236,7 @@ test.describe("ads safety (T-B003)", () => {
     expect(headers["permissions-policy"]).toContain("geolocation=()");
   });
 
-  test("[ads-safety] every authenticated app page mounts all three Adsterra units", async ({
-    page,
-  }) => {
+  test("[ads-safety] every authenticated app page mounts the Adsterra units", async ({ page }) => {
     test.setTimeout(60_000);
     await page.context().addCookies([consentCookie()]);
     await signInE2E(page);
@@ -245,7 +244,6 @@ test.describe("ads safety (T-B003)", () => {
     for (const path of ["/app", "/app/marks", "/app/offerings", "/app/bookings"]) {
       await page.goto(path);
       await expect(page.getByTestId("app-adsterra-units"), `${path} app ad wrapper`).toBeVisible();
-      await expect(page.getByTestId("adsterra-banner-468"), `${path} banner`).toBeVisible();
       await expect(page.getByTestId("adsterra-native"), `${path} native`).toBeVisible();
       await expect(
         page.locator('script[data-ad-unit-id="31803282"]'),
@@ -255,6 +253,11 @@ test.describe("ads safety (T-B003)", () => {
         page.locator('script[data-ad-unit-id="31803283"]'),
         `${path} social bar script`,
       ).toHaveCount(1);
+      await expect(
+        page.locator('script[data-ad-network-script="adsterra-popunder"]'),
+        `${path} popunder script`,
+      ).toHaveCount(1);
+      await expect(page.getByTestId("adsterra-banner-468"), `${path} banner`).toHaveCount(0);
     }
   });
 

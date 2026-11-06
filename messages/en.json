@@ -508,13 +508,13 @@
       },
       "privacy": {
         "title": "Privacy Policy",
-        "updated": "Last updated: October 2026.",
+        "updated": "Last updated: November 2026.",
         "intro": "{product} collects the minimum needed to run your courses: your university account identity, your memberships and roles, and the academic records for the courses you are enrolled in or staff.",
         "collectTitle": "What we collect",
         "collect": "Your name and email from your university Google account, your tenant membership, and course data such as assessments, marks, evaluation bookings and announcements. We do not sell personal data.",
         "adsTitle": "Advertising",
-        "ads": "Public pages and the authenticated app may show advertising served by third-party advertising networks. These networks may use cookies and similar technologies to measure and personalise advertising. Advertising networks are listed in our ad configuration and are subject to their own privacy policies.",
-        "adsNetworks": "The advertising network currently approved for this site is Adsterra. Advertising scripts load only after you grant consent for the advertising category.",
+        "ads": "Public pages and the authenticated app may show advertising served by third-party advertising networks. These networks may use cookies and similar technologies to measure and personalise advertising. Advertising networks are listed in our ad configuration and are subject to their own privacy policies. Some advertising, including popunder ads, may open a sponsored page in a background tab after you interact with a page.",
+        "adsNetworks": "The advertising network currently approved for this site is Adsterra. Advertising scripts load only after you grant consent for the advertising category. Popunder ads are limited to four script loads every two hours; a first-party cookie stores only a random browser id and recent load times to enforce that limit. No fingerprinting is used.",
         "consentTitle": "Consent",
         "consent": "Non-essential scripts, including advertising, do not load until you accept them in the consent banner. You can reject non-essential categories and still use the site. Your choice is stored in a first-party cookie.",
         "appTitle": "Inside the app",
@@ -524,7 +524,7 @@
       },
       "terms": {
         "title": "Terms of Use",
-        "updated": "Last updated: October 2026.",
+        "updated": "Last updated: November 2026.",
         "intro": "By using {product} you agree to these terms. If you do not agree, do not use the service.",
         "accountsTitle": "Accounts",
         "accounts": "Access is limited to members of a participating university. You must use your own university account and keep your credentials secure. Accounts may be suspended for misuse.",
@@ -533,7 +533,7 @@
         "contentTitle": "Content",
         "content": "Course content, marks and announcements belong to the university and the people who created them. You may not redistribute other users' data.",
         "adsTitle": "Advertising",
-        "ads": "Advertising may be displayed on public pages and inside the authenticated application. Advertising is labelled and must not be clicked artificially.",
+        "ads": "Advertising may be displayed on public pages and inside the authenticated application. Advertising is labelled and must not be clicked artificially. Some ads may open a sponsored page in a new tab; close it if you are not interested.",
         "liabilityTitle": "Availability and liability",
         "liability": "The service is provided as-is. We aim for high availability but do not guarantee uninterrupted access, and we are not liable for indirect losses arising from use of the service.",
         "contactTitle": "Contact",
@@ -575,6 +575,9 @@
         },
         "private": {
           "enabled": "Sponsor units on authenticated pages"
+        },
+        "popunder": {
+          "enabled": "Popunder format (background-tab ads)"
         },
         "global_kill": "Global kill (emergency off)"
       }

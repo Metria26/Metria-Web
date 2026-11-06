@@ -24,6 +24,8 @@ import { ADSTERRA_NETWORK_KEY } from "./public-surface-rules";
 export type PrivateAdSurface = {
   /** Master flag on, no global kill, private layer enabled, network live. */
   open: boolean;
+  /** Independent popunder switch (ADR-013); absent flag fails closed. */
+  popunderEnabled: boolean;
   consentGranted: boolean;
   universityId: string | null;
   killState: AdKillState | null;
@@ -42,6 +44,7 @@ export function evaluatePrivateSurface(input: {
   if (!input.authenticated || !input.universityId || !kill.success || !config.success) {
     return {
       open: false,
+      popunderEnabled: false,
       consentGranted: input.consentGranted,
       universityId: input.universityId,
       killState: null,
@@ -65,6 +68,7 @@ export function evaluatePrivateSurface(input: {
 
   return {
     open,
+    popunderEnabled: state.flags.popunder_enabled,
     consentGranted: input.consentGranted,
     universityId: input.universityId,
     killState: state,
@@ -75,4 +79,9 @@ export function evaluatePrivateSurface(input: {
 /** True when the app shell may mount ad units: surface open and consent given. */
 export function privateSurfaceAllows(surface: PrivateAdSurface): boolean {
   return surface.open && surface.consentGranted;
+}
+
+/** Popunder adds its independent switch on top of the normal private gate. */
+export function privatePopunderAllowed(surface: PrivateAdSurface): boolean {
+  return surface.popunderEnabled && privateSurfaceAllows(surface);
 }

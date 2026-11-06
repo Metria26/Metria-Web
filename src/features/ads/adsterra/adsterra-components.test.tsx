@@ -1,9 +1,11 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { AdsterraBanner468 } from "./banner-468";
 import { AdsterraNativeBanner } from "./native-banner";
+import { AdsterraPopunder } from "./popunder";
 import { AdsterraSocialBar } from "./social-bar";
 import { ADSTERRA_UNITS } from "./config";
+import { parseVisitorCookie, serializeVisitorState } from "../visitor";
 
 /**
  * SS11 component boundary: the exact Adsterra markup (script URLs, container
@@ -16,9 +18,30 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
 }));
 
+const POPUNDER_SCRIPT_SELECTOR = `script[src="${ADSTERRA_UNITS.popunder.scriptUrl}"]`;
+
+function clearAdVisitorCookie() {
+  document.cookie = "metria_ad_visitor=; Path=/; Max-Age=0; SameSite=Lax";
+}
+
+function readAdVisitorCookie() {
+  const prefix = "metria_ad_visitor=";
+  const raw = document.cookie
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(prefix))
+    ?.slice(prefix.length);
+  return parseVisitorCookie(raw ?? null);
+}
+
+beforeEach(() => {
+  clearAdVisitorCookie();
+});
+
 afterEach(() => {
   cleanup();
-  document.body.querySelectorAll("script[data-ad-unit-id]").forEach((el) => el.remove());
+  document.querySelectorAll("script[data-ad-unit-id]").forEach((el) => el.remove());
+  clearAdVisitorCookie();
 });
 
 describe("AdsterraNativeBanner", () => {
@@ -74,5 +97,51 @@ describe("AdsterraSocialBar", () => {
     expect(
       document.body.querySelectorAll(`script[src="${ADSTERRA_UNITS.social_bar.scriptUrl}"]`).length,
     ).toBe(0);
+  });
+});
+
+describe("AdsterraPopunder", () => {
+  it("injects one head script with the reviewed attributes and survives unmount", () => {
+    const { unmount } = render(<AdsterraPopunder />);
+    const scripts = document.head.querySelectorAll(POPUNDER_SCRIPT_SELECTOR);
+    expect(scripts.length).toBe(1);
+    expect((scripts[0] as HTMLScriptElement)?.async).toBe(true);
+    expect(scripts[0]?.getAttribute("data-cfasync")).toBe("false");
+    expect(scripts[0]?.getAttribute("data-ad-network-script")).toBe("adsterra-popunder");
+    expect(scripts[0]?.getAttribute("data-ad-unit-id")).toBe("popunder");
+    expect(scripts[0]?.getAttribute("src")).toBe(ADSTERRA_UNITS.popunder.scriptUrl);
+
+    unmount();
+    expect(document.head.querySelector(POPUNDER_SCRIPT_SELECTOR)).not.toBeNull();
+  });
+
+  it("does not inject a duplicate script across remounts", () => {
+    const first = render(<AdsterraPopunder />);
+    first.unmount();
+    render(<AdsterraPopunder />);
+    expect(document.head.querySelectorAll(POPUNDER_SCRIPT_SELECTOR).length).toBe(1);
+  });
+
+  it("records a load in the first-party cookie", () => {
+    render(<AdsterraPopunder />);
+    const script = document.head.querySelector(POPUNDER_SCRIPT_SELECTOR);
+    script?.dispatchEvent(new Event("load"));
+
+    const state = readAdVisitorCookie();
+    expect(state?.popunderShownAt).toHaveLength(1);
+  });
+
+  it("does not inject when four loads are already inside the two-hour window", () => {
+    const now = Date.now();
+    document.cookie = `metria_ad_visitor=${encodeURIComponent(
+      serializeVisitorState({
+        id: "test-visitor",
+        popStyleShownAt: null,
+        popunderShownAt: [now, now - 1, now - 2, now - 3],
+      }),
+    )}; Path=/; SameSite=Lax`;
+
+    render(<AdsterraPopunder />);
+    expect(document.head.querySelector(POPUNDER_SCRIPT_SELECTOR)).toBeNull();
   });
 });

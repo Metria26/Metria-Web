@@ -3,15 +3,18 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { PublicFooter, PublicHeader } from "@/components/public/public-shell";
 import { loadPublicAdSurface } from "@/features/ads/public-surface";
-import { publicUnitAllowed } from "@/features/ads/public-surface-rules";
+import { publicPopunderAllowed, publicUnitAllowed } from "@/features/ads/public-surface-rules";
 import { AdsterraNativeBanner } from "@/features/ads/adsterra/native-banner";
+import { AdsterraPopunder } from "@/features/ads/adsterra/popunder";
 import { isAdsterraPathAllowed } from "@/features/ads/adsterra/config";
 
 /**
- * Shared shell for the public legal/trust pages (SS11, task §5). Only the
- * native unit may appear here (no Social Bar, no banner), and only when the
- * same public gates pass. `instant = false` (set by each page) documents that
- * the request-time ad/consent shell blocks navigation.
+ * Shared shell for the public legal/trust pages (SS11, task §5). Native and
+ * popunder units may appear here (no Social Bar, no banner), and only when the
+ * same public gates pass, including the independent popunder switch. These
+ * pages have no consent banner, so popunder only serves visitors who already
+ * granted ad consent elsewhere. `instant = false` (set by each page) documents
+ * that the request-time ad/consent shell blocks navigation.
  */
 
 export async function legalPageMetadata(titleKey: string): Promise<Metadata> {
@@ -34,6 +37,9 @@ export async function PublicPageLayout({
   const showNative = publicUnitAllowed(surface, pathname, (path) =>
     isAdsterraPathAllowed("native_banner", path),
   );
+  const showPopunder = publicPopunderAllowed(surface, pathname, (path) =>
+    isAdsterraPathAllowed("popunder", path),
+  );
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -50,6 +56,7 @@ export async function PublicPageLayout({
         ) : null}
       </main>
       <PublicFooter />
+      {showPopunder ? <AdsterraPopunder /> : null}
     </div>
   );
 }

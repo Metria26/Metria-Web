@@ -1,9 +1,19 @@
 import { describe, expect, it } from "vitest";
 import type { AdConfigSnapshot, AdKillState } from "./contracts";
-import { evaluatePrivateSurface, privateSurfaceAllows } from "./private-surface-rules";
+import {
+  evaluatePrivateSurface,
+  privatePopunderAllowed,
+  privateSurfaceAllows,
+} from "./private-surface-rules";
 
 const OPEN_KILL: AdKillState = {
-  flags: { enabled: true, public_enabled: false, private_enabled: true, global_kill: false },
+  flags: {
+    enabled: true,
+    public_enabled: false,
+    private_enabled: true,
+    popunder_enabled: true,
+    global_kill: false,
+  },
   global: false,
   killed_networks: [],
 };
@@ -31,7 +41,19 @@ describe("private ad surface", () => {
   it("opens for an authenticated viewer when flags, network and consent allow", () => {
     const surface = evaluatePrivateSurface(base);
     expect(surface.open).toBe(true);
+    expect(surface.popunderEnabled).toBe(true);
     expect(privateSurfaceAllows(surface)).toBe(true);
+    expect(privatePopunderAllowed(surface)).toBe(true);
+  });
+
+  it("keeps popunder independently switchable without closing other units", () => {
+    const surface = evaluatePrivateSurface({
+      ...base,
+      killState: { ...OPEN_KILL, flags: { ...OPEN_KILL.flags, popunder_enabled: false } },
+    });
+    expect(surface.open).toBe(true);
+    expect(privateSurfaceAllows(surface)).toBe(true);
+    expect(privatePopunderAllowed(surface)).toBe(false);
   });
 
   it("fails closed without a session or a tenant", () => {
@@ -97,6 +119,7 @@ describe("private ad surface", () => {
     const surface = evaluatePrivateSurface({ ...base, consentGranted: false });
     expect(surface.open).toBe(true);
     expect(privateSurfaceAllows(surface)).toBe(false);
+    expect(privatePopunderAllowed(surface)).toBe(false);
     expect(evaluatePrivateSurface({ ...base, killState: {} }).open).toBe(false);
     expect(evaluatePrivateSurface({ ...base, config: {} }).open).toBe(false);
   });

@@ -167,6 +167,7 @@ SELECT is(jsonb_array_length(current_setting('test.kill_pre')::jsonb->'killed_ne
 SELECT is(current_setting('test.kill_pre')::jsonb->'flags'->>'enabled', 'true','ads.enabled flag on (production activation 2026-10-19)');
 SELECT is(current_setting('test.kill_pre')::jsonb->'flags'->>'public_enabled', 'true','ads.public.enabled flag on');
 SELECT is(current_setting('test.kill_pre')::jsonb->'flags'->>'private_enabled', 'true','ads.private.enabled flag on');
+SELECT is(current_setting('test.kill_pre')::jsonb->'flags'->>'popunder_enabled', 'true','ads.popunder.enabled flag on (owner request 2026-11-06)');
 SELECT is(current_setting('test.kill_pre')::jsonb->'flags'->>'global_kill', 'false','ads.global_kill flag off');
 
 INSERT INTO public.ad_kill_switches (university_id, is_global, enabled)

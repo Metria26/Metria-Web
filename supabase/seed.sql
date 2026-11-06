@@ -135,6 +135,7 @@ CROSS JOIN (VALUES
   ('ads.enabled', true),
   ('ads.public.enabled', true),
   ('ads.private.enabled', true),
+  ('ads.popunder.enabled', true),
   ('ads.global_kill', false),
   ('analytics.visits.enabled', false),
   ('revenue.share.enabled', false),

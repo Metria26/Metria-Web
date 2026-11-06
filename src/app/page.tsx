@@ -1,16 +1,16 @@
 import { connection } from "next/server";
 import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
-import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PublicFooter, PublicHeader } from "@/components/public/public-shell";
 import { productName } from "@/lib/brand";
 import { CONSENT_COOKIE, policyVersionFromEnv } from "@/features/ads/consent";
 import { loadPublicAdSurface } from "@/features/ads/public-surface";
-import { publicUnitAllowed } from "@/features/ads/public-surface-rules";
+import { publicPopunderAllowed, publicUnitAllowed } from "@/features/ads/public-surface-rules";
 import { ConsentBanner } from "@/features/ads/ui/consent-banner";
 import { AdsterraNativeBanner } from "@/features/ads/adsterra/native-banner";
+import { AdsterraPopunder } from "@/features/ads/adsterra/popunder";
 import { AdsterraSocialBar } from "@/features/ads/adsterra/social-bar";
 import { isAdsterraPathAllowed } from "@/features/ads/adsterra/config";
 
@@ -18,7 +18,8 @@ import { isAdsterraPathAllowed } from "@/features/ads/adsterra/config";
  * Public landing page (SS11). Ads are opt-in: every Adsterra component mounts
  * only when the public surface is open (master flag + no kill + public layer +
  * adsterra network enabled), the visitor consented, and the unit's reviewed
- * path allowlist matches. With the shipped defaults (`ads.enabled=false`,
+ * path allowlist matches. Popunder also requires its own `ads.popunder.enabled`
+ * switch (ADR-013). With the shipped defaults (`ads.enabled=false`,
  * `ads.global_kill=true`) the page renders zero ad markup.
  *
  * `connection()` keeps this route request-time: the tenant lookup uses the
@@ -40,6 +41,9 @@ export default async function Home() {
 
   const showNative = adsAllowed("native_banner");
   const showSocialBar = adsAllowed("social_bar");
+  const showPopunder = publicPopunderAllowed(surface, "/", (path) =>
+    isAdsterraPathAllowed("popunder", path),
+  );
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -48,7 +52,8 @@ export default async function Home() {
         <section className="mx-auto flex w-full max-w-5xl flex-col items-center gap-6 px-4 py-16 text-center md:px-6">
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{productName}</h1>
           <p className="max-w-md text-balance text-muted-foreground sm:text-lg">{t("tagline")}</p>
-          <Button render={<Link href="/app" />} nativeButton={false} size="lg">
+          {/* Plain anchor: /app may redirect to /auth, so start a fresh document. */}
+          <Button render={<a href="/app" />} nativeButton={false} size="lg">
             {t("ctaOpenApp")}
             <ArrowRight aria-hidden />
           </Button>
@@ -90,6 +95,7 @@ export default async function Home() {
         />
       ) : null}
       {showSocialBar ? <AdsterraSocialBar /> : null}
+      {showPopunder ? <AdsterraPopunder /> : null}
     </div>
   );
 }

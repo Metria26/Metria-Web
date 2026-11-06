@@ -20,6 +20,8 @@ import {
 export type PublicAdSurface = {
   /** Master flag on, no global kill, public layer enabled. */
   open: boolean;
+  /** Independent popunder switch (ADR-013); absent flag fails closed. */
+  popunderEnabled: boolean;
   consentGranted: boolean;
   universityId: string | null;
   killState: AdKillState | null;
@@ -41,6 +43,7 @@ export function evaluatePublicSurface(input: {
   if (!input.universityId || !kill.success || !config.success) {
     return {
       open: false,
+      popunderEnabled: false,
       consentGranted: input.consentGranted,
       universityId: input.universityId,
       killState: null,
@@ -61,6 +64,7 @@ export function evaluatePublicSurface(input: {
     !state.killed_networks.includes(ADSTERRA_NETWORK_KEY);
   return {
     open,
+    popunderEnabled: state.flags.popunder_enabled,
     consentGranted: input.consentGranted,
     universityId: input.universityId,
     killState: state,
@@ -96,4 +100,13 @@ export function publicUnitAllowed(
   networkKey: string = ADSTERRA_NETWORK_KEY,
 ): boolean {
   return publicSurfaceAllows(surface, pathname, allowed) && networkNotKilled(surface, networkKey);
+}
+
+/** Popunder adds its independent switch on top of the normal unit gate. */
+export function publicPopunderAllowed(
+  surface: PublicAdSurface,
+  pathname: string,
+  allowed: (pathname: string) => boolean,
+): boolean {
+  return surface.popunderEnabled && publicUnitAllowed(surface, pathname, allowed);
 }

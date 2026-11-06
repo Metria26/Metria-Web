@@ -24,13 +24,14 @@ export async function PublicHeader() {
           <Link href="/contact" className="text-muted-foreground hover:text-foreground">
             {t("contact")}
           </Link>
-          <Link
+          {/* Plain anchor: /app may redirect to /auth, so start a fresh document. */}
+          <a
             href="/app"
             className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 font-medium hover:bg-muted"
           >
             {t("openApp")}
             <ArrowRight className="size-3.5" aria-hidden />
-          </Link>
+          </a>
         </nav>
       </div>
     </header>

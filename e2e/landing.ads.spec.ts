@@ -9,19 +9,22 @@ import { serviceRest } from "./helpers/auth";
  * Coverage:
  *  (a) flags off -> zero Adsterra markup anywhere,
  *  (b) live defaults (ads on) + no consent -> zero ad markup, consent banner visible,
- *  (c) consent granted -> banner/native/social units render with exact codes,
- *  (d) unauthenticated /app, /auth/*, /admin/* and 404 never carry Adsterra,
- *  (e) per-network kill darkens the landing page again,
- *  (f) master kill darkens the landing page again.
+ *  (c) consent granted -> native/social/popunder units render with exact codes,
+ *  (d) the independent popunder flag removes only popunder,
+ *  (e) unauthenticated /app, /auth/*, /admin/* and 404 never carry Adsterra,
+ *  (f) per-network kill darkens the landing page again,
+ *  (g) master kill darkens the landing page again.
  *
- * Every test aborts requests to https://bauval.org so the suite asserts the
- * reviewed markup without loading live creatives (no artificial impressions).
+ * Every test aborts requests to both reviewed Adsterra hosts so the suite
+ * asserts the reviewed markup without loading live creatives (no artificial
+ * impressions).
  */
 
 const ADSTERRA_HOST = "https://bauval.org";
+const POPUNDER_HOST = "https://abscloud.org";
 const NATIVE_SRC = `${ADSTERRA_HOST}/21/ce7743f7a63e3303a8a5bca86be972a9`;
 const SOCIAL_SRC = `${ADSTERRA_HOST}/14/0d0d523604c826337be77b00f55115b5`;
-const BANNER_SRC = `${ADSTERRA_HOST}/22/166ca6f5db0d4f74e14b5e11e470ec29`;
+const POPUNDER_SRC = `${POPUNDER_HOST}/1/d5d5a4efeec12f60a2b9db7ddf75914b`;
 
 const KILL_TTL_GRACE_MS = 1_600;
 
@@ -29,12 +32,14 @@ const ADS_FLAGS_ON: Array<[string, boolean]> = [
   ["ads.enabled", true],
   ["ads.public.enabled", true],
   ["ads.private.enabled", true],
+  ["ads.popunder.enabled", true],
   ["ads.global_kill", false],
 ];
 const ADS_FLAGS_OFF: Array<[string, boolean]> = [
   ["ads.enabled", false],
   ["ads.public.enabled", false],
   ["ads.private.enabled", false],
+  ["ads.popunder.enabled", false],
   ["ads.global_kill", true],
 ];
 
@@ -120,7 +125,9 @@ async function setNetworkKill(universityIdValue: string, killed: boolean): Promi
 
 async function adsterraMarkupCount(page: import("@playwright/test").Page): Promise<number> {
   return page
-    .locator('script[src*="bauval.org"], iframe[src*="bauval.org"], [data-ad-unit-id]')
+    .locator(
+      'script[src*="bauval.org"], script[src*="abscloud.org"], iframe[src*="bauval.org"], [data-ad-unit-id]',
+    )
     .count();
 }
 
@@ -132,7 +139,7 @@ test.describe("landing ads (SS11)", () => {
     // reviewed markup, and loading real creatives would create artificial
     // impressions. Aborted requests still leave the script/iframe elements in
     // the DOM, which is exactly what this suite inspects.
-    await page.route(/bauval\.org/, (route) => route.abort());
+    await page.route(/bauval\.org|abscloud\.org/, (route) => route.abort());
   });
 
   let uniId = "";
@@ -170,7 +177,7 @@ test.describe("landing ads (SS11)", () => {
     expect(await adsterraMarkupCount(page)).toBe(0);
   });
 
-  test("[ads-safety] consent granted: all three units render with exact codes", async ({
+  test("[ads-safety] consent granted: all mounted units render with exact codes", async ({
     page,
   }) => {
     await setFlags(ADS_FLAGS_ON, uniId);
@@ -178,18 +185,11 @@ test.describe("landing ads (SS11)", () => {
     await page.context().addCookies([consentCookie(true)]);
     await page.goto("/");
 
-    await expect(page.getByTestId("adsterra-banner-468")).toBeVisible();
     await expect(page.getByTestId("adsterra-native")).toBeVisible();
     await expect(page.getByTestId("adsterra-native-container")).toHaveAttribute(
       "id",
       "container-ce7743f7a63e3303a8a5bca86be972a9",
     );
-
-    const frame = page.locator('iframe[data-ad-unit-id="31803284"]');
-    await expect(frame).toHaveAttribute("width", "468");
-    await expect(frame).toHaveAttribute("height", "60");
-    const srcDoc = await frame.getAttribute("srcdoc");
-    expect(srcDoc).toContain(BANNER_SRC);
 
     await expect(
       page.locator(`script[data-ad-unit-id="31803282"][src="${NATIVE_SRC}"]`),
@@ -197,15 +197,32 @@ test.describe("landing ads (SS11)", () => {
     await expect(
       page.locator(`script[data-ad-unit-id="31803283"][src="${SOCIAL_SRC}"]`),
     ).toHaveCount(1);
+    await expect(
+      page.locator(`script[data-ad-network-script="adsterra-popunder"][src="${POPUNDER_SRC}"]`),
+    ).toHaveCount(1);
+    await expect(page.locator('script[data-ad-unit-id="31803284"]')).toHaveCount(0);
+  });
 
-    // Ads never cover the primary action.
-    const cta = page.getByRole("link", { name: /Open app/i }).first();
-    const ctaBox = await cta.boundingBox();
-    const bannerBox = await page.getByTestId("adsterra-banner-468").boundingBox();
-    expect(ctaBox && bannerBox).toBeTruthy();
-    if (ctaBox && bannerBox) {
-      expect(bannerBox.y).toBeGreaterThanOrEqual(ctaBox.y + ctaBox.height - 1);
-    }
+  test("[ads-safety] popunder flag off removes only the popunder unit", async ({ page }) => {
+    await setFlags(
+      [
+        ["ads.enabled", true],
+        ["ads.public.enabled", true],
+        ["ads.private.enabled", true],
+        ["ads.popunder.enabled", false],
+        ["ads.global_kill", false],
+      ],
+      uniId,
+    );
+    await page.waitForTimeout(KILL_TTL_GRACE_MS);
+    await page.context().addCookies([consentCookie(true)]);
+    await page.goto("/");
+
+    await expect(page.getByTestId("adsterra-native")).toBeVisible();
+    await expect(
+      page.locator(`script[data-ad-unit-id="31803283"][src="${SOCIAL_SRC}"]`),
+    ).toHaveCount(1);
+    await expect(page.locator('script[data-ad-network-script="adsterra-popunder"]')).toHaveCount(0);
   });
 
   test("[ads-safety] consent denied: zero ad markup, site still usable", async ({ page }) => {
@@ -233,13 +250,16 @@ test.describe("landing ads (SS11)", () => {
     }
   });
 
-  test("[ads-safety] legal pages carry at most the native unit", async ({ page }) => {
+  test("[ads-safety] legal pages carry native and popunder units only", async ({ page }) => {
     await setFlags(ADS_FLAGS_ON, uniId);
     await page.waitForTimeout(KILL_TTL_GRACE_MS);
     await page.context().addCookies([consentCookie(true)]);
     await page.goto("/privacy");
 
     await expect(page.getByTestId("adsterra-native")).toBeVisible();
+    await expect(
+      page.locator(`script[data-ad-network-script="adsterra-popunder"][src="${POPUNDER_SRC}"]`),
+    ).toHaveCount(1);
     await expect(page.getByTestId("adsterra-banner-468")).toHaveCount(0);
     await expect(page.locator(`script[data-ad-unit-id="31803283"]`)).toHaveCount(0);
   });

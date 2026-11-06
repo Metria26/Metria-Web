@@ -135,11 +135,12 @@ describe("publishableConfig", () => {
 });
 
 describe("admin ads input contracts", () => {
-  it("accepts only the four registered ads flag keys", () => {
+  it("accepts only the five registered ads flag keys", () => {
     for (const key of [
       "ads.enabled",
       "ads.public.enabled",
       "ads.private.enabled",
+      "ads.popunder.enabled",
       "ads.global_kill",
     ]) {
       expect(adsFlagKeySchema.safeParse(key).success).toBe(true);

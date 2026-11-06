@@ -2,9 +2,12 @@
  * Adsterra unit registry (SS11, plan.md §11).
  *
  * These are PUBLIC ad codes, not secrets — but they still live in code (not the
- * database) per ADR-008: provider script URLs stay reviewed constants. Only the
- * three approved units exist here. Popunder and Smartlink are intentionally
- * absent and must never be added (task §3.4).
+ * database) per ADR-008: provider script URLs stay reviewed constants. The
+ * four registered units are Native Banner, Social Bar, Banner 468x60 and
+ * Popunder. Smartlink remains intentionally absent and must never be added.
+ * Banner 468x60 stays registered for reference but is not mounted (it was
+ * removed from public/app surfaces on 2026-10-25 because it rendered empty
+ * boxes). Popunder was approved by the owner on 2026-11-06 (ADR-013).
  *
  * The existing resolver/adapters cannot express per-unit scripts (one URL per
  * network) and the anonymous public layer is deferred in code, so the Adsterra
@@ -18,8 +21,10 @@
  */
 
 export const ADSTERRA_SCRIPT_HOST = "https://bauval.org";
+/** Popunder is served from a separate reviewed Adsterra host. */
+export const ADSTERRA_POPUNDER_HOST = "https://abscloud.org";
 
-export type AdsterraUnitKey = "native_banner" | "social_bar" | "banner_468";
+export type AdsterraUnitKey = "native_banner" | "social_bar" | "banner_468" | "popunder";
 
 export type AdsterraUnit = {
   key: AdsterraUnitKey;
@@ -56,6 +61,14 @@ export const ADSTERRA_UNITS = {
     width: 468,
     height: 60,
     allowedPaths: ["/"],
+  },
+  popunder: {
+    key: "popunder",
+    // Adsterra does not expose a numeric unit id for this code-level unit.
+    unitId: "popunder",
+    scriptUrl: `${ADSTERRA_POPUNDER_HOST}/1/d5d5a4efeec12f60a2b9db7ddf75914b`,
+    // Popunder remains allowed on all public pages, including legal pages.
+    allowedPaths: ["/", "/privacy", "/terms", "/about", "/contact"],
   },
 } as const satisfies Record<AdsterraUnitKey, AdsterraUnit>;
 

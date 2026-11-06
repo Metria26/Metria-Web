@@ -137,7 +137,13 @@ const baseConfig: AdConfigSnapshot = {
 };
 
 const baseKill: AdKillState = {
-  flags: { enabled: true, public_enabled: true, private_enabled: true, global_kill: false },
+  flags: {
+    enabled: true,
+    public_enabled: true,
+    private_enabled: true,
+    popunder_enabled: true,
+    global_kill: false,
+  },
   global: false,
   killed_networks: [],
 };
@@ -404,29 +410,41 @@ describe("visitor", () => {
   });
 
   it("round-trips visitor state and normalises a bad timestamp", () => {
-    const state = { id: "abc", popStyleShownAt: 1234 };
+    const state = { id: "abc", popStyleShownAt: 1234, popunderShownAt: [] };
     expect(parseVisitorCookie(serializeVisitorState(state))).toEqual(state);
     expect(parseVisitorCookie('{"id":"abc","popStyleShownAt":"soon"}')).toEqual({
       id: "abc",
       popStyleShownAt: null,
+      popunderShownAt: [],
     });
   });
 
   it("generates a random id only when needed", () => {
     expect(newVisitorId(() => "fixed-id")).toBe("fixed-id");
     expect(
-      visitorForContext(serializeVisitorState({ id: "kept", popStyleShownAt: null }), () => "x"),
+      visitorForContext(
+        serializeVisitorState({ id: "kept", popStyleShownAt: null, popunderShownAt: [] }),
+        () => "x",
+      ),
     ).toEqual({
       id: "kept",
       popStyleShownAt: null,
+      popunderShownAt: [],
     });
-    expect(visitorForContext(null, () => "fresh")).toEqual({ id: "fresh", popStyleShownAt: null });
+    expect(visitorForContext(null, () => "fresh")).toEqual({
+      id: "fresh",
+      popStyleShownAt: null,
+      popunderShownAt: [],
+    });
   });
 
   it("records the pop-style timestamp without touching the id", () => {
-    expect(withPopStyleShown({ id: "abc", popStyleShownAt: null }, 99)).toEqual({
+    expect(
+      withPopStyleShown({ id: "abc", popStyleShownAt: null, popunderShownAt: [] }, 99),
+    ).toEqual({
       id: "abc",
       popStyleShownAt: 99,
+      popunderShownAt: [],
     });
   });
 });

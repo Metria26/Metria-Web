@@ -15,6 +15,7 @@ export const ADS_FLAG_KEYS = [
   "ads.enabled",
   "ads.public.enabled",
   "ads.private.enabled",
+  "ads.popunder.enabled",
   "ads.global_kill",
 ] as const;
 export const adsFlagKeySchema = z.enum(ADS_FLAG_KEYS);
