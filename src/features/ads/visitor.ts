@@ -9,9 +9,9 @@
 export const AD_VISITOR_COOKIE = "metria_ad_visitor";
 export const AD_VISITOR_COOKIE_MAX_AGE_SECONDS = 180 * 24 * 60 * 60;
 
-/** ADR-013: popunder script loads are capped at four per two hours. */
-export const POPUNDER_WINDOW_MS = 2 * 60 * 60 * 1000;
-export const POPUNDER_MAX_LOADS = 4;
+/** ADR-013: popunder script loads are capped at twice per day (2 per 24h). */
+export const POPUNDER_WINDOW_MS = 24 * 60 * 60 * 1000;
+export const POPUNDER_MAX_LOADS = 2;
 
 export type AdVisitorState = {
   id: string;

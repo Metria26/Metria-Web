@@ -66,14 +66,14 @@ describe("visitor cookie popunder state", () => {
 });
 
 describe("popunder frequency window", () => {
-  it("allows up to four loads and blocks the fifth", () => {
-    const three = [NOW - 3, NOW - 2, NOW - 1];
-    expect(popunderAllowedAt(three, NOW)).toBe(true);
-    expect(popunderAllowedAt([...three, NOW], NOW)).toBe(false);
+  it("allows up to two loads and blocks the third", () => {
+    const one = [NOW - 1];
+    expect(popunderAllowedAt(one, NOW)).toBe(true);
+    expect(popunderAllowedAt([...one, NOW], NOW)).toBe(false);
   });
 
-  it("frees a slot once a load falls outside the two-hour window", () => {
-    const recent = [NOW - 3, NOW - 2, NOW - 1, NOW];
+  it("frees a slot once a load falls outside the 24-hour window", () => {
+    const recent = [NOW - 1, NOW];
     expect(popunderAllowedAt(recent, NOW)).toBe(false);
     expect(popunderAllowedAt(recent, NOW + POPUNDER_WINDOW_MS)).toBe(true);
   });
@@ -84,10 +84,10 @@ describe("popunder frequency window", () => {
     ]);
   });
 
-  it("keeps only the newest four entries", () => {
+  it("keeps only the newest two entries", () => {
     const entries = [NOW - 5, NOW - 4, NOW - 3, NOW - 2, NOW - 1];
-    expect(prunePopunderShows(entries, NOW)).toEqual([NOW - 4, NOW - 3, NOW - 2, NOW - 1]);
-    expect(POPUNDER_MAX_LOADS).toBe(4);
+    expect(prunePopunderShows(entries, NOW)).toEqual([NOW - 2, NOW - 1]);
+    expect(POPUNDER_MAX_LOADS).toBe(2);
   });
 
   it("records a load and preserves the rest of the visitor state", () => {

@@ -10,15 +10,14 @@ popunder traffic, while `/auth/*`, `/admin/*` and error routes stay ad-free.
 
 Popunder has no visual layout. The revenue levers are page scope, load timing,
 frequency, and avoiding stacked formats. The implementation therefore focuses
-on a single script per document, a first-party 4-per-2-hour load cap, consent,
+on a single script per document, a first-party 2-per-24-hour load cap, consent,
 and the existing kill switches.
 
 ## Owner decisions
 
 - Public scope: landing page plus `/privacy`, `/terms`, `/about`, `/contact`.
 - Authenticated scope: every `/app` page.
-- Frequency: 4 per 2 hours, matching Adsterra's default; also configure the
-  Adsterra dashboard/support cap to 4/2h.
+- Frequency: twice per day (2 per 24 hours); also configure the Adsterra dashboard/support cap accordingly.
 - Independent kill switch: `ads.popunder.enabled`, toggleable from `/admin/ads`.
 - The 468x60 unit stays registered but unmounted (removed 2026-10-25 because it
   rendered empty boxes). Stale e2e expectations for it will be fixed.
@@ -62,7 +61,7 @@ and the existing kill switches.
   `ADSTERRA_UNITS`; add `ADSTERRA_POPUNDER_HOST`; allow `/`, `/privacy`,
   `/terms`, `/about`, `/contact`; keep Smartlink absent.
 - `src/features/ads/visitor.ts`: extend the first-party state with
-  `popunderShownAt: number[]`; add 4-per-2-hour prune/check/record helpers.
+  `popunderShownAt: number[]`; add 2-per-24-hour prune/check/record helpers.
   Keep backward compatibility with the old cookie shape.
 - New `src/features/ads/popunder-cookie.ts`: client-side cookie read/write and
   `popunderAllowedNow()` / `recordPopunderLoad()` helpers.
@@ -109,7 +108,7 @@ and the existing kill switches.
 - `ads.validation.test.ts` and `adslot.validation.test.tsx`: updated kill-state
   fixtures and visitor state.
 - `admin-ads.validation.test.ts`: new flag key.
-- New `popunder-frequency.test.ts`: 4/2h window, expiry, malformed cookies,
+- New `popunder-frequency.test.ts`: 24h window, expiry, malformed cookies,
   backward compatibility.
 - E2E:
   - `e2e/helpers/test.ts`: abort `abscloud.org` by default.
@@ -124,7 +123,7 @@ and the existing kill switches.
 - `plan.md` section 11.
 - `README.md` ads status, migration/flag/test counts.
 - `docs/DECISIONS.md`: amend D13 and add ADR-013.
-- `docs/06-growth-and-ads/ad-system-spec.md`: scoped 4/2h exception.
+- `docs/06-growth-and-ads/ad-system-spec.md`: scoped 24h exception.
 - `docs/06-growth-and-ads/ad-network-setup-checklists.md`: host list and
   popunder QA.
 - `adsterra-integration.md` (gitignored): move popunder into scope, keep
@@ -149,7 +148,7 @@ and the existing kill switches.
 
 ## Risks
 
-- 4/2h is aggressive for repeat students and may hurt retention.
+- 2 per 24h is much friendlier for repeat students and protects retention.
 - The first-party cap limits script loads, not confirmed impressions; Adsterra's
   dashboard cap is the impression limiter.
 - A popunder script that has already executed cannot be fully torn down by

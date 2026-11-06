@@ -131,13 +131,13 @@ describe("AdsterraPopunder", () => {
     expect(state?.popunderShownAt).toHaveLength(1);
   });
 
-  it("does not inject when four loads are already inside the two-hour window", () => {
+  it("does not inject when two loads are already inside the 24-hour window", () => {
     const now = Date.now();
     document.cookie = `metria_ad_visitor=${encodeURIComponent(
       serializeVisitorState({
         id: "test-visitor",
         popStyleShownAt: null,
-        popunderShownAt: [now, now - 1, now - 2, now - 3],
+        popunderShownAt: [now, now - 1],
       }),
     )}; Path=/; SameSite=Lax`;
 
