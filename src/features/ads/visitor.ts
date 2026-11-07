@@ -1,17 +1,16 @@
 /**
  * First-party ad visitor state (T-B002, D13/ADR-013): a random browser-storage
- * id, the last resolver pop-style timestamp used by the 24h cap, and the
- * popunder load timestamps used by the approved 4-per-2-hour cap. Cookie-based
- * so the server resolver can read it during SSR. No fingerprinting, no
- * third-party storage.
+ * id, the last resolver pop-style timestamp, and the successful popunder open
+ * timestamps used by the 4-per-24-hour cap. Cookie-based so the server resolver
+ * can read it during SSR. No fingerprinting, no third-party storage.
  */
 
 export const AD_VISITOR_COOKIE = "metria_ad_visitor";
 export const AD_VISITOR_COOKIE_MAX_AGE_SECONDS = 180 * 24 * 60 * 60;
 
-/** ADR-013: popunder script loads are capped at twice per day (2 per 24h). */
+/** ADR-013: successful popunder opens are capped at four per 24 hours. */
 export const POPUNDER_WINDOW_MS = 24 * 60 * 60 * 1000;
-export const POPUNDER_MAX_LOADS = 2;
+export const POPUNDER_MAX_OPENS = 4;
 
 export type AdVisitorState = {
   id: string;
@@ -93,17 +92,17 @@ export function withPopStyleShown(state: AdVisitorState, now: number): AdVisitor
   return { ...state, popStyleShownAt: now };
 }
 
-/** Keeps only recent, non-future popunder loads and the newest capped batch. */
+/** Keeps only recent, non-future popunder opens and the newest capped batch. */
 export function prunePopunderShows(timestamps: readonly number[], now: number): number[] {
   const cutoff = now - POPUNDER_WINDOW_MS;
   return timestamps
     .filter((entry) => Number.isFinite(entry) && entry > cutoff && entry <= now)
     .sort((a, b) => a - b)
-    .slice(-POPUNDER_MAX_LOADS);
+    .slice(-POPUNDER_MAX_OPENS);
 }
 
 export function popunderAllowedAt(timestamps: readonly number[], now: number): boolean {
-  return prunePopunderShows(timestamps, now).length < POPUNDER_MAX_LOADS;
+  return prunePopunderShows(timestamps, now).length < POPUNDER_MAX_OPENS;
 }
 
 export function withPopunderShown(state: AdVisitorState, now: number): AdVisitorState {

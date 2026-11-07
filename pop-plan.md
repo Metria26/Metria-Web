@@ -1,6 +1,8 @@
 # Adsterra Popunder Implementation Plan
 
-Status: approved 2026-11-06. Build in progress.
+Status: implemented 2026-11-06; revised 2026-11-07 (open-based 4-per-24-hour
+cap). Code, copy, docs and targeted tests complete; deployment and Adsterra
+dashboard/support follow-up are pending.
 
 ## Objective
 
@@ -10,14 +12,52 @@ popunder traffic, while `/auth/*`, `/admin/*` and error routes stay ad-free.
 
 Popunder has no visual layout. The revenue levers are page scope, load timing,
 frequency, and avoiding stacked formats. The implementation therefore focuses
-on a single script per document, a first-party 2-per-24-hour load cap, consent,
-and the existing kill switches.
+on a single script per document, a first-party 4-per-24-hour cap counting real
+popunder opens, consent, and the existing kill switches.
+
+## 2026-11-07 revision (current)
+
+The 2026-11-06 build capped **script loads** at 2 per 24 hours and recorded a
+load on every full page view. Two visits (or reloads) exhausted the day's
+allowance even when no popunder appeared, which blocked popunders for the rest
+of the day and contradicted the owner's 4-per-day requirement. This revision:
+
+- Allows **4 popunder opens per rolling 24 hours per browser**, matching the
+  owner preference and the site copy.
+- Counts a slot only when Adsterra's script actually calls
+  `window.open(url, "_blank")` and receives a window. Page loads, reloads, and
+  non-ad interactions no longer consume slots.
+- Stops injecting the popunder script after 4 opens in the 24-hour window.
+- Leaves focus behavior to Adsterra support for now; no `window.open` focus
+  monkey-patch in this revision.
+- Keeps Adsterra's dashboard/support cap as the authoritative impression
+  limiter: configure **4 impressions per user per 24 hours** there.
+- Requires no database change; production already has the popunder flag and
+  `private.ad_kill_state` field applied (the local migration is idempotent and
+  remains the source of truth for clean environments).
+
+### Owner/support request (Adsterra, website 6133098)
+
+Write to Adsterra support with:
+
+1. Confirm the popunder unit is active for `https://metria-web.onrender.com`
+   and set the frequency cap to **4 impressions per user per 24 hours**.
+   Confirm whether the cap counts impressions or opened tabs, and whether it is
+   per browser cookie or per IP.
+2. Ask for a setting or updated script that opens the popunder in a background
+   tab without taking focus. The current reviewed script is
+   `https://abscloud.org/1/d5d5a4efeec12f60a2b9db7ddf75914b`; the site loads it
+   in the page head after consent.
+3. If native/social ads serve but the dashboard shows zero popunder
+   impressions, ask them to check unit moderation/fill for this domain.
+
+Do not add a `window.open` focus monkey-patch until support answers.
 
 ## Owner decisions
 
 - Public scope: landing page plus `/privacy`, `/terms`, `/about`, `/contact`.
 - Authenticated scope: every `/app` page.
-- Frequency: twice per day (2 per 24 hours); also configure the Adsterra dashboard/support cap accordingly.
+- Frequency: four popunder opens per 24 hours per browser; also configure the Adsterra dashboard/support cap to 4 impressions per user per 24 hours.
 - Independent kill switch: `ads.popunder.enabled`, toggleable from `/admin/ads`.
 - The 468x60 unit stays registered but unmounted (removed 2026-10-25 because it
   rendered empty boxes). Stale e2e expectations for it will be fixed.
@@ -61,16 +101,25 @@ and the existing kill switches.
   `ADSTERRA_UNITS`; add `ADSTERRA_POPUNDER_HOST`; allow `/`, `/privacy`,
   `/terms`, `/about`, `/contact`; keep Smartlink absent.
 - `src/features/ads/visitor.ts`: extend the first-party state with
-  `popunderShownAt: number[]`; add 2-per-24-hour prune/check/record helpers.
-  Keep backward compatibility with the old cookie shape.
+  `popunderShownAt: number[]`; add 4-per-24-hour prune/check/record helpers.
+  `POPUNDER_MAX_OPENS = 4`, `POPUNDER_WINDOW_MS = 24h`. Keep backward
+  compatibility with the old cookie shape.
 - New `src/features/ads/popunder-cookie.ts`: client-side cookie read/write and
-  `popunderAllowedNow()` / `recordPopunderLoad()` helpers.
+  `popunderAllowedNow()` / `recordPopunderOpen()` helpers.
+- New `src/features/ads/popunder-open-tracker.ts`:
+  - Installs once per document before the popunder script.
+  - Wraps `window.open`; when a `_blank` call returns a window, records one
+    popunder open in the first-party cookie.
+  - Does not change focus and does not block opens. Adsterra's dashboard cap is
+    the impression limiter; blocking in-page would affect unrelated `_blank`
+    calls.
 - New `src/features/ads/adsterra/popunder.tsx`:
   - Client component, renders nothing.
   - Injects once into `document.head` with
     `data-ad-network-script="adsterra-popunder"`.
   - `async`, `data-cfasync="false"`, the reviewed script URL and a unit marker.
-  - Records a load only on the script `load` event.
+  - Installs the open tracker before injection and no longer records script
+    loads.
   - Does not remove the script on unmount and does not retry in the same
     document; third-party listener teardown is not reliable. The hard reloads
     below protect the auth boundary, and the marker prevents duplicates across
@@ -103,13 +152,15 @@ and the existing kill switches.
 - `adsterra.validation.test.ts`: four registered units, popunder host/URL,
   Smartlink still absent, public popunder gate behavior.
 - `adsterra-components.test.tsx`: popunder injection, marker, cap blocking,
-  no duplicate after re-mount, cookie write on load.
+  no duplicate after re-mount, no cookie write on script load, one cookie entry
+  per successful `_blank` open, no entry for blocked or non-`_blank` opens.
 - `private-surface-rules.test.ts`: private popunder gate.
 - `ads.validation.test.ts` and `adslot.validation.test.tsx`: updated kill-state
   fixtures and visitor state.
 - `admin-ads.validation.test.ts`: new flag key.
 - New `popunder-frequency.test.ts`: 24h window, expiry, malformed cookies,
-  backward compatibility.
+  backward compatibility, four opens allowed and the fifth blocked, only the
+  newest four retained.
 - E2E:
   - `e2e/helpers/test.ts`: abort `abscloud.org` by default.
   - `e2e/landing.ads.spec.ts`: add the popunder flag to on/off lists, assert the
@@ -131,28 +182,46 @@ and the existing kill switches.
 
 ## Verification
 
-- Targeted vitest for the changed ads files.
-- ESLint on changed files.
-- TypeScript check once after the contract changes.
-- Database snapshot before applying the migration (staging-as-prod, ADR-010).
-- Verify `public.ad_kill_state` returns `popunder_enabled=true`.
-- Owner QA:
-  - consent granted: popunder script appears on public and `/app` pages;
-  - consent denied: no script;
-  - `/auth/*`, `/admin/*`, 404: no script;
+- Targeted vitest for the changed ads files:
+  `popunder-frequency.test.ts` and `adsterra-components.test.tsx`.
+- ESLint on changed files. No full build/typecheck/E2E on the low-RAM machine.
+- No database change required for this revision. Verify
+  `public.ad_kill_state` still returns `popunder_enabled=true` (already true in
+  production).
+- Owner QA (incognito, consent granted, Render URL):
+  - popunder script appears on public and `/app` pages;
+  - each actual popunder tab increments `popunderShownAt` in
+    `metria_ad_visitor`;
+  - after four opens in 24 hours, a full reload does not inject the script
+    (the network cap handles any extra in-page open);
+  - clear the cookie or use incognito for repeat QA (existing load timestamps
+    count toward the new open cap);
+  - consent denied: no script; `/auth/*`, `/admin/*`, 404: no script;
   - master, public/private, popunder and network kills all stop it;
-  - `/admin/ads` toggle applies within the kill-state cache TTL;
   - sign out and public "Open app" land on a fresh document.
+- Adsterra dashboard/support:
+  - confirm the popunder unit is active and set the cap to 4 impressions per
+    user per 24 hours;
+  - check today's popunder impressions when native/social serve but no popunder
+    appears;
+  - ask support for a background-tab/non-focus variant; only consider a
+    `window.open` focus wrapper if support cannot help.
 - Monitor Adsterra impressions/RPM and site bounce/retention for 1-2 weeks.
 - Rollback: turn off `ads.popunder.enabled` in `/admin/ads`; no deploy needed.
 
 ## Risks
 
-- 2 per 24h is much friendlier for repeat students and protects retention.
-- The first-party cap limits script loads, not confirmed impressions; Adsterra's
-  dashboard cap is the impression limiter.
+- Four opens per 24 hours matches the owner preference and site copy. The cap
+  is per browser; clearing cookies resets it (same as the existing D13 design).
+- The first-party cap counts successful `window.open` calls, not confirmed
+  impressions; Adsterra's dashboard cap is the impression limiter.
+- The tracker wraps `window.open` for the document lifetime. The app currently
+  makes no JS `window.open` calls; scope the wrapper to `_blank` and revisit if
+  first-party code adds any.
+- If Adsterra changes its open path away from `window.open`, the tracker will
+  under-count and Adsterra's cap remains the only limiter.
 - A popunder script that has already executed cannot be fully torn down by
   removing its script tag. Hard reloads are the reliable auth-boundary control.
 - The host must stay in the reviewed CSP allowlist; report-only violations must
   be monitored.
-- Production is the staging database: migration changes need a snapshot.
+- Production is the staging database: future migration changes need a snapshot.

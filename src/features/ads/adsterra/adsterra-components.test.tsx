@@ -5,6 +5,7 @@ import { AdsterraNativeBanner } from "./native-banner";
 import { AdsterraPopunder } from "./popunder";
 import { AdsterraSocialBar } from "./social-bar";
 import { ADSTERRA_UNITS } from "./config";
+import { POPUNDER_OPEN_TRACKER_KEY } from "../popunder-open-tracker";
 import { parseVisitorCookie, serializeVisitorState } from "../visitor";
 
 /**
@@ -19,6 +20,14 @@ vi.mock("next-intl", () => ({
 }));
 
 const POPUNDER_SCRIPT_SELECTOR = `script[src="${ADSTERRA_UNITS.popunder.scriptUrl}"]`;
+const nativeWindowOpen = window.open;
+
+function resetPopunderOpenTracker() {
+  window.open = nativeWindowOpen;
+  delete (window as Window & { __metria_popunder_open_tracker?: boolean })[
+    POPUNDER_OPEN_TRACKER_KEY
+  ];
+}
 
 function clearAdVisitorCookie() {
   document.cookie = "metria_ad_visitor=; Path=/; Max-Age=0; SameSite=Lax";
@@ -36,12 +45,14 @@ function readAdVisitorCookie() {
 
 beforeEach(() => {
   clearAdVisitorCookie();
+  resetPopunderOpenTracker();
 });
 
 afterEach(() => {
   cleanup();
   document.querySelectorAll("script[data-ad-unit-id]").forEach((el) => el.remove());
   clearAdVisitorCookie();
+  resetPopunderOpenTracker();
 });
 
 describe("AdsterraNativeBanner", () => {
@@ -122,26 +133,60 @@ describe("AdsterraPopunder", () => {
     expect(document.head.querySelectorAll(POPUNDER_SCRIPT_SELECTOR).length).toBe(1);
   });
 
-  it("records a load in the first-party cookie", () => {
+  it("does not record a script load in the first-party cookie", () => {
     render(<AdsterraPopunder />);
     const script = document.head.querySelector(POPUNDER_SCRIPT_SELECTOR);
     script?.dispatchEvent(new Event("load"));
 
     const state = readAdVisitorCookie();
+    expect(state).toBeNull();
+  });
+
+  it("records one open for a successful _blank window", () => {
+    window.open = vi.fn(() => ({}) as Window);
+    render(<AdsterraPopunder />);
+
+    window.open("https://ad.example", "_blank");
+
+    const state = readAdVisitorCookie();
     expect(state?.popunderShownAt).toHaveLength(1);
   });
 
-  it("does not inject when two loads are already inside the 24-hour window", () => {
+  it("does not count blocked or non-_blank opens", () => {
+    window.open = vi.fn(() => null);
+    render(<AdsterraPopunder />);
+
+    window.open("https://ad.example", "_blank");
+    window.open("https://ad.example", "_self");
+
+    expect(readAdVisitorCookie()).toBeNull();
+  });
+
+  it("does not inject when four opens are already inside the 24-hour window", () => {
     const now = Date.now();
     document.cookie = `metria_ad_visitor=${encodeURIComponent(
       serializeVisitorState({
         id: "test-visitor",
         popStyleShownAt: null,
-        popunderShownAt: [now, now - 1],
+        popunderShownAt: [now, now - 1, now - 2, now - 3],
       }),
     )}; Path=/; SameSite=Lax`;
 
     render(<AdsterraPopunder />);
     expect(document.head.querySelector(POPUNDER_SCRIPT_SELECTOR)).toBeNull();
+  });
+
+  it("still injects with three opens inside the 24-hour window", () => {
+    const now = Date.now();
+    document.cookie = `metria_ad_visitor=${encodeURIComponent(
+      serializeVisitorState({
+        id: "test-visitor",
+        popStyleShownAt: null,
+        popunderShownAt: [now, now - 1, now - 2],
+      }),
+    )}; Path=/; SameSite=Lax`;
+
+    render(<AdsterraPopunder />);
+    expect(document.head.querySelector(POPUNDER_SCRIPT_SELECTOR)).not.toBeNull();
   });
 });

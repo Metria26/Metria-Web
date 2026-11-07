@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   AD_VISITOR_COOKIE,
-  POPUNDER_MAX_LOADS,
+  POPUNDER_MAX_OPENS,
   POPUNDER_WINDOW_MS,
   parseVisitorCookie,
   popunderAllowedAt,
@@ -12,9 +12,9 @@ import {
 } from "./visitor";
 
 /**
- * ADR-013: the first-party popunder cap allows four script loads per two
+ * ADR-013: the first-party popunder cap allows four successful opens per 24
  * hours. These tests pin the window/pruning math and the backward-compatible
- * cookie shape; the component test covers browser injection.
+ * cookie shape; the component test covers browser injection and open tracking.
  */
 
 const NOW = 1_800_000_000_000;
@@ -66,14 +66,14 @@ describe("visitor cookie popunder state", () => {
 });
 
 describe("popunder frequency window", () => {
-  it("allows up to two loads and blocks the third", () => {
-    const one = [NOW - 1];
-    expect(popunderAllowedAt(one, NOW)).toBe(true);
-    expect(popunderAllowedAt([...one, NOW], NOW)).toBe(false);
+  it("allows the fourth open and blocks the fifth", () => {
+    const three = [NOW - 3, NOW - 2, NOW - 1];
+    expect(popunderAllowedAt(three, NOW)).toBe(true);
+    expect(popunderAllowedAt([...three, NOW], NOW)).toBe(false);
   });
 
-  it("frees a slot once a load falls outside the 24-hour window", () => {
-    const recent = [NOW - 1, NOW];
+  it("frees a slot once an open falls outside the 24-hour window", () => {
+    const recent = [NOW - 3, NOW - 2, NOW - 1, NOW];
     expect(popunderAllowedAt(recent, NOW)).toBe(false);
     expect(popunderAllowedAt(recent, NOW + POPUNDER_WINDOW_MS)).toBe(true);
   });
@@ -84,13 +84,13 @@ describe("popunder frequency window", () => {
     ]);
   });
 
-  it("keeps only the newest two entries", () => {
+  it("keeps only the newest four entries", () => {
     const entries = [NOW - 5, NOW - 4, NOW - 3, NOW - 2, NOW - 1];
-    expect(prunePopunderShows(entries, NOW)).toEqual([NOW - 2, NOW - 1]);
-    expect(POPUNDER_MAX_LOADS).toBe(2);
+    expect(prunePopunderShows(entries, NOW)).toEqual([NOW - 4, NOW - 3, NOW - 2, NOW - 1]);
+    expect(POPUNDER_MAX_OPENS).toBe(4);
   });
 
-  it("records a load and preserves the rest of the visitor state", () => {
+  it("records an open and preserves the rest of the visitor state", () => {
     const next = withPopunderShown(
       { id: "v1", popStyleShownAt: NOW - 10, popunderShownAt: [NOW - 1] },
       NOW,

@@ -1,9 +1,10 @@
 /**
  * Browser-side helpers for the first-party popunder frequency cap (ADR-013).
  *
- * The cap stores only a random visitor id and recent script-load timestamps in
- * the existing `metria_ad_visitor` cookie. It is read after the ad-consent gate
- * has mounted the popunder component, so no cookie is written before consent.
+ * The cap stores only a random visitor id and recent successful popunder open
+ * timestamps in the existing `metria_ad_visitor` cookie. It is read after the
+ * ad-consent gate has mounted the popunder component, so no cookie is written
+ * before consent.
  */
 
 import {
@@ -37,8 +38,8 @@ export function popunderAllowedNow(now: number = Date.now()): boolean {
   return state ? popunderAllowedAt(state.popunderShownAt, now) : true;
 }
 
-/** Records one popunder script load; called only after the script `load` event. */
-export function recordPopunderLoad(now: number = Date.now(), randomUuid?: () => string): void {
+/** Records one successful popunder open; called by the window.open tracker. */
+export function recordPopunderOpen(now: number = Date.now(), randomUuid?: () => string): void {
   if (typeof document === "undefined") return;
   const state = visitorForContext(readCookie(AD_VISITOR_COOKIE), randomUuid);
   const serialized = encodeURIComponent(serializeVisitorState(withPopunderShown(state, now)));
