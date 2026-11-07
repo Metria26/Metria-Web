@@ -28,8 +28,10 @@ of the day and contradicted the owner's 4-per-day requirement. This revision:
   `window.open(url, "_blank")` and receives a window. Page loads, reloads, and
   non-ad interactions no longer consume slots.
 - Stops injecting the popunder script after 4 opens in the 24-hour window.
-- Leaves focus behavior to Adsterra support for now; no `window.open` focus
-  monkey-patch in this revision.
+- Adds a best-effort background-focus wrapper: blur the sponsored tab and
+  refocus the current page immediately and twice shortly afterwards (0 ms and
+  250 ms). Browsers may ignore programmatic focus, so a network-side fix is
+  still requested.
 - Keeps Adsterra's dashboard/support cap as the authoritative impression
   limiter: configure **4 impressions per user per 24 hours** there.
 - Requires no database change; production already has the popunder flag and
@@ -47,11 +49,13 @@ Write to Adsterra support with:
 2. Ask for a setting or updated script that opens the popunder in a background
    tab without taking focus. The current reviewed script is
    `https://abscloud.org/1/d5d5a4efeec12f60a2b9db7ddf75914b`; the site loads it
-   in the page head after consent.
+   in the page head after consent. Our best-effort wrapper blurs the new tab and
+   refocuses the current page, but browsers may ignore it.
 3. If native/social ads serve but the dashboard shows zero popunder
    impressions, ask them to check unit moderation/fill for this domain.
 
-Do not add a `window.open` focus monkey-patch until support answers.
+The best-effort focus wrapper is implemented; do not add further focus hacks
+without support guidance.
 
 ## Owner decisions
 
@@ -110,9 +114,11 @@ Do not add a `window.open` focus monkey-patch until support answers.
   - Installs once per document before the popunder script.
   - Wraps `window.open`; when a `_blank` call returns a window, records one
     popunder open in the first-party cookie.
-  - Does not change focus and does not block opens. Adsterra's dashboard cap is
-    the impression limiter; blocking in-page would affect unrelated `_blank`
-    calls.
+  - Blurs the new tab and refocuses the current page immediately and twice
+    shortly afterwards (0 ms and 250 ms), so the popunder stays in the
+    background where the browser allows it.
+  - Never blocks opens. Adsterra's dashboard cap is the impression limiter;
+    blocking in-page would affect unrelated `_blank` calls.
 - New `src/features/ads/adsterra/popunder.tsx`:
   - Client component, renders nothing.
   - Injects once into `document.head` with
@@ -194,6 +200,8 @@ Do not add a `window.open` focus monkey-patch until support answers.
     `metria_ad_visitor`;
   - after four opens in 24 hours, a full reload does not inject the script
     (the network cap handles any extra in-page open);
+  - on Chrome, Edge, Firefox and Safari, the sponsored tab opens behind the
+    current page and focus stays on Metria (best-effort; record failures);
   - clear the cookie or use incognito for repeat QA (existing load timestamps
     count toward the new open cap);
   - consent denied: no script; `/auth/*`, `/admin/*`, 404: no script;
@@ -218,6 +226,10 @@ Do not add a `window.open` focus monkey-patch until support answers.
 - The tracker wraps `window.open` for the document lifetime. The app currently
   makes no JS `window.open` calls; scope the wrapper to `_blank` and revisit if
   first-party code adds any.
+- Background focus is browser-dependent. `blur()`/`focus()` may be ignored,
+  especially outside a user gesture; the 0/250 ms retries are best-effort
+  second attempts. Escalate to Adsterra support if Chrome/Safari still
+  foreground the tab.
 - If Adsterra changes its open path away from `window.open`, the tracker will
   under-count and Adsterra's cap remains the only limiter.
 - A popunder script that has already executed cannot be fully torn down by

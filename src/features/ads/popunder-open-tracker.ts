@@ -4,16 +4,47 @@
  * `window.open(url, "_blank")`, so wrapping that call gives a closer count
  * than recording script loads or page views.
  *
- * The wrapper never changes focus and never blocks an open. Adsterra's own
- * dashboard cap remains the impression limiter; this tracker only decides
- * whether the script is injected again on later page loads.
+ * The wrapper also tries to keep focus on the current page: it blurs the new
+ * tab and refocuses the opener, then retries shortly afterwards. Browsers may
+ * ignore programmatic focus changes, so this is best-effort; Adsterra support
+ * remains the reliable fix. It never blocks an open, and Adsterra's dashboard
+ * cap remains the impression limiter.
  */
 
 import { recordPopunderOpen } from "./popunder-cookie";
 
 export const POPUNDER_OPEN_TRACKER_KEY = "__metria_popunder_open_tracker";
 
+const FOCUS_RETRY_DELAYS_MS = [0, 250];
+
 type TrackedWindow = Window & { __metria_popunder_open_tracker?: boolean };
+
+function keepFocusOnCurrentPage(win: Window, opened: Window): void {
+  try {
+    opened.blur();
+  } catch {
+    // Cross-origin/hardened windows may reject blur(); focus() still runs.
+  }
+  try {
+    win.focus();
+  } catch {
+    // Focus changes are best-effort and browser-dependent.
+  }
+  for (const delay of FOCUS_RETRY_DELAYS_MS) {
+    setTimeout(() => {
+      try {
+        opened.blur();
+      } catch {
+        // Ignore windows that no longer allow blur().
+      }
+      try {
+        win.focus();
+      } catch {
+        // Ignore browsers that deny focus after the user gesture ends.
+      }
+    }, delay);
+  }
+}
 
 export function installPopunderOpenTracker(
   win: Window = window,
@@ -28,7 +59,10 @@ export function installPopunderOpenTracker(
   try {
     win.open = function (url?: string | URL, target?: string, features?: string) {
       const opened = originalOpen.call(win, url, target, features);
-      if (opened && target === "_blank") recordPopunderOpen(now());
+      if (opened && target === "_blank") {
+        recordPopunderOpen(now());
+        keepFocusOnCurrentPage(win, opened);
+      }
       return opened;
     } as Window["open"];
     tracked[POPUNDER_OPEN_TRACKER_KEY] = true;

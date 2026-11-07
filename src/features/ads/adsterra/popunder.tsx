@@ -11,7 +11,8 @@ import { ADSTERRA_UNITS } from "./config";
  * A body/head-level script with no DOM target. It is injected once per document
  * after the consent and ads gates have mounted this component. A first-party
  * cap allows at most four successful popunder opens per 24 hours; the tracker
- * wraps `window.open` so page loads and reloads do not consume slots.
+ * wraps `window.open` so page loads and reloads do not consume slots, and
+ * tries to keep the current page focused by blurring the new tab.
  *
  * The script is intentionally NOT removed on unmount or on error. Adsterra's
  * listeners may outlive the script element, so removing it gives false

@@ -352,11 +352,12 @@ Pre-commit: husky + lint-staged (eslint --fix + prettier on staged `ts/tsx/mjs`;
 - **Owner next:** create the monitor account and URL (`https://metria-web.onrender.com/api/health`, 3-5 minute interval), route alerts to both founders, and check Render instance hours monthly. Optional second monitor from a different provider reduces single-monitor failure risk.
 - **Limits:** best-effort only; monitor failure or a Render restart can still cause a cold start, and the shallow route does not keep Supabase active.
 
-### Adsterra Popunder (2026-11-06; frequency revised 2026-11-07) - implemented; cloud applied
+### Adsterra Popunder (2026-11-06; frequency/focus revised 2026-11-07) - implemented; cloud applied
 - **Scope:** landing, legal/trust pages and every authenticated `/app` page; `/auth/*`, `/admin/*` and error routes stay ad-free.
 - **Code:** `src/features/ads/adsterra/popunder.tsx`, `src/features/ads/popunder-cookie.ts`, `src/features/ads/popunder-open-tracker.ts`, `ads.popunder.enabled` gate in public/private surfaces, host `https://abscloud.org` in CSP, hard reload on sign-out/public "Open app".
 - **Frequency:** four successful popunder opens per 24 hours via `metria_ad_visitor`; page loads/reloads do not consume slots. Configure the Adsterra dashboard/support popunder cap to 4 impressions per user per 24 hours too. Plan: `pop-plan.md`.
-- **Pending:** owner QA + Adsterra impressions check; set/confirm the dashboard cap and ask support for background-tab behavior. `supabase db push` is optional for the idempotent `20261106120000_b_ads_popunder_flag.sql` because the flag and `ad_kill_state` field are already applied.
+- **Background focus:** the tracker wraps `window.open`, blurs the sponsored tab and refocuses the current page immediately and twice shortly afterwards (0 ms and 250 ms). This is best-effort; browsers may still activate the new tab. Ask Adsterra support for a network-side background/non-focus variant as the reliable fix.
+- **Pending:** owner QA + Adsterra impressions check; set/confirm the dashboard cap and the background-tab support request. `supabase db push` is optional for the idempotent `20261106120000_b_ads_popunder_flag.sql` because the flag and `ad_kill_state` field are already applied.
 
 ## Post-MVP roadmap (moved from plan.md §9, 2026-10-19)
 

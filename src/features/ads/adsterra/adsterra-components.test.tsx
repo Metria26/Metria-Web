@@ -143,13 +143,46 @@ describe("AdsterraPopunder", () => {
   });
 
   it("records one open for a successful _blank window", () => {
-    window.open = vi.fn(() => ({}) as Window);
-    render(<AdsterraPopunder />);
+    vi.useFakeTimers();
+    const focus = vi.spyOn(window, "focus").mockImplementation(() => {});
+    window.open = vi.fn(() => ({ blur: vi.fn() }) as unknown as Window);
 
-    window.open("https://ad.example", "_blank");
+    try {
+      render(<AdsterraPopunder />);
 
-    const state = readAdVisitorCookie();
-    expect(state?.popunderShownAt).toHaveLength(1);
+      window.open("https://ad.example", "_blank");
+
+      const state = readAdVisitorCookie();
+      expect(state?.popunderShownAt).toHaveLength(1);
+
+      vi.runAllTimers();
+    } finally {
+      focus.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("tries to keep the current page focused for _blank opens", () => {
+    vi.useFakeTimers();
+    const blur = vi.fn();
+    window.open = vi.fn(() => ({ blur }) as unknown as Window);
+    const focus = vi.spyOn(window, "focus").mockImplementation(() => {});
+
+    try {
+      render(<AdsterraPopunder />);
+
+      window.open("https://ad.example", "_blank");
+
+      expect(blur).toHaveBeenCalledTimes(1);
+      expect(focus).toHaveBeenCalledTimes(1);
+
+      vi.runAllTimers();
+      expect(blur).toHaveBeenCalledTimes(3);
+      expect(focus).toHaveBeenCalledTimes(3);
+    } finally {
+      focus.mockRestore();
+      vi.useRealTimers();
+    }
   });
 
   it("does not count blocked or non-_blank opens", () => {
