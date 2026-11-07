@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Cookie } from "lucide-react";
 import {
+  CONSENT_CHANGED_EVENT,
   CONSENT_COOKIE,
   CONSENT_COOKIE_MAX_AGE_SECONDS,
   chosenCategories,
@@ -41,8 +42,9 @@ export function ConsentBanner({ policyVersion, initialConsentCookie = null }: Co
       serializeConsentState(state),
     )}; Path=/; Max-Age=${CONSENT_COOKIE_MAX_AGE_SECONDS}; SameSite=Lax`;
     setDecided(true);
-    // The ad surface is resolved on the server from this cookie; refresh so an
-    // accepted choice mounts ads immediately without requiring navigation.
+    // Already-mounted client loaders react to the same-tab signal; the server
+    // refresh then mounts server-resolved ad units without a navigation.
+    window.dispatchEvent(new Event(CONSENT_CHANGED_EVENT));
     router.refresh();
   };
 

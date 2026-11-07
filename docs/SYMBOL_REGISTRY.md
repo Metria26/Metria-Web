@@ -81,6 +81,16 @@ Audit: `mark.changed`, `role.assignment.changed`, `ad.config.changed`, `ad.kill_
 ## Registry delta protocol
 Any later symbol addition or correction must be listed in the generating file's `REGISTRY DELTA`, mirrored here, then checked against all references.
 
+## Registry deltas
+### 2026-11-07 - Monetag Vignette Banner
+- Client component `MonetagVignette` (`src/features/ads/monetag-vignette.tsx`), mounted once in the root layout; no new cookie.
+- Pure gate helpers `isMonetagVignettePathAllowed(pathname)`, `monetagVignetteAllowed({ pathname, surfaceOpen, consentGranted })` and `monetagVignetteSurface(pathname)` (`src/features/ads/monetag-vignette-rules.ts`).
+- Constants `MONETAG_VIGNETTE_ZONE` (`12211513`), `MONETAG_VIGNETTE_SCRIPT_URL` (`https://n6wxm.com/vignette.min.js`) and `MONETAG_VIGNETTE_SCRIPT_MARKER` (`monetag-vignette`).
+- Consent event `CONSENT_CHANGED_EVENT` (`metria:consent-changed`), dispatched by the existing consent banner so already-mounted loaders react to an accept/reject without a timer.
+- Read-only gate endpoint `GET /api/ads/monetag-vignette` returning `{ allowed: boolean }` with `Cache-Control: no-store`; it reuses `loadPublicAdSurface` / `loadPrivateAdSurface`.
+- Test seam `clearMonetagVignetteState()`.
+- No new database table, function, feature flag or environment variable.
+
 ## Self-check
 - [x] Purpose, audience, prerequisites, owner lane, and registry version are stated.
 - [x] Scope and implementation constraints are explicit.

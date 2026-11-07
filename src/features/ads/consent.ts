@@ -12,6 +12,12 @@ import { consentStateSchema, type ConsentCategories, type ConsentState } from ".
 export const CONSENT_COOKIE = "metria_consent";
 export const CONSENT_COOKIE_MAX_AGE_SECONDS = 180 * 24 * 60 * 60;
 export const DEFAULT_CONSENT_POLICY_VERSION = "v1";
+/**
+ * Same-tab signal after the consent cookie changes. The banner also calls
+ * router.refresh() for server-resolved ads; already-mounted client loaders
+ * (Monetag Vignette) use this event instead of a polling timer.
+ */
+export const CONSENT_CHANGED_EVENT = "metria:consent-changed";
 
 export function policyVersionFromEnv(
   env: Record<string, string | undefined> = process.env,
