@@ -1,10 +1,11 @@
 import { CSV_MAX_BYTES, CSV_MAX_ROWS, type ImportCounts } from "./contracts";
+import { parseRollInput } from "@/features/academics/roll-email";
 
 /**
  * Pure two-phase import classification (feature 2.2 / T-A004). The route
  * resolves emails against the tenant and delegates the row decisions here so
  * preview counts are unit-testable without a database. Cascade per row:
- * email format → score parse/range → within-file duplicate → resolvability
+ * email/roll format → score parse/range → within-file duplicate → resolvability
  * (student exists + enrolled) → ready (flagged `existing` when a mark is
  * already present — the confirm step decides skip vs overwrite, R10).
  */
@@ -33,10 +34,10 @@ export function withinCsvLimits(byteLength: number, rowCount: number): boolean {
 }
 
 export function isValidEmail(email: string): boolean {
-  return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  return parseRollInput(email) !== null;
 }
 
-/** First occurrence of an email wins; later rows are duplicates (documented). */
+/** First occurrence of a student wins; later rows are duplicates (documented). */
 export function classifyRows(
   rows: PreviewRow[],
   options: ClassificationOptions,
@@ -54,7 +55,7 @@ export function classifyRows(
   };
 
   rows.forEach((row, index) => {
-    const email = row.email.trim().toLowerCase();
+    const rawInput = row.email.trim();
     const rowNumber = index + 1;
     const push = (
       status: ClassifiedRow["status"],
@@ -62,7 +63,8 @@ export function classifyRows(
       {
         existing = false,
         proposedScore = null,
-      }: { existing?: boolean; proposedScore?: number | null } = {},
+        email = rawInput.toLowerCase(),
+      }: { existing?: boolean; proposedScore?: number | null; email?: string } = {},
     ) => {
       classified.push({
         rowNumber,
@@ -76,36 +78,43 @@ export function classifyRows(
       if (existing) counts.existing = (counts.existing ?? 0) + 1;
     };
 
-    if (!isValidEmail(email)) {
+    const roll = parseRollInput(rawInput);
+    if (!roll) {
       push("invalid", "email_invalid");
       return;
     }
+    const canonicalEmail = roll.email;
+
     const score = Number(row.score.trim());
     if (row.score.trim() === "" || !Number.isFinite(score) || score < 0) {
-      push("invalid", "score_invalid");
+      push("invalid", "score_invalid", { email: canonicalEmail });
       return;
     }
     if (score > options.assessmentTotal) {
-      push("invalid", "score_out_of_range");
+      push("invalid", "score_out_of_range", { email: canonicalEmail });
       return;
     }
-    if (seenEmails.has(email)) {
-      push("duplicate", "duplicate_email");
+    if (seenEmails.has(canonicalEmail)) {
+      push("duplicate", "duplicate_email", { email: canonicalEmail });
       return;
     }
-    seenEmails.add(email);
+    seenEmails.add(canonicalEmail);
 
-    const resolved = options.resolve(email);
+    const resolved = options.resolve(canonicalEmail);
     if (!resolved) {
-      push("not_found", "student_not_found");
+      push("not_found", "student_not_found", { email: canonicalEmail });
       return;
     }
     if (!resolved.enrolled) {
-      push("not_found", "not_enrolled");
+      push("not_found", "not_enrolled", { email: canonicalEmail });
       return;
     }
     const existing = options.markExists(resolved.profileId);
-    push("ready", existing ? "exists" : null, { existing, proposedScore: score });
+    push("ready", existing ? "exists" : null, {
+      existing,
+      proposedScore: score,
+      email: canonicalEmail,
+    });
   });
 
   return { rows: classified, counts };

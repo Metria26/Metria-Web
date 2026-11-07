@@ -15,6 +15,7 @@ import {
   type ImportPreviewResponse,
 } from "@/features/marks/contracts";
 import { errorsToCsv, withinCsvLimits } from "@/features/marks/import-logic";
+import { parseRollInput } from "@/features/academics/roll-email";
 
 /**
  * Two-phase CSV importer (feature 2.2 / ADR-002): client pre-parse with
@@ -24,6 +25,17 @@ import { errorsToCsv, withinCsvLimits } from "@/features/marks/import-logic";
  */
 
 type FileErrorKey = "tooLarge" | "emptyFile" | "invalidHeader" | "tooManyRows" | "parseError";
+
+const STUDENT_HEADER_LABELS = new Set([
+  "roll",
+  "rollno",
+  "rollnumber",
+  "email",
+  "student",
+  "studentid",
+  "id",
+]);
+const SCORE_HEADER_LABELS = new Set(["score", "marks", "mark", "grade"]);
 
 const buttonClass =
   "inline-flex h-9 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50";
@@ -81,15 +93,37 @@ export function ImportPanel({ assessmentId }: { assessmentId: string }) {
       return;
     }
     const header = (data[0] ?? []).map((cell) => (cell ?? "").trim().toLowerCase());
-    const emailIdx = header.indexOf("email");
-    const scoreIdx = header.indexOf("score");
-    if (emailIdx === -1 || scoreIdx === -1) {
+    let studentIdx = -1;
+    let scoreIdx = -1;
+    for (let i = 0; i < header.length; i++) {
+      const h = header[i]!.replace(/[^a-z0-9]/g, "");
+      if (STUDENT_HEADER_LABELS.has(h)) studentIdx = i;
+      if (SCORE_HEADER_LABELS.has(h)) scoreIdx = i;
+    }
+    let startIndex = 1;
+    if (studentIdx === -1 || scoreIdx === -1) {
+      const firstRow = data[0];
+      const sampleCell = (firstRow?.[0] ?? "").trim();
+      if (sampleCell && parseRollInput(sampleCell) !== null) {
+        studentIdx = 0;
+        scoreIdx = firstRow && firstRow.length > 1 ? 1 : -1;
+        startIndex = 0;
+      } else if (firstRow && firstRow.length >= 2) {
+        studentIdx = 0;
+        scoreIdx = 1;
+        startIndex = 1;
+      } else {
+        setFileError("invalidHeader");
+        return;
+      }
+    }
+    if (scoreIdx === -1) {
       setFileError("invalidHeader");
       return;
     }
     const nextRows: CsvRow[] = [];
-    for (const line of data.slice(1)) {
-      const email = (line[emailIdx] ?? "").trim();
+    for (const line of data.slice(startIndex)) {
+      const email = (line[studentIdx] ?? "").trim();
       const score = (line[scoreIdx] ?? "").trim();
       if (!email && !score) continue;
       nextRows.push({ email, score });

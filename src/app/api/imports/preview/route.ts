@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { parseRollInput } from "@/features/academics/roll-email";
 import {
   CSV_MAX_BYTES,
   importPreviewRequestSchema,
@@ -174,7 +175,7 @@ export async function POST(request: Request): Promise<Response> {
 
 async function buildResolvers(
   supabase: Awaited<ReturnType<typeof requireSession>>["supabase"],
-  emails: string[],
+  rawInputs: string[],
   universityId: string,
   offeringId: string,
   sectionId: string | null,
@@ -184,17 +185,25 @@ async function buildResolvers(
   enrolledIds: Set<string>;
   markedIds: Set<string>;
 }> {
-  const uniqueEmails = [...new Set(emails.map((email) => email.trim().toLowerCase()))];
+  const candidates: string[] = [];
+  for (const raw of rawInputs) {
+    const roll = parseRollInput(raw);
+    if (roll) {
+      candidates.push(roll.email);
+      if (roll.altEmail) candidates.push(roll.altEmail);
+    }
+  }
+  const uniqueCandidates = [...new Set(candidates.map((c) => c.toLowerCase()))];
   const resolvedProfiles = new Map<string, string>();
-  for (let i = 0; i < uniqueEmails.length; i += EMAIL_CHUNK) {
-    const chunk = uniqueEmails.slice(i, i + EMAIL_CHUNK);
+  for (let i = 0; i < uniqueCandidates.length; i += EMAIL_CHUNK) {
+    const chunk = uniqueCandidates.slice(i, i + EMAIL_CHUNK);
     const { data } = await supabase
       .from("profiles")
       .select("id, email")
       .eq("university_id", universityId)
       .in("email", chunk);
     for (const row of data ?? []) {
-      resolvedProfiles.set(row.email.toLowerCase(), row.id);
+      if (row.email) resolvedProfiles.set(row.email.toLowerCase(), row.id);
     }
   }
 
