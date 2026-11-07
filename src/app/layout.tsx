@@ -26,6 +26,9 @@ export async function generateMetadata(): Promise<Metadata> {
       template: `%s | ${productName}`,
     },
     description: t("description"),
+    other: {
+      monetag: "2669971f08e5ec9d1d792b0f28ef61ed",
+    },
   };
 }
 
