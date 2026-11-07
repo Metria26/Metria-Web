@@ -135,6 +135,35 @@ export default async function Home() {
                 <Check className="size-4 shrink-0 text-primary" aria-hidden />
                 {t("heroNote")}
               </p>
+
+              {showPopunderNotice ? (
+                <div className="mt-8 rounded-2xl border bg-card p-5 shadow-sm sm:p-6">
+                  <div className="flex items-start gap-3.5">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-warning/15 text-warning">
+                      <Lightbulb className="size-5" aria-hidden />
+                    </span>
+                    <div className="space-y-2.5">
+                      <h2 className="text-base font-semibold tracking-tight sm:text-lg">
+                        {t("adsNoteTitle")}
+                      </h2>
+                      <p className="text-base leading-relaxed text-muted-foreground sm:text-lg">
+                        {t("adsNoteBody")}
+                      </p>
+                      <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
+                        {t("adsNoteTipBefore")}{" "}
+                        <kbd className="rounded border bg-background px-2 py-0.5 font-mono text-xs font-semibold sm:text-sm">
+                          Ctrl
+                        </kbd>
+                        {" + "}
+                        <kbd className="rounded border bg-background px-2 py-0.5 font-mono text-xs font-semibold sm:text-sm">
+                          W
+                        </kbd>{" "}
+                        {t("adsNoteTipAfter")}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div aria-hidden className="relative mx-auto w-full max-w-md lg:max-w-none">
@@ -324,40 +353,6 @@ export default async function Home() {
             </div>
           </div>
         </section>
-
-        {showPopunderNotice ? (
-          <section className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
-            <aside
-              aria-labelledby="ads-note-title"
-              className="rounded-2xl border bg-card p-5 shadow-sm sm:p-6"
-            >
-              <div className="flex items-start gap-3">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-warning/15 text-warning">
-                  <Lightbulb className="size-4" aria-hidden />
-                </span>
-                <div className="space-y-2">
-                  <h2 id="ads-note-title" className="font-semibold tracking-tight">
-                    {t("adsNoteTitle")}
-                  </h2>
-                  <p className="text-sm leading-relaxed text-muted-foreground">
-                    {t("adsNoteBody")}
-                  </p>
-                  <p className="text-sm leading-relaxed text-muted-foreground">
-                    {t("adsNoteTipBefore")}{" "}
-                    <kbd className="rounded border bg-background px-1.5 py-0.5 font-mono text-xs">
-                      Ctrl
-                    </kbd>
-                    {" + "}
-                    <kbd className="rounded border bg-background px-1.5 py-0.5 font-mono text-xs">
-                      W
-                    </kbd>{" "}
-                    {t("adsNoteTipAfter")}
-                  </p>
-                </div>
-              </div>
-            </aside>
-          </section>
-        ) : null}
 
         {showNative ? (
           <div className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
