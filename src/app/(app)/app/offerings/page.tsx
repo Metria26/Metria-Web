@@ -4,6 +4,8 @@ import { connection } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { EmptyState } from "@/components/states/empty-state";
 import { createClient } from "@/lib/supabase/server";
+import { deleteOfferingAction } from "@/features/academics/actions";
+import { ConfirmDeleteDialogButton } from "@/components/ui/confirm-delete-dialog";
 
 export const metadata: Metadata = {
   title: "Offerings",
@@ -46,6 +48,7 @@ export default async function OfferingsPage() {
     .from("course_offerings")
     .select("id, offering_code, term_id, courses ( code, title )")
     .order("created_at", { ascending: false });
+  let staffedOfferingIds: string[] = [];
 
   if (!isAdmin && userProfile) {
     // Check if user is staff (TA/Teacher)
@@ -54,6 +57,7 @@ export default async function OfferingsPage() {
       .select("offering_id")
       .eq("profile_id", userProfile.id);
     const staffOfferingIds = (staffRows ?? []).map((r) => r.offering_id);
+    staffedOfferingIds = staffOfferingIds;
 
     if (staffOfferingIds.length > 0) {
       offeringQuery = offeringQuery.in("id", staffOfferingIds);
@@ -121,30 +125,46 @@ export default async function OfferingsPage() {
         />
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2" data-testid="offerings-list">
-          {offerings.map((offering) => (
-            <li key={offering.id}>
-              <Link
-                href={`/app/offerings/${offering.id}`}
-                className="flex items-center justify-between rounded-xl border bg-card p-5 transition-all hover:border-primary hover:shadow-md focus-visible:outline-2 focus-visible:outline-ring"
-                data-testid="offering-item"
-              >
-                <span className="grid gap-1">
-                  <span className="font-semibold text-base">
-                    {offering.courses
-                      ? `${offering.courses.code} — ${offering.courses.title}`
-                      : offering.offering_code}
+          {offerings.map((offering) => {
+            const canDelete = staffedOfferingIds.includes(offering.id);
+            return (
+              <li key={offering.id} className="flex flex-col">
+                <Link
+                  href={`/app/offerings/${offering.id}`}
+                  className="flex items-center justify-between rounded-xl border bg-card p-5 transition-all hover:border-primary hover:shadow-md focus-visible:outline-2 focus-visible:outline-ring"
+                  data-testid="offering-item"
+                >
+                  <span className="grid gap-1">
+                    <span className="font-semibold text-base">
+                      {offering.courses
+                        ? `${offering.courses.code} — ${offering.courses.title}`
+                        : offering.offering_code}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {offering.offering_code}
+                      {offering.termName ? ` · ${offering.termName}` : ""}
+                    </span>
                   </span>
-                  <span className="text-xs text-muted-foreground">
-                    {offering.offering_code}
-                    {offering.termName ? ` · ${offering.termName}` : ""}
+                  <span aria-hidden className="text-muted-foreground text-lg">
+                    →
                   </span>
-                </span>
-                <span aria-hidden className="text-muted-foreground text-lg">
-                  →
-                </span>
-              </Link>
-            </li>
-          ))}
+                </Link>
+                {canDelete ? (
+                  <div className="mt-2 flex justify-end">
+                    <ConfirmDeleteDialogButton
+                      label={t("actions.deleteOffering")}
+                      confirmMessage={t("confirm.deleteOffering", { code: offering.offering_code })}
+                      requireTyping={offering.offering_code}
+                      hiddenFields={{ offeringId: offering.id, force: "true" }}
+                      action={deleteOfferingAction}
+                      testId={`delete-offering-${offering.id.slice(0, 8)}`}
+                      buttonClass="inline-flex h-8 items-center rounded-lg border border-destructive/40 bg-background px-2.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
+                    />
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

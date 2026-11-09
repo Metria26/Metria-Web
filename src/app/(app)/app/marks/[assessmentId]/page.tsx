@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { EmptyState } from "@/components/states/empty-state";
 import { createClient } from "@/lib/supabase/server";
+import { compareStudentsByEmail } from "@/lib/student-sort";
 import { ImportPanel } from "@/features/marks/ui/import-panel";
 import { MarksEntry, type MarkEntryGroup } from "@/features/marks/ui/marks-entry";
 import { ReleaseToggle } from "@/features/marks/ui/release-toggle";
@@ -126,7 +127,9 @@ export default async function MarksEntryPage({
         score: marksByStudent.get(student.id)?.score ?? null,
         status: marksByStudent.get(student.id)?.status ?? "pending",
       }))
-      .sort((a, b) => a.name.localeCompare(b.name)),
+      // Registry delta 2026-11-08: rosters sort by email local part ascending
+      // (numeric-aware), not by display name.
+      .sort(compareStudentsByEmail),
   }));
 
   return (

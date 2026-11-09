@@ -183,7 +183,7 @@ test.describe("booking journey", () => {
     await page.goto("/app");
     const dashboardRow = page.getByTestId("dashboard-booking").filter({ hasText: periodTitle });
     await expect(dashboardRow).toBeVisible({ timeout: 20_000 });
-    await expect(dashboardRow).toContainText("Booked");
+    await expect(dashboardRow).toContainText("Bookings");
     const dashboardHref = await dashboardRow
       .getByTestId("dashboard-booking-link")
       .getAttribute("href");

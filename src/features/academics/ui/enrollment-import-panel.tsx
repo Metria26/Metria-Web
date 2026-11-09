@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { bulkEnrollStudentsAction } from "@/features/academics/actions";
 import { parseRollInput } from "@/features/academics/roll-email";
+import { compareStudentsByEmail } from "@/lib/student-sort";
 import type { BulkEnrollmentResult } from "@/features/academics/contracts";
 
 type SectionOption = { id: string; label: string };
@@ -227,9 +228,12 @@ export function EnrollmentImportPanel({ sections }: { sections: SectionOption[] 
               <p className="font-medium">{t("invalidTitle")}</p>
               <p className="text-muted-foreground">{t("invalidHint")}</p>
               <ul className="grid max-h-32 gap-1 overflow-y-auto rounded-lg border p-2 text-xs">
-                {sheet.invalid.slice(0, 20).map((entry, index) => (
-                  <li key={`${entry}-${index}`}>{entry}</li>
-                ))}
+                {[...sheet.invalid]
+                  .sort((a, b) => compareStudentsByEmail({ email: a }, { email: b }))
+                  .slice(0, 20)
+                  .map((entry, index) => (
+                    <li key={`${entry}-${index}`}>{entry}</li>
+                  ))}
                 {sheet.invalid.length > 20 ? <li className="text-muted-foreground">…</li> : null}
               </ul>
             </div>
