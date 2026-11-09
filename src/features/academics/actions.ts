@@ -455,54 +455,119 @@ async function deleteViaRpc(
   fn: "delete_announcement" | "delete_assessment" | "delete_enrollment" | "delete_section_cascade",
   idKey: string,
   id: string,
-): Promise<boolean> {
+  force = false,
+): Promise<{ message: string | null }> {
   const supabase = await createClient();
-  const { error } = await rpcTransport(supabase).rpc(fn, { [idKey]: id });
-  return !error;
+  // PostgREST resolves functions by their argument names: only the RPCs that
+  // actually take p_force may receive it.
+  const args: Record<string, unknown> = { [idKey]: id };
+  if (fn === "delete_assessment" || fn === "delete_section_cascade") args.p_force = force;
+  const { error } = await rpcTransport(supabase).rpc(fn, args);
+  return { message: error?.message ?? null };
+}
+
+/** Session expired while submitting a delete — surface a stable key. */
+function deleteResult(message: string | null): ActionResult {
+  if (!message) return { ok: true };
+  if (message.includes("not_found")) return { ok: false, error: "notFound" };
+  if (message.includes("marks_protected")) return { ok: false, error: "marksProtected" };
+  if (message.includes("42501") || message.includes("unauthenticated")) {
+    return { ok: false, error: "notAuthorized" };
+  }
+  return { ok: false, error: "deleteFailed" };
 }
 
 /** Delete an announcement (author or offering staff). */
-export async function deleteAnnouncementAction(formData: FormData): Promise<void> {
+export async function deleteAnnouncementAction(formData: FormData): Promise<ActionResult> {
   const announcementId = formUuid(formData, "announcementId");
   const offeringId = formUuid(formData, "offeringId");
-  if (!announcementId || !offeringId) return;
-  await deleteViaRpc("delete_announcement", "p_announcement_id", announcementId);
+  if (!announcementId || !offeringId) return { ok: false, error: "invalidInput" };
+  const result = await deleteViaRpc("delete_announcement", "p_announcement_id", announcementId);
   revalidatePath(`/app/offerings/${offeringId}`);
   revalidatePath("/app");
+  return deleteResult(result.message);
 }
 
-/** Delete an assessment, its marks and mark history, and any import batches. */
-export async function deleteAssessmentAction(formData: FormData): Promise<void> {
+/**
+ * Delete an assessment, its marks and mark history, and any import batches.
+ * Released marks (visibility='students' + scored rows) block the call unless
+ * the typed confirmation dialog passes force=true.
+ */
+export async function deleteAssessmentAction(formData: FormData): Promise<ActionResult> {
   const assessmentId = formUuid(formData, "assessmentId");
   const offeringId = formUuid(formData, "offeringId");
-  if (!assessmentId || !offeringId) return;
-  await deleteViaRpc("delete_assessment", "p_assessment_id", assessmentId);
+  const force = formData.get("force") === "true";
+  if (!assessmentId || !offeringId) return { ok: false, error: "invalidInput" };
+  const result = await deleteViaRpc("delete_assessment", "p_assessment_id", assessmentId, force);
   revalidatePath(`/app/offerings/${offeringId}`);
   revalidatePath(`/app/marks/${assessmentId}`);
   revalidatePath("/app/marks");
+  return deleteResult(result.message);
 }
 
 /** Remove one student from a section. */
-export async function deleteEnrollmentAction(formData: FormData): Promise<void> {
+export async function deleteEnrollmentAction(formData: FormData): Promise<ActionResult> {
   const enrollmentId = formUuid(formData, "enrollmentId");
   const offeringId = formUuid(formData, "offeringId");
-  if (!enrollmentId || !offeringId) return;
-  await deleteViaRpc("delete_enrollment", "p_enrollment_id", enrollmentId);
+  if (!enrollmentId || !offeringId) return { ok: false, error: "invalidInput" };
+  const result = await deleteViaRpc("delete_enrollment", "p_enrollment_id", enrollmentId);
   revalidatePath(`/app/offerings/${offeringId}`);
+  return deleteResult(result.message);
 }
 
 /**
  * Delete a section and everything that belongs to it: enrollments,
  * announcements, assessments/marks, periods/slots/bookings and invites.
+ * Released marks block the call unless force=true (typed confirmation).
  */
-export async function deleteSectionAction(formData: FormData): Promise<void> {
+export async function deleteSectionAction(formData: FormData): Promise<ActionResult> {
   const sectionId = formUuid(formData, "sectionId");
   const offeringId = formUuid(formData, "offeringId");
-  if (!sectionId || !offeringId) return;
-  await deleteViaRpc("delete_section_cascade", "p_section_id", sectionId);
+  const force = formData.get("force") === "true";
+  if (!sectionId || !offeringId) return { ok: false, error: "invalidInput" };
+  const result = await deleteViaRpc("delete_section_cascade", "p_section_id", sectionId, force);
   revalidatePath(`/app/offerings/${offeringId}`);
   revalidatePath("/app/bookings");
   revalidatePath("/app");
+  return deleteResult(result.message);
+}
+
+/**
+ * Delete a whole course offering: every section (with its cascade), the
+ * offering-wide assessments/marks, periods, bookings, staff rows — audited and
+ * released-mark-guarded in private.delete_course_offering.
+ */
+export async function deleteOfferingAction(formData: FormData): Promise<ActionResult> {
+  const offeringId = formUuid(formData, "offeringId");
+  const force = formData.get("force") === "true";
+  if (!offeringId) return { ok: false, error: "invalidInput" };
+  const supabase = await createClient();
+  const { error } = await rpcTransport(supabase).rpc("delete_course_offering", {
+    p_offering_id: offeringId,
+    p_force: force,
+  });
+  revalidatePath("/app/offerings");
+  revalidatePath("/app");
+  return deleteResult(error?.message ?? null);
+}
+
+/**
+ * Authoritative child counts for the delete-confirmation dialog ("Deleting
+ * section A also removes N enrollments and M bookings"). Uses the delete RPC's
+ * permission gate, so non-managers receive an error instead of data.
+ */
+export async function deleteCascadePreview(
+  kind: "section" | "assessment" | "period" | "slot",
+  targetId: string,
+): Promise<Record<string, number> | null> {
+  if (!uuidPattern.test(targetId)) return null;
+  const supabase = await createClient();
+  const { data, error } = await rpcTransport(supabase).rpc("delete_cascade_preview", {
+    p_kind: kind,
+    p_target_id: targetId,
+  });
+  if (error || typeof data !== "object" || data === null) return null;
+  return data as Record<string, number>;
 }
 
 /**

@@ -5,8 +5,10 @@ import { getMessages, getTranslations } from "next-intl/server";
 import { ThemeProvider } from "next-themes";
 import { OfflineBanner } from "@/components/shell/offline-banner";
 import { Toaster } from "@/components/ui/sonner";
-/*import { policyVersionFromEnv } from "@/features/ads/consent";*/
-/*import { MonetagVignette } from "@/features/ads/monetag-vignette";*/
+// Monetag ads paused 2026-11-09: uncomment the import, the policy constant and
+// the <MonetagVignette /> render below to re-enable.
+// import { policyVersionFromEnv } from "@/features/ads/consent";
+// import { MonetagVignette } from "@/features/ads/monetag-vignette";
 import { productName } from "@/lib/brand";
 import "./globals.css";
 
@@ -37,7 +39,8 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const messages = await getMessages();
   const t = await getTranslations("Shell");
-  /*const consentPolicyVersion = policyVersionFromEnv();*/
+  // Monetag ads paused 2026-11-09 (see commented imports above).
+  // const consentPolicyVersion = policyVersionFromEnv();
 
   return (
     <html
@@ -56,6 +59,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             </a>
             <OfflineBanner />
             {children}
+            {/* Monetag ads paused 2026-11-09: uncomment to re-enable. */}
             {/* <MonetagVignette policyVersion={consentPolicyVersion} /> */}
             <Toaster />
           </NextIntlClientProvider>

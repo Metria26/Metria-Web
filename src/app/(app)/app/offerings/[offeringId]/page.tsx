@@ -9,9 +9,11 @@ import {
   deleteAnnouncementAction,
   deleteAssessmentAction,
   deleteEnrollmentAction,
+  deleteSectionAction,
   removeEnrollmentInviteAction,
 } from "@/features/academics/actions";
-import { ConfirmDeleteButton } from "@/components/ui/confirm-delete-button";
+import { compareStudentsByEmail } from "@/lib/student-sort";
+import { ConfirmDeleteDialogButton } from "@/components/ui/confirm-delete-dialog";
 import { loadOfferingAnalytics } from "@/features/academics/analytics";
 import { AssessmentForm, EnrollmentForm, SectionForm } from "@/features/academics/ui/forms";
 import { AnnouncementForm as AnnouncementComposer } from "@/features/academics/ui/announcement-editor";
@@ -189,6 +191,102 @@ export default async function OfferingDetailPage({
 
   const selectedSection = sections.find((s) => s.id === sectionId);
 
+  // ---------------------------------------------------------------------------
+  // Delete-confirmation counts (staff only). The delete RPCs re-check
+  // permission server-side; these summaries just make the dialog copy exact.
+  // ---------------------------------------------------------------------------
+  const assessmentDeleteSummaries = new Map<string, string>();
+  const sectionDeleteSummaries = new Map<string, string>();
+  if (viewerIsStaff) {
+    const assessmentIds = assessments.map((assessment) => assessment.id);
+    const overviewSectionIds = sections.map((section) => section.id);
+    const [marksRes, periodsRes] = await Promise.all([
+      assessmentIds.length > 0
+        ? supabase.from("marks").select("assessment_id, score").in("assessment_id", assessmentIds)
+        : Promise.resolve({ data: [] as { assessment_id: string; score: number | null }[] }),
+      overviewSectionIds.length > 0
+        ? supabase
+            .from("evaluation_periods")
+            .select("id, section_id")
+            .in("section_id", overviewSectionIds)
+        : Promise.resolve({ data: [] as { id: string; section_id: string }[] }),
+    ]);
+    const periodRows = (periodsRes.data ?? []) as { id: string; section_id: string }[];
+    const periodIds = periodRows.map((row) => row.id);
+    const [slotsRes, bookingsRes] = await Promise.all([
+      periodIds.length > 0
+        ? supabase.from("slots").select("id, period_id").in("period_id", periodIds)
+        : Promise.resolve({ data: [] as { id: string; period_id: string }[] }),
+      periodIds.length > 0
+        ? supabase.from("bookings").select("id, period_id").in("period_id", periodIds)
+        : Promise.resolve({ data: [] as { id: string; period_id: string }[] }),
+    ]);
+    const slotRows = (slotsRes.data ?? []) as { id: string; period_id: string }[];
+    const bookingRows = (bookingsRes.data ?? []) as { id: string; period_id: string }[];
+
+    const marksByAssessment = new Map<string, { total: number; released: number }>();
+    for (const row of (marksRes.data ?? []) as { assessment_id: string; score: number | null }[]) {
+      const entry = marksByAssessment.get(row.assessment_id) ?? { total: 0, released: 0 };
+      entry.total += 1;
+      const assessment = assessments.find((a) => a.id === row.assessment_id);
+      if (row.score != null && assessment?.visibility === "students") entry.released += 1;
+      marksByAssessment.set(row.assessment_id, entry);
+    }
+    for (const assessment of assessments) {
+      const entry = marksByAssessment.get(assessment.id);
+      if (!entry) continue;
+      assessmentDeleteSummaries.set(
+        assessment.id,
+        t("confirm.assessmentCounts", { marks: entry.total, releasedMarks: entry.released }),
+      );
+    }
+
+    const sectionPeriodIds = new Map<string, string[]>();
+    for (const row of periodRows) {
+      sectionPeriodIds.set(row.section_id, [
+        ...(sectionPeriodIds.get(row.section_id) ?? []),
+        row.id,
+      ]);
+    }
+    const periodsBySection = new Map<string, number>();
+    for (const [id] of sectionPeriodIds) periodsBySection.set(id, sectionPeriodIds.get(id)!.length);
+    const slotsByPeriod = new Map<string, number>();
+    for (const slot of slotRows)
+      slotsByPeriod.set(slot.period_id, (slotsByPeriod.get(slot.period_id) ?? 0) + 1);
+    const bookingsByPeriod = new Map<string, number>();
+    for (const booking of bookingRows) {
+      bookingsByPeriod.set(booking.period_id, (bookingsByPeriod.get(booking.period_id) ?? 0) + 1);
+    }
+    const slotsBySection = new Map<string, number>();
+    const bookingsBySection = new Map<string, number>();
+    for (const [section, ids] of sectionPeriodIds) {
+      slotsBySection.set(
+        section,
+        ids.reduce((sum, id) => sum + (slotsByPeriod.get(id) ?? 0), 0),
+      );
+      bookingsBySection.set(
+        section,
+        ids.reduce((sum, id) => sum + (bookingsByPeriod.get(id) ?? 0), 0),
+      );
+    }
+    for (const section of sections) {
+      const assessmentCount = assessments.filter(
+        (assessment) => assessment.section_id === section.id,
+      ).length;
+      sectionDeleteSummaries.set(
+        section.id,
+        t("confirm.sectionCounts", {
+          enrollments: enrollments.filter((enrollment) => enrollment.section_id === section.id)
+            .length,
+          assessments: assessmentCount,
+          periods: periodsBySection.get(section.id) ?? 0,
+          slots: slotsBySection.get(section.id) ?? 0,
+          bookings: bookingsBySection.get(section.id) ?? 0,
+        }),
+      );
+    }
+  }
+
   // STEP 2: SECTION SELECTION VIEW (if no sectionId selected)
   if (!sectionId || !selectedSection) {
     return (
@@ -226,22 +324,40 @@ export default async function OfferingDetailPage({
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {sections.map((section) => (
-                <Link
+                <div
                   key={section.id}
-                  href={`/app/offerings/${offeringId}?sectionId=${section.id}`}
-                  className="flex items-center justify-between rounded-xl border bg-background p-4 transition-all hover:border-primary hover:bg-accent/50 focus-visible:outline-2 focus-visible:outline-ring"
-                  data-testid="section-item"
+                  className="flex items-center justify-between gap-2 rounded-xl border bg-background p-4"
                 >
-                  <div>
-                    <span className="font-semibold text-base">{section.section_code}</span>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {section.capacity != null
-                        ? t("capacityLabel", { count: section.capacity })
-                        : t("capacityUnlimited")}
-                    </p>
-                  </div>
-                  <span className="text-primary font-medium text-sm">Select →</span>
-                </Link>
+                  <Link
+                    href={`/app/offerings/${offeringId}?sectionId=${section.id}`}
+                    className="flex-1 transition-all hover:border-primary hover:bg-accent/50 focus-visible:outline-2 focus-visible:outline-ring"
+                    data-testid="section-item"
+                  >
+                    <div>
+                      <span className="font-semibold text-base">{section.section_code}</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {section.capacity != null
+                          ? t("capacityLabel", { count: section.capacity })
+                          : t("capacityUnlimited")}
+                      </p>
+                    </div>
+                    <span className="text-primary font-medium text-sm">Select →</span>
+                  </Link>
+                  {viewerIsStaff ? (
+                    <ConfirmDeleteDialogButton
+                      label={t("actions.deleteSection")}
+                      confirmMessage={t("confirm.deleteSection", {
+                        code: section.section_code,
+                        counts: sectionDeleteSummaries.get(section.id) ?? "",
+                      })}
+                      requireTyping={section.section_code}
+                      hiddenFields={{ sectionId: section.id, offeringId, force: "true" }}
+                      action={deleteSectionAction}
+                      testId={`delete-section-${section.id.slice(0, 8)}`}
+                      buttonClass="inline-flex h-8 items-center rounded-lg border border-destructive/40 bg-background px-2.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
+                    />
+                  ) : null}
+                </div>
               ))}
             </div>
           )}
@@ -449,15 +565,15 @@ export default async function OfferingDetailPage({
               renderActions={
                 viewerIsStaff
                   ? (announcement) => (
-                      <form action={deleteAnnouncementAction}>
-                        <input type="hidden" name="announcementId" value={announcement.id} />
-                        <input type="hidden" name="offeringId" value={offeringId} />
-                        <ConfirmDeleteButton
-                          label={t("actions.deleteAnnouncement")}
-                          confirmMessage={t("confirm.deleteAnnouncement")}
-                          testId="delete-announcement"
-                        />
-                      </form>
+                      <ConfirmDeleteDialogButton
+                        label={t("actions.deleteAnnouncement")}
+                        confirmMessage={t("confirm.deleteAnnouncement", {
+                          title: announcement.title,
+                        })}
+                        hiddenFields={{ announcementId: announcement.id, offeringId }}
+                        action={deleteAnnouncementAction}
+                        testId="delete-announcement"
+                      />
                     )
                   : undefined
               }
@@ -520,15 +636,25 @@ export default async function OfferingDetailPage({
                           >
                             {t("enterMarks")}
                           </Link>
-                          <form action={deleteAssessmentAction}>
-                            <input type="hidden" name="assessmentId" value={assessment.id} />
-                            <input type="hidden" name="offeringId" value={offeringId} />
-                            <ConfirmDeleteButton
-                              label={t("actions.deleteAssessment")}
-                              confirmMessage={t("confirm.deleteAssessment")}
-                              testId="delete-assessment"
-                            />
-                          </form>
+                          <ConfirmDeleteDialogButton
+                            label={t("actions.deleteAssessment")}
+                            confirmMessage={t("confirm.deleteAssessment", {
+                              title: assessment.title,
+                              counts: assessmentDeleteSummaries.get(assessment.id) ?? "",
+                            })}
+                            requireTyping={
+                              (assessmentDeleteSummaries.get(assessment.id) ?? "").length > 0
+                                ? assessment.title
+                                : undefined
+                            }
+                            hiddenFields={{
+                              assessmentId: assessment.id,
+                              offeringId,
+                              force: "true",
+                            }}
+                            action={deleteAssessmentAction}
+                            testId="delete-assessment"
+                          />
                         </span>
                       ) : null}
                     </li>
@@ -568,15 +694,25 @@ export default async function OfferingDetailPage({
                             >
                               {t("enterMarks")}
                             </Link>
-                            <form action={deleteAssessmentAction}>
-                              <input type="hidden" name="assessmentId" value={assessment.id} />
-                              <input type="hidden" name="offeringId" value={offeringId} />
-                              <ConfirmDeleteButton
-                                label={t("actions.deleteAssessment")}
-                                confirmMessage={t("confirm.deleteAssessment")}
-                                testId="delete-assessment"
-                              />
-                            </form>
+                            <ConfirmDeleteDialogButton
+                              label={t("actions.deleteAssessment")}
+                              confirmMessage={t("confirm.deleteAssessment", {
+                                title: assessment.title,
+                                counts: assessmentDeleteSummaries.get(assessment.id) ?? "",
+                              })}
+                              requireTyping={
+                                (assessmentDeleteSummaries.get(assessment.id) ?? "").length > 0
+                                  ? assessment.title
+                                  : undefined
+                              }
+                              hiddenFields={{
+                                assessmentId: assessment.id,
+                                offeringId,
+                                force: "true",
+                              }}
+                              action={deleteAssessmentAction}
+                              testId="delete-assessment"
+                            />
                           </span>
                         ) : null}
                       </li>
@@ -612,37 +748,54 @@ export default async function OfferingDetailPage({
 
           {scopedEnrollments.length === 0 ? (
             <EmptyState title={t("empty.studentsTitle")} description={t("empty.studentsBody")} />
+          ) : !viewerIsStaff ? (
+            // Privacy rule (T-A): non-staff viewers get counts, never names or emails.
+            <p className="text-sm text-muted-foreground" data-testid="enrollments-count">
+              {t("studentsCountOnly", { count: scopedEnrollments.length })}
+            </p>
           ) : (
             <ul className="grid gap-2" data-testid="enrollments-list">
-              {scopedEnrollments.map((enrollment) => {
-                const profile = profiles.get(enrollment.profile_id);
-                return (
-                  <li
-                    key={enrollment.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card px-4 py-3"
-                    data-testid="enrollment-item"
-                  >
-                    <span className="grid gap-0.5">
-                      <span className="font-medium">
-                        {profile?.display_name ?? t("unknownStudent")}
+              {[...scopedEnrollments]
+                .sort((a, b) =>
+                  compareStudentsByEmail(
+                    {
+                      email: profiles.get(a.profile_id)?.email ?? "",
+                      displayName: profiles.get(a.profile_id)?.display_name ?? "",
+                    },
+                    {
+                      email: profiles.get(b.profile_id)?.email ?? "",
+                      displayName: profiles.get(b.profile_id)?.display_name ?? "",
+                    },
+                  ),
+                )
+                .map((enrollment) => {
+                  const profile = profiles.get(enrollment.profile_id);
+                  return (
+                    <li
+                      key={enrollment.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card px-4 py-3"
+                      data-testid="enrollment-item"
+                    >
+                      <span className="grid gap-0.5">
+                        <span className="font-medium">
+                          {profile?.display_name ?? t("unknownStudent")}
+                        </span>
+                        <span className="text-sm text-muted-foreground">{profile?.email}</span>
                       </span>
-                      <span className="text-sm text-muted-foreground">{profile?.email}</span>
-                    </span>
-                    <span className="text-sm text-muted-foreground">{enrollment.status}</span>
-                    {viewerIsStaff ? (
-                      <form action={deleteEnrollmentAction}>
-                        <input type="hidden" name="enrollmentId" value={enrollment.id} />
-                        <input type="hidden" name="offeringId" value={offeringId} />
-                        <ConfirmDeleteButton
-                          label={t("actions.removeStudent")}
-                          confirmMessage={t("confirm.removeStudent")}
-                          testId="delete-enrollment"
-                        />
-                      </form>
-                    ) : null}
-                  </li>
-                );
-              })}
+                      <span className="text-sm text-muted-foreground">{enrollment.status}</span>
+                      <ConfirmDeleteDialogButton
+                        label={t("actions.removeStudent")}
+                        confirmMessage={t("confirm.removeStudent", {
+                          name: profile?.display_name ?? t("unknownStudent"),
+                          section: selectedSection.section_code,
+                        })}
+                        hiddenFields={{ enrollmentId: enrollment.id, offeringId }}
+                        action={deleteEnrollmentAction}
+                        testId="delete-enrollment"
+                      />
+                    </li>
+                  );
+                })}
             </ul>
           )}
 

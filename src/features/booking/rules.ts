@@ -41,8 +41,20 @@ export function mapRpcError(message: string | null | undefined): string {
       return "slotEnded";
     case "not_active":
       return "notActive";
+    case "no_active_booking":
+      return "noActiveBooking";
     case "not_found":
       return "notFound";
+    case "slot_overlap":
+      return "slotOverlap";
+    case "outside_period":
+      return "outsidePeriod";
+    case "too_many_slots":
+      return "tooManySlots";
+    case "marks_protected":
+      return "marksProtected";
+    case "capacity_below_bookings":
+      return "capacityBelowBookings";
     case "forbidden":
     case "unauthenticated":
       return "notAuthorized";

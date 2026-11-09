@@ -198,17 +198,30 @@
       "book": "Book slot",
       "cancel": "Cancel booking",
       "deletePeriod": "Delete period",
-      "deleteSlot": "Delete slot"
+      "deleteSlot": "Delete slot",
+      "delete": "Delete",
+      "switchHere": "Switch here",
+      "saveCapacity": "Save"
     },
     "confirm": {
-      "deletePeriod": "Delete this period? All slots, bookings and waitlist entries in it will also be deleted.",
-      "deleteSlot": "Delete this slot? Its bookings and waitlist entries will also be deleted."
+      "deletePeriod": "Delete period \"{title}\"? All of its slots, bookings and waitlist entries will also be removed.",
+      "deleteSlot": "Delete the {time} slot? Its {bookings, plural, =0 {bookings} =1 {booking} other {# bookings}} will be released and removed."
     },
     "statuses": {
       "active": "booked",
       "cancelled": "cancelled",
-      "completed": "completed"
+      "completed": "completed",
+      "free": "Free",
+      "almost_full": "Almost full",
+      "full": "Full",
+      "booked_by_me": "Booked by me",
+      "cutoff_passed": "Cutoff passed"
     },
+    "hubHint": "Browse evaluation windows, presentation slots, and sign-ups.",
+    "cutoffChip": "Cutoff: {hours}h prior",
+    "viewSlot": "View evaluation slots",
+    "slotsAvailable": "{count, plural, =1 {1 time slot} other {# time slots}} available",
+    "capacityUpdated": "Capacity updated.",
     "errors": {
       "notAuthorized": "You do not have permission to do that.",
       "invalidInput": "Check the form values and try again.",
@@ -220,8 +233,68 @@
       "slotEnded": "This slot already took place.",
       "notActive": "This booking is no longer active.",
       "notFound": "That record no longer exists.",
-      "generic": "Something went wrong. Please try again."
+      "generic": "Something went wrong. Please try again.",
+      "noActiveBooking": "You have no active booking in this period to switch.",
+      "slotOverlap": "Some generated slots overlap slots that already exist in this period. Adjust times or remove the conflicting slots first.",
+      "outsidePeriod": "Generated slots must stay inside the period window.",
+      "tooManySlots": "That would create more than 500 slots. Reduce the range or slots per day.",
+      "capacityBelowBookings": "Capacity cannot go below the current number of active bookings.",
+      "genericAction": "That did not work. Please try again."
+    },
+    "bulk": {
+      "title": "Generate slots",
+      "hint": "Create a whole schedule in one step: pick the dates, the daily window, slot length and capacity. A live preview shows exactly what will be created before anything is saved.",
+      "altCountHint": "Use EITHER the daily end time OR slots per day — not both.",
+      "fields": {
+        "fromDate": "From day",
+        "toDate": "To day",
+        "dailyStart": "Daily start time",
+        "dailyEnd": "Daily end time",
+        "slotsPerDay": "…or slots per day",
+        "slotMinutes": "Slot duration (minutes)",
+        "gapMinutes": "Gap between slots (minutes)",
+        "capacity": "Capacity per slot",
+        "location": "Location (optional)"
+      },
+      "previewIdle": "Pick dates and times to see the plan.",
+      "previewSummary": "This will create {total, plural, =1 {1 slot} other {# slots}} across {days, plural, =1 {1 day} other {# days}}:",
+      "planErrors": {
+        "fromAfterTo": "The range end must not be before its start.",
+        "endOrCountRequired": "Give the daily end time or the number of slots per day.",
+        "endAfterStart": "The daily end time must be after the start.",
+        "noSlotsFitDay": "No slot fits in that daily window — lengthen it or shorten the slot duration.",
+        "tooManySlots": "That plan exceeds the 500-slot limit. Shorten the range or reduce slots per day."
+      },
+      "created": "Slots generated.",
+      "submit": "Generate slots",
+      "saving": "Generating…"
+    },
+    "staff": {
+      "title": "All bookings",
+      "totalSlots": "{count, plural, =1 {1 slot} other {# slots}}",
+      "bookedStudents": "{count, plural, =1 {1 booked} other {# booked}}",
+      "freeSlots": "{count, plural, =1 {1 free} other {# free}}",
+      "filterDay": "Day",
+      "filterSlot": "Slot",
+      "allDays": "All days",
+      "allSlots": "All slots",
+      "exportCsv": "Export CSV",
+      "colSlot": "Slot",
+      "colStudent": "Student",
+      "colEmail": "Roll / email",
+      "colBookedAt": "Booked at",
+      "empty": "No bookings yet.",
+      "orderingNote": "Ordered by slot time, then roll number/email (A→Z)."
     }
+  },
+  "DeleteDialog": {
+    "title": "Delete permanently?",
+    "cancel": "Cancel",
+    "confirm": "Delete",
+    "deleting": "Deleting…",
+    "typeToConfirm": "Type {name} to confirm.",
+    "defaultSuccess": "Deleted.",
+    "errorToast": "Delete failed: {message}"
   },
   "Analytics": {
     "suppressed": "Hidden: fewer than {k} students have scores.",
@@ -287,14 +360,19 @@
       "deleteSection": "Delete section",
       "deleteAssessment": "Delete assessment",
       "deleteAnnouncement": "Delete announcement",
-      "removeStudent": "Remove student"
+      "removeStudent": "Remove student",
+      "deleteOffering": "Delete offering"
     },
     "confirm": {
-      "deleteSection": "Delete this section? Its enrollments, announcements, assessments, marks, periods, slots and bookings will also be deleted.",
-      "deleteAssessment": "Delete this assessment? All marks, mark history and import batches for it will also be deleted.",
-      "deleteAnnouncement": "Delete this announcement?",
-      "removeStudent": "Remove this student from the section?"
+      "deleteSection": "Deleting section {code} also removes {counts}.",
+      "deleteAssessment": "Deleting \"{title}\" also removes {counts}. Released marks are destroyed and cannot be recovered.",
+      "deleteAnnouncement": "Delete \"{title}\"? Students and staff will no longer see it.",
+      "removeStudent": "Remove {name} from section {section}? Their marks for this section's assessments stay attached to the assessment, not the removed enrollment.",
+      "deleteOffering": "Delete offering {code}? Every section, roster, announcement, assessment and evaluation window under it is removed.",
+      "sectionCounts": "{enrollments} enrollments, {assessments} assessments, {periods, plural, =1 {1 period} other {# periods}} with {slots} slots and {bookings} bookings",
+      "assessmentCounts": "{marks, plural, =0 {no marks} =1 {1 mark} other {# marks}} ({releasedMarks} released)"
     },
+    "studentsCountOnly": "{count, plural, =1 {1 student is enrolled.} other {# students are enrolled.}}",
     "empty": {
       "title": "No offerings yet",
       "body": "Offerings appear here once a course is opened in a term.",

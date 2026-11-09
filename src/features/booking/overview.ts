@@ -34,6 +34,9 @@ export const bookingStudentSchema = z.object({
   slot_id: z.string().uuid(),
   slot_starts_at: z.string(),
   student_name: z.string(),
+  /** Staff-only (registry delta 2026-11-08): students never receive emails. */
+  student_email: z.string().optional(),
+  booked_at: z.string().optional(),
   status: z.string(),
 });
 
@@ -46,6 +49,7 @@ export const periodBookingOverviewSchema = z.object({
 
 export type PeriodBookingOverview = z.infer<typeof periodBookingOverviewSchema>;
 export type BookingSlotOverview = z.infer<typeof bookingSlotOverviewSchema>;
+export type BookingStudent = z.infer<typeof bookingStudentSchema>;
 
 type RpcEnvelope = {
   data: unknown;

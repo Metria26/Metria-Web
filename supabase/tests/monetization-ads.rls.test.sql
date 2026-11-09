@@ -10,7 +10,7 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
-SELECT plan(82);
+SELECT plan(83);
 
 -- ---------------------------------------------------------------------------
 -- A. Structural checks

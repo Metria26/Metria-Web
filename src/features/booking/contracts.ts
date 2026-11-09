@@ -49,4 +49,16 @@ export const cancelBookingInputSchema = z.object({
   periodId: z.string().uuid("periodRequired"),
 });
 
+/** "Switch slot": move the caller's active booking to a free slot (D-k RPC). */
+export const switchBookingInputSchema = z.object({
+  periodId: z.string().uuid("periodRequired"),
+  targetSlotId: z.string().uuid("slotRequired"),
+});
+
+/** Staff capacity edit; the RPC refuses going below current active bookings. */
+export const slotCapacityInputSchema = z.object({
+  slotId: z.string().uuid("slotRequired"),
+  capacity: z.coerce.number().int("capacityInteger").min(1, "capacityMin").max(500, "capacityMax"),
+});
+
 export type ActionResult = { ok: true } | { ok: false; error: string };
