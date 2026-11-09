@@ -47,6 +47,8 @@ export function mapRpcError(message: string | null | undefined): string {
       return "notFound";
     case "slot_overlap":
       return "slotOverlap";
+    case "too_many_bookings":
+      return "tooManyBookings";
     case "outside_period":
       return "outsidePeriod";
     case "too_many_slots":

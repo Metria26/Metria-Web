@@ -124,7 +124,7 @@ export default async function BookingPeriodPage({
       <AdSlot pageType="booking" slotKey="booking-top" withSponsor />
 
       {/* Slots Section — rectangular cards grouped by Asia/Karachi day */}
-      <section className="grid gap-4" aria-labelledby="slots-heading">
+      <section className="grid gap-4 overflow-hidden" aria-labelledby="slots-heading">
         <div className="flex items-center justify-between">
           <h2 id="slots-heading" className="text-xl font-semibold tracking-tight">
             {t("slots")}
