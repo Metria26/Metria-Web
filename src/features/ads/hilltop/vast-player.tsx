@@ -90,8 +90,12 @@ export function HilltopVastPlayer({
     const controller = new AbortController();
     let active = true;
 
+    // Keep this a simple cross-origin GET: no custom headers and no
+    // credentials. Hilltop answers OPTIONS without CORS headers, so a
+    // preflighted request would fail and leave the slot empty. The tag itself
+    // is served with `Cache-Control: no-store`, so the browser never reuses an
+    // old ad.
     fetch(HILLTOP_VAST_TAG_URL, {
-      cache: "no-store",
       credentials: "omit",
       signal: controller.signal,
     })
@@ -239,7 +243,6 @@ function VastCreative({ ad, onDismiss }: { ad: VastAd; onDismiss: () => void }) 
           ref={videoRef}
           data-testid="hilltop-vast-video"
           className="h-full w-full object-contain"
-          src={ad.mediaFile.url}
           playsInline
           muted
           autoPlay
@@ -248,7 +251,11 @@ function VastCreative({ ad, onDismiss }: { ad: VastAd; onDismiss: () => void }) 
           onTimeUpdate={handleTimeUpdate}
           onEnded={handleEnded}
           onError={handleError}
-        />
+        >
+          {ad.mediaFiles.map((file) => (
+            <source key={file.url} src={file.url} type={file.type || undefined} />
+          ))}
+        </video>
         {ad.clickThroughUrl ? (
           <a
             href={ad.clickThroughUrl}

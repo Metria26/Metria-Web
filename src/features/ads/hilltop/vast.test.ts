@@ -44,6 +44,11 @@ describe("parseVastXml", () => {
     const ad = parseVastXml(VAST);
     expect(ad?.id).toBe("559485");
     expect(ad?.mediaFile.url).toBe("https://cdn.example.com/ad720.mp4");
+    expect(ad?.mediaFiles.map((file) => file.url)).toEqual([
+      "https://cdn.example.com/ad720.mp4",
+      "https://cdn.example.com/ad.webm",
+      "https://cdn.example.com/ad480.mp4",
+    ]);
     expect(ad?.impressionUrls).toEqual(["https://ads.example.com/impression"]);
     expect(ad?.errorUrl).toBe("https://ads.example.com/error?code=[ERRORCODE]");
     expect(ad?.clickThroughUrl).toBe("https://ads.example.com/click");

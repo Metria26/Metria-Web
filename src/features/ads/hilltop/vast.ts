@@ -4,8 +4,10 @@
  * The reviewed Hilltop tag returns InLine ads with progressive MP4/WebM
  * creatives. The player only needs the first playable linear creative, so
  * wrappers are intentionally not resolved (a wrapper-only response fails
- * closed: no creative, no ad) and percentage skip offsets are ignored. The
- * code is pure and DOM-only so jsdom can unit-test it.
+ * closed: no creative, no ad) and percentage skip offsets are ignored. Every
+ * HTTPS media file is returned (selected file first) so the `<video>` can fall
+ * back to the next source when a CDN host fails. The code is pure and DOM-only
+ * so jsdom can unit-test it.
  */
 
 export type VastMediaFile = {
@@ -24,6 +26,8 @@ export type VastAd = {
   impressionUrls: string[];
   errorUrl: string | null;
   mediaFile: VastMediaFile;
+  /** Selected file first, then every other HTTPS progressive fallback. */
+  mediaFiles: VastMediaFile[];
   clickThroughUrl: string | null;
   clickTrackingUrls: string[];
   trackingEvents: VastTrackingEvent[];
@@ -119,12 +123,15 @@ export function parseVastXml(xml: string): VastAd | null {
     const linear = inline.getElementsByTagName("Linear").item(0);
     if (!linear) continue;
 
-    const mediaFile = selectVastMediaFile(
-      Array.from(linear.getElementsByTagName("MediaFile"))
-        .map(mediaFileFrom)
-        .filter((file): file is VastMediaFile => file !== null),
-    );
+    const playableMediaFiles = Array.from(linear.getElementsByTagName("MediaFile"))
+      .map(mediaFileFrom)
+      .filter((file): file is VastMediaFile => file !== null);
+    const mediaFile = selectVastMediaFile(playableMediaFiles);
     if (!mediaFile) continue;
+    const mediaFiles = [
+      mediaFile,
+      ...playableMediaFiles.filter((file) => file.url !== mediaFile.url),
+    ];
 
     const trackingEvents = Array.from(inline.getElementsByTagName("Tracking"))
       .map((element) => ({
@@ -138,6 +145,7 @@ export function parseVastXml(xml: string): VastAd | null {
       impressionUrls: textsByTag(inline, "Impression").filter((url) => HTTPS_URL.test(url)),
       errorUrl: textsByTag(inline, "Error").find((url) => HTTPS_URL.test(url)) ?? null,
       mediaFile,
+      mediaFiles,
       clickThroughUrl:
         textsByTag(inline, "ClickThrough").find((url) => HTTPS_URL.test(url)) ?? null,
       clickTrackingUrls: textsByTag(inline, "ClickTracking").filter((url) => HTTPS_URL.test(url)),

@@ -23,10 +23,11 @@ import createNextIntlPlugin from "next-intl/plugin";
  *   code that can rotate its delivery hosts, so Report-Only remains the
  *   monitoring channel before enforcement.
  * - HilltopAds Video VAST: the reviewed tag/impression host
- *   expensive-pollution.com and the creative host dismal-library.pro are
- *   allowlisted for connect-src, img-src and media-src only (the player never
- *   injects their scripts). Creative CDNs can rotate per ad, so the policy
- *   stays Report-Only.
+ *   expensive-pollution.com and the creative hosts (dismal-library.pro plus
+ *   the irresponsible-smoke.com CDN it redirects to) are allowlisted for
+ *   connect-src, img-src and media-src only (the player never injects their
+ *   scripts). Creative CDNs can rotate per ad, so the policy stays
+ *   Report-Only.
  * - Permissions-Policy disables powerful features (ad code has no business
  *   calling them; interest-cohort/topics explicitly off).
  * - Referrer-Policy: strict-origin-when-cross-origin — outbound sponsor links
@@ -94,10 +95,12 @@ const MONETAG_ORIGINS = [
 
 /**
  * HilltopAds Video VAST: the reviewed tag/impression/click host and the
- * creative host returned by the current tag. Public ad hosts, not secrets.
+ * creative hosts returned by the current tag. Media URLs 302 to an ad CDN, so
+ * both hops are needed in media-src. Public ad hosts, not secrets.
  */
 const HILLTOP_TAG_ORIGINS = "https://expensive-pollution.com https://*.expensive-pollution.com";
-const HILLTOP_MEDIA_ORIGINS = "https://dismal-library.pro https://*.dismal-library.pro";
+const HILLTOP_MEDIA_ORIGINS =
+  "https://dismal-library.pro https://*.dismal-library.pro https://irresponsible-smoke.com https://*.irresponsible-smoke.com";
 
 const connectSrc = [
   "'self'",
@@ -131,7 +134,9 @@ const cspReportOnly = [
 
 const permissionsPolicy = [
   "accelerometer=()",
-  "autoplay=()",
+  // Muted autoplay for the in-page VAST player (the player only autoplays muted
+  // and offers an explicit unmute control); every other origin stays denied.
+  "autoplay=(self)",
   "browsing-topics=()",
   "camera=()",
   "display-capture=()",
