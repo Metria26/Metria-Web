@@ -19,8 +19,9 @@ import {
  *  (d) a broken/aborted creative fails to the empty reserved box, page intact,
  *  (e) marks sit behind tap-to-reveal while ads serve (R1),
  *  (f) a kill flip darkens the surface again (master kill, short TTL), and
- *  (g) every authenticated /app page mounts the reviewed Adsterra units while
- *      the private surface is open (owner requests 2026-10-19/2026-11-06).
+ *  (g) every authenticated /app page mounts the reviewed ad units (HilltopAds
+ *      video, Adsterra social bar/popunder) while the private surface is open
+ *      (owner requests 2026-10-19/2026-11-06/2026-11-11).
  *
  * It mutates GLOBAL state (feature flags + one sponsor fixture): page_types
  * keys are globally unique, so no tenant-scoped variant exists. CI runs it in
@@ -93,7 +94,10 @@ test.describe("ads safety (T-B003)", () => {
   // Never contact the live ad network: assertions only inspect the reviewed
   // markup, and real creatives would create artificial impressions.
   test.beforeEach(async ({ page }) => {
-    await page.route(/bauval\.org|abscloud\.org/, (route) => route.abort());
+    await page.route(
+      /bauval\.org|abscloud\.org|expensive-pollution\.com|dismal-library\.pro/,
+      (route) => route.abort(),
+    );
   });
 
   let universityId = "";
@@ -236,7 +240,9 @@ test.describe("ads safety (T-B003)", () => {
     expect(headers["permissions-policy"]).toContain("geolocation=()");
   });
 
-  test("[ads-safety] every authenticated app page mounts the Adsterra units", async ({ page }) => {
+  test("[ads-safety] every authenticated app page mounts the reviewed ad units", async ({
+    page,
+  }) => {
     test.setTimeout(60_000);
     await page.context().addCookies([consentCookie()]);
     await signInE2E(page);
@@ -244,11 +250,11 @@ test.describe("ads safety (T-B003)", () => {
     for (const path of ["/app", "/app/marks", "/app/offerings", "/app/bookings"]) {
       await page.goto(path);
       await expect(page.getByTestId("app-adsterra-units"), `${path} app ad wrapper`).toBeVisible();
-      await expect(page.getByTestId("adsterra-native"), `${path} native`).toBeVisible();
+      await expect(page.getByTestId("hilltop-vast"), `${path} video unit`).toHaveCount(1);
       await expect(
-        page.locator('script[data-ad-unit-id="31803282"]'),
-        `${path} native script`,
-      ).toHaveCount(1);
+        page.getByTestId("adsterra-native"),
+        `${path} native banner removed`,
+      ).toHaveCount(0);
       await expect(
         page.locator('script[data-ad-unit-id="31803283"]'),
         `${path} social bar script`,

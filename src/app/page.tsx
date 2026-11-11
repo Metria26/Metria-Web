@@ -21,20 +21,27 @@ import { Button } from "@/components/ui/button";
 import { PublicFooter, PublicHeader } from "@/components/public/public-shell";
 import { CONSENT_COOKIE, policyVersionFromEnv } from "@/features/ads/consent";
 import { loadPublicAdSurface } from "@/features/ads/public-surface";
-import { publicPopunderAllowed, publicUnitAllowed } from "@/features/ads/public-surface-rules";
+import {
+  publicPopunderAllowed,
+  publicSurfaceAllows,
+  publicUnitAllowed,
+} from "@/features/ads/public-surface-rules";
 import { ConsentBanner } from "@/features/ads/ui/consent-banner";
-import { AdsterraNativeBanner } from "@/features/ads/adsterra/native-banner";
+import { isHilltopVastPathAllowed } from "@/features/ads/hilltop/config";
+import { HilltopVastPlayer } from "@/features/ads/hilltop/vast-player";
 import { AdsterraPopunder } from "@/features/ads/adsterra/popunder";
 import { AdsterraSocialBar } from "@/features/ads/adsterra/social-bar";
 import { isAdsterraPathAllowed } from "@/features/ads/adsterra/config";
 
 /**
- * Public landing page (SS11). Ads are opt-in: every Adsterra component mounts
- * only when the public surface is open (master flag + no kill + public layer +
- * adsterra network enabled), the visitor consented, and the unit's reviewed
- * path allowlist matches. Popunder also requires its own `ads.popunder.enabled`
- * switch (ADR-013). With the shipped defaults (`ads.enabled=false`,
- * `ads.global_kill=true`) the page renders zero ad markup.
+ * Public landing page (SS11). Ads are opt-in: every unit mounts only when the
+ * public surface is open (master flag + no kill + public layer + adsterra
+ * network enabled), the visitor consented, and the unit's reviewed path
+ * allowlist matches. The HilltopAds video unit replaces the Adsterra native
+ * banner here; the Social Bar and the popunder (which also needs its own
+ * `ads.popunder.enabled` switch, ADR-013) are unchanged. With the shipped
+ * defaults (`ads.enabled=false`, `ads.global_kill=true`) the page renders zero
+ * ad markup.
  *
  * `connection()` keeps this route request-time: the tenant lookup uses the
  * service role and must never run during `next build`. `instant = false`
@@ -50,11 +57,10 @@ export default async function Home() {
   const cookieStore = await cookies();
   const initialConsentCookie = cookieStore.get(CONSENT_COOKIE)?.value ?? null;
 
-  const adsAllowed = (unit: "native_banner" | "social_bar") =>
-    publicUnitAllowed(surface, "/", (path) => isAdsterraPathAllowed(unit, path));
-
-  const showNative = adsAllowed("native_banner");
-  const showSocialBar = adsAllowed("social_bar");
+  const showVast = publicSurfaceAllows(surface, "/", isHilltopVastPathAllowed);
+  const showSocialBar = publicUnitAllowed(surface, "/", (path) =>
+    isAdsterraPathAllowed("social_bar", path),
+  );
   const showPopunder = publicPopunderAllowed(surface, "/", (path) =>
     isAdsterraPathAllowed("popunder", path),
   );
@@ -354,9 +360,9 @@ export default async function Home() {
           </div>
         </section>
 
-        {showNative ? (
+        {showVast ? (
           <div className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
-            <AdsterraNativeBanner />
+            <HilltopVastPlayer policyVersion={policyVersionFromEnv()} />
           </div>
         ) : null}
 

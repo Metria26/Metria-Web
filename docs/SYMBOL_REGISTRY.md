@@ -106,6 +106,14 @@ Any later symbol addition or correction must be listed in the generating file's 
 - Test seam `clearMonetagVignetteState()`.
 - No new database table, function, feature flag or environment variable.
 
+### 2026-11-11 - HilltopAds Video VAST
+- Client component `HilltopVastPlayer` (`src/features/ads/hilltop/vast-player.tsx`), replacing the Adsterra native banner at its three reviewed mounts: landing page, legal/trust pages and the authenticated `/app` shell; Social Bar and Popunder mounts are unchanged.
+- Pure parser `parseVastXml(xml)`, `selectVastMediaFile(files)` and `parseVastOffsetSeconds(value)` (`src/features/ads/hilltop/vast.ts`).
+- Path gate `isHilltopVastPathAllowed(pathname)` and public constant `HILLTOP_VAST_TAG_URL` (`src/features/ads/hilltop/config.ts`).
+- Consent reuse: `CONSENT_CHANGED_EVENT` plus the existing `metria_consent` cookie; no new cookie, database table, function or feature flag.
+- CSP report-only hosts: `https://expensive-pollution.com` (+ subdomains) and `https://dismal-library.pro` (+ subdomains) in connect-src/img-src/media-src.
+- Site verification: `public/6b8ad6b8ba15e46e3362.txt` and meta tag `6b8ad6b8ba15e46e3362c8647781def3845ac949` in the root layout.
+
 ## Self-check
 - [x] Purpose, audience, prerequisites, owner lane, and registry version are stated.
 - [x] Scope and implementation constraints are explicit.

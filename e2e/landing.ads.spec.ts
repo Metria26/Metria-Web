@@ -9,20 +9,19 @@ import { serviceRest } from "./helpers/auth";
  * Coverage:
  *  (a) flags off -> zero Adsterra markup anywhere,
  *  (b) live defaults (ads on) + no consent -> zero ad markup, consent banner visible,
- *  (c) consent granted -> native/social/popunder units render with exact codes,
+ *  (c) consent granted -> HilltopAds video/social/popunder units render,
  *  (d) the independent popunder flag removes only popunder,
- *  (e) unauthenticated /app, /auth/*, /admin/* and 404 never carry Adsterra,
+ *  (e) unauthenticated /app, /auth/*, /admin/* and 404 never carry ad scripts,
  *  (f) per-network kill darkens the landing page again,
  *  (g) master kill darkens the landing page again.
  *
- * Every test aborts requests to both reviewed Adsterra hosts so the suite
- * asserts the reviewed markup without loading live creatives (no artificial
- * impressions).
+ * Every test aborts requests to the reviewed Adsterra and HilltopAds hosts so
+ * the suite asserts the reviewed markup without loading live creatives (no
+ * artificial impressions).
  */
 
 const ADSTERRA_HOST = "https://bauval.org";
 const POPUNDER_HOST = "https://abscloud.org";
-const NATIVE_SRC = `${ADSTERRA_HOST}/21/ce7743f7a63e3303a8a5bca86be972a9`;
 const SOCIAL_SRC = `${ADSTERRA_HOST}/14/0d0d523604c826337be77b00f55115b5`;
 const POPUNDER_SRC = `${POPUNDER_HOST}/1/d5d5a4efeec12f60a2b9db7ddf75914b`;
 
@@ -139,7 +138,10 @@ test.describe("landing ads (SS11)", () => {
     // reviewed markup, and loading real creatives would create artificial
     // impressions. Aborted requests still leave the script/iframe elements in
     // the DOM, which is exactly what this suite inspects.
-    await page.route(/bauval\.org|abscloud\.org/, (route) => route.abort());
+    await page.route(
+      /bauval\.org|abscloud\.org|expensive-pollution\.com|dismal-library\.pro/,
+      (route) => route.abort(),
+    );
   });
 
   let uniId = "";
@@ -177,7 +179,7 @@ test.describe("landing ads (SS11)", () => {
     expect(await adsterraMarkupCount(page)).toBe(0);
   });
 
-  test("[ads-safety] consent granted: all mounted units render with exact codes", async ({
+  test("[ads-safety] consent granted: video, social bar and popunder units render", async ({
     page,
   }) => {
     await setFlags(ADS_FLAGS_ON, uniId);
@@ -185,15 +187,9 @@ test.describe("landing ads (SS11)", () => {
     await page.context().addCookies([consentCookie(true)]);
     await page.goto("/");
 
-    await expect(page.getByTestId("adsterra-native")).toBeVisible();
-    await expect(page.getByTestId("adsterra-native-container")).toHaveAttribute(
-      "id",
-      "container-ce7743f7a63e3303a8a5bca86be972a9",
-    );
+    await expect(page.getByTestId("hilltop-vast")).toHaveCount(1);
+    await expect(page.getByTestId("adsterra-native")).toHaveCount(0);
 
-    await expect(
-      page.locator(`script[data-ad-unit-id="31803282"][src="${NATIVE_SRC}"]`),
-    ).toHaveCount(1);
     await expect(
       page.locator(`script[data-ad-unit-id="31803283"][src="${SOCIAL_SRC}"]`),
     ).toHaveCount(1);
@@ -218,7 +214,7 @@ test.describe("landing ads (SS11)", () => {
     await page.context().addCookies([consentCookie(true)]);
     await page.goto("/");
 
-    await expect(page.getByTestId("adsterra-native")).toBeVisible();
+    await expect(page.getByTestId("hilltop-vast")).toHaveCount(1);
     await expect(
       page.locator(`script[data-ad-unit-id="31803283"][src="${SOCIAL_SRC}"]`),
     ).toHaveCount(1);
@@ -250,13 +246,14 @@ test.describe("landing ads (SS11)", () => {
     }
   });
 
-  test("[ads-safety] legal pages carry native and popunder units only", async ({ page }) => {
+  test("[ads-safety] legal pages carry the video unit and popunder only", async ({ page }) => {
     await setFlags(ADS_FLAGS_ON, uniId);
     await page.waitForTimeout(KILL_TTL_GRACE_MS);
     await page.context().addCookies([consentCookie(true)]);
     await page.goto("/privacy");
 
-    await expect(page.getByTestId("adsterra-native")).toBeVisible();
+    await expect(page.getByTestId("hilltop-vast")).toHaveCount(1);
+    await expect(page.getByTestId("adsterra-native")).toHaveCount(0);
     await expect(
       page.locator(`script[data-ad-network-script="adsterra-popunder"][src="${POPUNDER_SRC}"]`),
     ).toHaveCount(1);

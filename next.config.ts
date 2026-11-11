@@ -22,6 +22,11 @@ import createNextIntlPlugin from "next-intl/plugin";
  *   script-src, connect-src, img-src and frame-src. The bundle is third-party
  *   code that can rotate its delivery hosts, so Report-Only remains the
  *   monitoring channel before enforcement.
+ * - HilltopAds Video VAST: the reviewed tag/impression host
+ *   expensive-pollution.com and the creative host dismal-library.pro are
+ *   allowlisted for connect-src, img-src and media-src only (the player never
+ *   injects their scripts). Creative CDNs can rotate per ad, so the policy
+ *   stays Report-Only.
  * - Permissions-Policy disables powerful features (ad code has no business
  *   calling them; interest-cohort/topics explicitly off).
  * - Referrer-Policy: strict-origin-when-cross-origin — outbound sponsor links
@@ -87,12 +92,21 @@ const MONETAG_ORIGINS = [
   "https://fonts.googleapis.com",
 ].join(" ");
 
+/**
+ * HilltopAds Video VAST: the reviewed tag/impression/click host and the
+ * creative host returned by the current tag. Public ad hosts, not secrets.
+ */
+const HILLTOP_TAG_ORIGINS = "https://expensive-pollution.com https://*.expensive-pollution.com";
+const HILLTOP_MEDIA_ORIGINS = "https://dismal-library.pro https://*.dismal-library.pro";
+
 const connectSrc = [
   "'self'",
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   ADSTERRA_ORIGIN,
   ADSTERRA_POPUNDER_ORIGIN,
   MONETAG_ORIGINS,
+  HILLTOP_TAG_ORIGINS,
+  HILLTOP_MEDIA_ORIGINS,
 ]
   .filter((entry): entry is string => Boolean(entry))
   .join(" ");
@@ -110,7 +124,7 @@ const cspReportOnly = [
   "font-src 'self' data:",
   `connect-src ${connectSrc}`,
   `frame-src 'self' ${ADSTERRA_ORIGINS} ${MONETAG_ORIGINS}`,
-  "media-src 'self'",
+  `media-src 'self' ${HILLTOP_MEDIA_ORIGINS}`,
   "form-action 'self'",
   "report-uri /api/csp-report",
 ].join("; ");
