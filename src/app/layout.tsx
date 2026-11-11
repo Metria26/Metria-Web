@@ -32,6 +32,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: t("description"),
     other: {
       monetag: "2669971f08e5ec9d1d792b0f28ef61ed",
+      "6b8ad6b8ba15e46e3362c8647781def3845ac949": "6b8ad6b8ba15e46e3362c8647781def3845ac949",
     },
   };
 }
