@@ -18,8 +18,10 @@ import {
  */
 
 export type PublicAdSurface = {
-  /** Master flag on, no global kill, public layer enabled. */
+  /** Master flag on, no global kill, public layer enabled, Adsterra live. */
   open: boolean;
+  /** Independent HilltopAds gate (owner request 2026-11-12). */
+  hilltopOpen: boolean;
   /** Independent popunder switch (ADR-013); absent flag fails closed. */
   popunderEnabled: boolean;
   consentGranted: boolean;
@@ -29,8 +31,35 @@ export type PublicAdSurface = {
 };
 
 export const ADSTERRA_NETWORK_KEY = "adsterra";
+/** HilltopAds video network key; kill/enable switches are independent (2026-11-12). */
+export const HILLTOP_NETWORK_KEY = "hilltop";
 /** Landing + legal pages share the seeded `public_home` page type. */
 export const PUBLIC_PAGE_TYPE = "public_home";
+
+/**
+ * One network's public gate: master flag -> master kill flag -> public layer
+ * -> page type -> network registry + per-network kill. Shared by the Adsterra
+ * `open` and the independent Hilltop `hilltopOpen` so the two sources can be
+ * killed separately.
+ */
+function publicNetworkOpen(
+  state: AdKillState,
+  config: AdConfigSnapshot,
+  networkKey: string,
+): boolean {
+  const pageType = config.page_types.find((entry) => entry.key === PUBLIC_PAGE_TYPE);
+  const network = config.networks.find((entry) => entry.key === networkKey);
+  return (
+    state.flags.enabled &&
+    !state.flags.global_kill &&
+    !state.global &&
+    state.flags.public_enabled &&
+    Boolean(pageType?.enabled) &&
+    pageType?.is_auth === false &&
+    Boolean(network?.enabled) &&
+    !state.killed_networks.includes(networkKey)
+  );
+}
 
 export function evaluatePublicSurface(input: {
   universityId: string | null;
@@ -43,6 +72,7 @@ export function evaluatePublicSurface(input: {
   if (!input.universityId || !kill.success || !config.success) {
     return {
       open: false,
+      hilltopOpen: false,
       popunderEnabled: false,
       consentGranted: input.consentGranted,
       universityId: input.universityId,
@@ -51,19 +81,9 @@ export function evaluatePublicSurface(input: {
     };
   }
   const state = kill.data;
-  const pageType = config.data.page_types.find((entry) => entry.key === PUBLIC_PAGE_TYPE);
-  const network = config.data.networks.find((entry) => entry.key === ADSTERRA_NETWORK_KEY);
-  const open =
-    state.flags.enabled &&
-    !state.flags.global_kill &&
-    !state.global &&
-    state.flags.public_enabled &&
-    Boolean(pageType?.enabled) &&
-    pageType?.is_auth === false &&
-    Boolean(network?.enabled) &&
-    !state.killed_networks.includes(ADSTERRA_NETWORK_KEY);
   return {
-    open,
+    open: publicNetworkOpen(state, config.data, ADSTERRA_NETWORK_KEY),
+    hilltopOpen: publicNetworkOpen(state, config.data, HILLTOP_NETWORK_KEY),
     popunderEnabled: state.flags.popunder_enabled,
     consentGranted: input.consentGranted,
     universityId: input.universityId,
@@ -109,4 +129,13 @@ export function publicPopunderAllowed(
   allowed: (pathname: string) => boolean,
 ): boolean {
   return surface.popunderEnabled && publicUnitAllowed(surface, pathname, allowed);
+}
+
+/** Hilltop unit gate: hilltop surface + consent + path allowlist (2026-11-12). */
+export function publicHilltopAllowed(
+  surface: PublicAdSurface,
+  pathname: string,
+  allowed: (pathname: string) => boolean,
+): boolean {
+  return surface.hilltopOpen && surface.consentGranted && allowed(pathname);
 }

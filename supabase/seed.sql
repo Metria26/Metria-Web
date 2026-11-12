@@ -385,6 +385,12 @@ FROM public.universities u
 WHERE u.slug = 'fast-nuces-lahore'
 ON CONFLICT (key) DO NOTHING;
 
+INSERT INTO public.ad_networks (university_id, key, name, enabled)
+SELECT u.id, 'hilltop', 'Hilltop', true
+FROM public.universities u
+WHERE u.slug = 'fast-nuces-lahore'
+ON CONFLICT (key) DO NOTHING;
+
 INSERT INTO public.ad_placements (university_id, page_type_id, network_id, format_id, slot_key, enabled, priority, isolation_mode)
 SELECT u.id, pt.id, n.id, f.id, v.slot_key, true, v.priority, v.isolation_mode
 FROM public.universities u

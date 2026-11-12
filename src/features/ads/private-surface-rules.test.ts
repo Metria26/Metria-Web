@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { AdConfigSnapshot, AdKillState } from "./contracts";
 import {
   evaluatePrivateSurface,
+  privateHilltopAllowed,
   privatePopunderAllowed,
   privateSurfaceAllows,
 } from "./private-surface-rules";
@@ -35,6 +36,15 @@ const base = {
   config: OPEN_CONFIG,
   consentGranted: true,
   authenticated: true,
+};
+
+/** Both seeded networks (2026-11-12): hilltop gets its own row and gate. */
+const CONFIG_BOTH: AdConfigSnapshot = {
+  ...OPEN_CONFIG,
+  networks: [
+    { key: "adsterra", name: "Adsterra", enabled: true },
+    { key: "hilltop", name: "Hilltop", enabled: true },
+  ],
 };
 
 describe("private ad surface", () => {
@@ -112,6 +122,65 @@ describe("private ad surface", () => {
         ...base,
         killState: { ...OPEN_KILL, killed_networks: ["adsterra"] },
       }).open,
+    ).toBe(false);
+  });
+
+  it("judges the hilltop network independently of adsterra (2026-11-12)", () => {
+    const both = { ...base, config: CONFIG_BOTH };
+
+    // Killing Adsterra leaves the Hilltop video unit standing.
+    const adsterraKilled = evaluatePrivateSurface({
+      ...both,
+      killState: { ...OPEN_KILL, killed_networks: ["adsterra"] },
+    });
+    expect(adsterraKilled.open).toBe(false);
+    expect(adsterraKilled.hilltopOpen).toBe(true);
+    expect(privateHilltopAllowed(adsterraKilled)).toBe(true);
+    expect(privateSurfaceAllows(adsterraKilled)).toBe(false);
+
+    // Killing Hilltop leaves the Adsterra units standing.
+    const hilltopKilled = evaluatePrivateSurface({
+      ...both,
+      killState: { ...OPEN_KILL, killed_networks: ["hilltop"] },
+    });
+    expect(hilltopKilled.open).toBe(true);
+    expect(hilltopKilled.hilltopOpen).toBe(false);
+    expect(privateHilltopAllowed(hilltopKilled)).toBe(false);
+    expect(privateSurfaceAllows(hilltopKilled)).toBe(true);
+
+    // Disabling the hilltop row fails Hilltop closed, Adsterra open.
+    const hilltopDisabled = evaluatePrivateSurface({
+      ...both,
+      config: {
+        ...CONFIG_BOTH,
+        networks: [
+          { key: "adsterra", name: "Adsterra", enabled: true },
+          { key: "hilltop", name: "Hilltop", enabled: false },
+        ],
+      },
+    });
+    expect(hilltopDisabled.open).toBe(true);
+    expect(hilltopDisabled.hilltopOpen).toBe(false);
+
+    // A missing hilltop row fails Hilltop closed without touching Adsterra.
+    const noHilltopRow = evaluatePrivateSurface({ ...base });
+    expect(noHilltopRow.open).toBe(true);
+    expect(noHilltopRow.hilltopOpen).toBe(false);
+
+    // Consent is still required per visitor even when the hilltop gate is open.
+    const noConsent = evaluatePrivateSurface({ ...both, consentGranted: false });
+    expect(noConsent.hilltopOpen).toBe(true);
+    expect(privateHilltopAllowed(noConsent)).toBe(false);
+
+    // The global kill and master flags close every network at once.
+    expect(
+      evaluatePrivateSurface({ ...both, killState: { ...OPEN_KILL, global: true } }).hilltopOpen,
+    ).toBe(false);
+    expect(
+      evaluatePrivateSurface({
+        ...both,
+        killState: { ...OPEN_KILL, flags: { ...OPEN_KILL.flags, enabled: false } },
+      }).hilltopOpen,
     ).toBe(false);
   });
 
