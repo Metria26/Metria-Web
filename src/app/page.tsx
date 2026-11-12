@@ -22,8 +22,8 @@ import { PublicFooter, PublicHeader } from "@/components/public/public-shell";
 import { CONSENT_COOKIE, policyVersionFromEnv } from "@/features/ads/consent";
 import { loadPublicAdSurface } from "@/features/ads/public-surface";
 import {
+  publicHilltopAllowed,
   publicPopunderAllowed,
-  publicSurfaceAllows,
   publicUnitAllowed,
 } from "@/features/ads/public-surface-rules";
 import { ConsentBanner } from "@/features/ads/ui/consent-banner";
@@ -34,14 +34,16 @@ import { AdsterraSocialBar } from "@/features/ads/adsterra/social-bar";
 import { isAdsterraPathAllowed } from "@/features/ads/adsterra/config";
 
 /**
- * Public landing page (SS11). Ads are opt-in: every unit mounts only when the
- * public surface is open (master flag + no kill + public layer + adsterra
- * network enabled), the visitor consented, and the unit's reviewed path
- * allowlist matches. The HilltopAds video unit replaces the Adsterra native
- * banner here; the Social Bar and the popunder (which also needs its own
- * `ads.popunder.enabled` switch, ADR-013) are unchanged. With the shipped
- * defaults (`ads.enabled=false`, `ads.global_kill=true`) the page renders zero
- * ad markup.
+ * Public landing page (SS11). Ads are opt-in: every unit mounts only when its
+ * network gate is open (master flag + no kill + public layer + that network
+ * enabled + not per-network killed), the visitor consented, and the unit's
+ * reviewed path allowlist matches. Adsterra units key on the adsterra network;
+ * the HilltopAds video unit keys on its own hilltop network so the two can be
+ * killed separately from /admin/ads (owner request 2026-11-12). The video unit
+ * replaces the Adsterra native banner here; the Social Bar and the popunder
+ * (which also needs its own `ads.popunder.enabled` switch, ADR-013) are
+ * unchanged. With the shipped defaults (`ads.enabled=false`,
+ * `ads.global_kill=true`) the page renders zero ad markup.
  *
  * `connection()` keeps this route request-time: the tenant lookup uses the
  * service role and must never run during `next build`. `instant = false`
@@ -57,7 +59,7 @@ export default async function Home() {
   const cookieStore = await cookies();
   const initialConsentCookie = cookieStore.get(CONSENT_COOKIE)?.value ?? null;
 
-  const showVast = publicSurfaceAllows(surface, "/", isHilltopVastPathAllowed);
+  const showVast = publicHilltopAllowed(surface, "/", isHilltopVastPathAllowed);
   const showSocialBar = publicUnitAllowed(surface, "/", (path) =>
     isAdsterraPathAllowed("social_bar", path),
   );

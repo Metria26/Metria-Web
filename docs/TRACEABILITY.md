@@ -79,6 +79,14 @@ Feature IDs are sourced from the supplied sketch; §15 migration/cleanup is excl
 | 14.2 | P2 | B | `admin` | /admin/* | T-B008 | `admin.test.sql` |
 | 14.3 | P2 | B | `admin` | /admin/* | T-B008 | `admin.test.sql` |
 | 14.4 | P2 | B | `admin` | /admin/* | T-B008 | `admin.test.sql` |
+| 15.1 | P2 | Shared | `projects` | /app/projects/* | owner request 2026-11-11 | `supabase/tests/projects.rls.test.sql` |
+| 15.2 | P2 | Shared | `projects` | /app/projects/* | owner request 2026-11-11 | `supabase/tests/projects.rls.test.sql` |
+| 15.3 | P2 | Shared | `projects` | /app/projects/* | owner request 2026-11-11 | `supabase/tests/projects.rls.test.sql` |
+| 15.4 | P2 | Shared | `projects` | /app/projects/* | owner request 2026-11-11 | `supabase/tests/projects.rls.test.sql` |
+| 15.5 | P2 | Shared | `projects` | /app/projects/*; /api/projects/export | owner request 2026-11-11 | `supabase/tests/projects.rls.test.sql` |
+| 15.6 | P2 | Shared | `projects` | /app/projects/* | owner request 2026-11-11 | `supabase/tests/projects.rls.test.sql` |
+| 15.7 | P2 | Shared | `projects` | /app/projects/*; /api/projects/export | owner request 2026-11-11 | `supabase/tests/projects.rls.test.sql` |
+| 15.8 | P2 | Shared | `projects` | /app/projects/* | owner request 2026-11-11 | `supabase/tests/projects.rls.test.sql` |
 
 ## Route ownership
 - `/auth/*` — see `05-frontend/route-map.md`; owned by A.
@@ -89,6 +97,8 @@ Feature IDs are sourced from the supplied sketch; §15 migration/cleanup is excl
 - `/app/bookings/*` — see `05-frontend/route-map.md`; owned by A.
 - `/app/objections/*` — see `05-frontend/route-map.md`; owned by A.
 - `/app/messages/*` — see `05-frontend/route-map.md`; owned by A.
+- `/app/projects/*` — see `05-frontend/route-map.md`; owner request 2026-11-11 (TA console + student project views); owned by Shared.
+- `/api/projects/*` — see `05-frontend/route-map.md`; owner request 2026-11-11 (staff Excel export); owned by Shared.
 - `/app/coursework/*` — see `05-frontend/route-map.md`; owned by A.
 - `/app/calendar` — see `05-frontend/route-map.md`; owned by A.
 - `/ta/*` — see `05-frontend/route-map.md`; owned by B.

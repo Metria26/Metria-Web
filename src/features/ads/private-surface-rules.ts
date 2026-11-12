@@ -4,7 +4,7 @@ import {
   type AdConfigSnapshot,
   type AdKillState,
 } from "./contracts";
-import { ADSTERRA_NETWORK_KEY } from "./public-surface-rules";
+import { ADSTERRA_NETWORK_KEY, HILLTOP_NETWORK_KEY } from "./public-surface-rules";
 
 /**
  * Authenticated (private) Adsterra surface gate for the app shell.
@@ -22,8 +22,10 @@ import { ADSTERRA_NETWORK_KEY } from "./public-surface-rules";
  */
 
 export type PrivateAdSurface = {
-  /** Master flag on, no global kill, private layer enabled, network live. */
+  /** Master flag on, no global kill, private layer enabled, Adsterra live. */
   open: boolean;
+  /** Independent HilltopAds gate (owner request 2026-11-12). */
+  hilltopOpen: boolean;
   /** Independent popunder switch (ADR-013); absent flag fails closed. */
   popunderEnabled: boolean;
   consentGranted: boolean;
@@ -31,6 +33,29 @@ export type PrivateAdSurface = {
   killState: AdKillState | null;
   config: AdConfigSnapshot | null;
 };
+
+/**
+ * One network's private gate, shared by the Adsterra `open` and the
+ * independent Hilltop `hilltopOpen` so the two sources can be killed
+ * separately from /admin/ads.
+ */
+function privateNetworkOpen(
+  state: AdKillState,
+  config: AdConfigSnapshot,
+  networkKey: string,
+): boolean {
+  const network = config.networks.find((entry) => entry.key === networkKey);
+  const hasEnabledPageType = config.page_types.some((entry) => entry.enabled && !entry.is_auth);
+  return (
+    state.flags.enabled &&
+    !state.flags.global_kill &&
+    !state.global &&
+    state.flags.private_enabled &&
+    hasEnabledPageType &&
+    Boolean(network?.enabled) &&
+    !state.killed_networks.includes(networkKey)
+  );
+}
 
 export function evaluatePrivateSurface(input: {
   universityId: string | null;
@@ -44,6 +69,7 @@ export function evaluatePrivateSurface(input: {
   if (!input.authenticated || !input.universityId || !kill.success || !config.success) {
     return {
       open: false,
+      hilltopOpen: false,
       popunderEnabled: false,
       consentGranted: input.consentGranted,
       universityId: input.universityId,
@@ -53,21 +79,9 @@ export function evaluatePrivateSurface(input: {
   }
 
   const state = kill.data;
-  const network = config.data.networks.find((entry) => entry.key === ADSTERRA_NETWORK_KEY);
-  const hasEnabledPageType = config.data.page_types.some(
-    (entry) => entry.enabled && !entry.is_auth,
-  );
-  const open =
-    state.flags.enabled &&
-    !state.flags.global_kill &&
-    !state.global &&
-    state.flags.private_enabled &&
-    hasEnabledPageType &&
-    Boolean(network?.enabled) &&
-    !state.killed_networks.includes(ADSTERRA_NETWORK_KEY);
-
   return {
-    open,
+    open: privateNetworkOpen(state, config.data, ADSTERRA_NETWORK_KEY),
+    hilltopOpen: privateNetworkOpen(state, config.data, HILLTOP_NETWORK_KEY),
     popunderEnabled: state.flags.popunder_enabled,
     consentGranted: input.consentGranted,
     universityId: input.universityId,
@@ -79,6 +93,11 @@ export function evaluatePrivateSurface(input: {
 /** True when the app shell may mount ad units: surface open and consent given. */
 export function privateSurfaceAllows(surface: PrivateAdSurface): boolean {
   return surface.open && surface.consentGranted;
+}
+
+/** Hilltop unit gate: independent hilltop surface + consent (2026-11-12). */
+export function privateHilltopAllowed(surface: PrivateAdSurface): boolean {
+  return surface.hilltopOpen && surface.consentGranted;
 }
 
 /** Popunder adds its independent switch on top of the normal private gate. */

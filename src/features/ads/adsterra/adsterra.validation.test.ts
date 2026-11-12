@@ -9,6 +9,7 @@ import {
   ADSTERRA_NETWORK_KEY,
   evaluatePublicSurface,
   networkNotKilled,
+  publicHilltopAllowed,
   publicPopunderAllowed,
   publicSurfaceAllows,
   publicUnitAllowed,
@@ -198,6 +199,67 @@ describe("public ad surface gate", () => {
       config: { ...OPEN_CONFIG, networks: [] },
     });
     expect(absent.open).toBe(false);
+  });
+
+  it("judges the hilltop network independently of adsterra (2026-11-12)", () => {
+    const both = {
+      ...base,
+      config: {
+        ...OPEN_CONFIG,
+        networks: [
+          { key: "adsterra", name: "Adsterra", enabled: true },
+          { key: "hilltop", name: "Hilltop", enabled: true },
+        ],
+      },
+    };
+
+    // Killing Adsterra leaves the Hilltop video unit standing.
+    const adsterraKilled = evaluatePublicSurface({
+      ...both,
+      killState: { ...OPEN_KILL, killed_networks: ["adsterra"] },
+    });
+    expect(adsterraKilled.open).toBe(false);
+    expect(adsterraKilled.hilltopOpen).toBe(true);
+    expect(publicHilltopAllowed(adsterraKilled, "/", () => true)).toBe(true);
+    expect(publicSurfaceAllows(adsterraKilled, "/", () => true)).toBe(false);
+
+    // Killing Hilltop leaves the Adsterra units standing.
+    const hilltopKilled = evaluatePublicSurface({
+      ...both,
+      killState: { ...OPEN_KILL, killed_networks: ["hilltop"] },
+    });
+    expect(hilltopKilled.open).toBe(true);
+    expect(hilltopKilled.hilltopOpen).toBe(false);
+    expect(publicHilltopAllowed(hilltopKilled, "/", () => true)).toBe(false);
+    expect(publicSurfaceAllows(hilltopKilled, "/", () => true)).toBe(true);
+
+    // A missing hilltop row fails Hilltop closed without touching Adsterra.
+    const noHilltopRow = evaluatePublicSurface(base);
+    expect(noHilltopRow.open).toBe(true);
+    expect(noHilltopRow.hilltopOpen).toBe(false);
+
+    // Consent and the shared flags still bound the hilltop unit.
+    const noConsent = evaluatePublicSurface({ ...both, consentGranted: false });
+    expect(noConsent.hilltopOpen).toBe(true);
+    expect(publicHilltopAllowed(noConsent, "/", () => true)).toBe(false);
+    expect(
+      evaluatePublicSurface({ ...both, killState: { ...OPEN_KILL, global: true } }).hilltopOpen,
+    ).toBe(false);
+    expect(
+      evaluatePublicSurface({
+        ...both,
+        killState: { ...OPEN_KILL, flags: { ...OPEN_KILL.flags, public_enabled: false } },
+      }).hilltopOpen,
+    ).toBe(false);
+    expect(
+      evaluatePublicSurface({
+        ...both,
+        config: {
+          ...OPEN_CONFIG,
+          page_types: [{ key: "public_home", is_auth: true, enabled: true }],
+        },
+      }).hilltopOpen,
+    ).toBe(false);
   });
 
   it("fails closed on missing tenant, consent or malformed payloads", () => {
