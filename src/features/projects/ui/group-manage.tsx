@@ -1154,21 +1154,22 @@ export function StudentMemberControls({
       {addOpen ? (
         <form
           className="grid gap-2 rounded-xl border p-3"
-          data-testid="request-add-form"
+          data-testid="add-member-form"
           onSubmit={(event) => {
             event.preventDefault();
             const formData = new FormData(event.currentTarget);
-            const member = {
-              name: String(formData.get("name") ?? ""),
-              regNo: String(formData.get("regNo") ?? ""),
-              memberRole: String(formData.get("memberRole") ?? "member"),
-              responsibilities: String(formData.get("responsibilities") ?? ""),
-            };
+            const members = [
+              {
+                name: String(formData.get("name") ?? ""),
+                regNo: String(formData.get("regNo") ?? ""),
+                memberRole: String(formData.get("memberRole") ?? "member"),
+                responsibilities: String(formData.get("responsibilities") ?? ""),
+              },
+            ];
             const payload = new FormData();
             payload.set("groupId", groupId);
-            payload.set("requestType", "add");
-            payload.set("member", JSON.stringify(member));
-            run(() => requestMemberChangeAction(payload));
+            payload.set("members", JSON.stringify(members));
+            run(() => addMembersAction(payload));
           }}
         >
           <input type="hidden" name="groupId" value={groupId} />
@@ -1179,6 +1180,7 @@ export function StudentMemberControls({
               maxLength={120}
               placeholder={t("members.name")}
               className={inputClass}
+              data-testid="add-member-name"
             />
             <input
               name="regNo"
@@ -1186,6 +1188,7 @@ export function StudentMemberControls({
               maxLength={40}
               placeholder={t("members.regNo")}
               className={inputClass}
+              data-testid="add-member-reg"
             />
           </div>
           <input
@@ -1202,7 +1205,7 @@ export function StudentMemberControls({
           />
           <div>
             <button type="submit" className={buttonClass} disabled={pending}>
-              {t("members.sendRequest")}
+              {t("members.add")}
             </button>
           </div>
         </form>
