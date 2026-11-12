@@ -1,4 +1,5 @@
 import {
+  Briefcase,
   CalendarCheck,
   CalendarDays,
   GraduationCap,
@@ -9,7 +10,7 @@ import {
 } from "lucide-react";
 
 export type NavItem = {
-  key: "dashboard" | "courses" | "bookings" | "calendar" | "messages" | "profile";
+  key: "dashboard" | "courses" | "projects" | "bookings" | "calendar" | "messages" | "profile";
   href: string;
   icon: LucideIcon;
 };
@@ -18,6 +19,7 @@ export type NavItem = {
 export const sidebarNav: NavItem[] = [
   { key: "dashboard", href: "/app", icon: LayoutDashboard },
   { key: "courses", href: "/app/offerings", icon: GraduationCap },
+  { key: "projects", href: "/app/projects", icon: Briefcase },
   { key: "bookings", href: "/app/bookings", icon: CalendarCheck },
   { key: "calendar", href: "/app/calendar", icon: CalendarDays },
   { key: "messages", href: "/app/messages", icon: MessageSquare },
