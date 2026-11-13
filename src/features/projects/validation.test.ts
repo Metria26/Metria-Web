@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  createGroupInputSchema,
   dashboardInputSchema,
   isHttpUrl,
   reviewInputSchema,
@@ -152,5 +153,20 @@ describe("schemas", () => {
       links: [{ title: "Repo", url: "javascript:alert(1)" }],
     });
     expect(result.success).toBe(false);
+  });
+
+  it("accepts roster profile ids on group members", () => {
+    const result = createGroupInputSchema.safeParse({
+      dashboardId: "11111111-1111-4111-8111-111111111111",
+      projectTitle: "Smart Attendance",
+      members: [
+        {
+          profileId: "22222222-2222-4222-8222-222222222222",
+          name: "Ali Ahmed",
+          regNo: "24L-1001",
+        },
+      ],
+    });
+    expect(result.success).toBe(true);
   });
 });

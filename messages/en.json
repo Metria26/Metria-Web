@@ -115,7 +115,7 @@
       "export": "Export to Excel",
       "exportHint": "Group Overview + Member Details sheets (.xlsx)",
       "myGroup": "My group",
-      "studentWaiting": "Group creation is managed by your TA for this dashboard."
+      "studentWaiting": "Your TA has not opened group creation on this dashboard yet."
     },
     "groups": {
       "title": "Groups",
@@ -138,8 +138,6 @@
       "pageCount": "Page {page} of {total} · {count} groups",
       "prev": "Previous",
       "next": "Next",
-      "createHeading": "Create a group",
-      "createHint": "Leave the Group ID empty to use the sequential prefix. The first listed member becomes the leader.",
       "reviewInDetail": "open the group to approve or reject"
     },
     "group": {
@@ -186,7 +184,15 @@
       "sendRequest": "Send request to TA",
       "removeViaRequest": "To remove a member, ask the TA or use a pending request.",
       "removeMember": "Remove member",
-      "selectRemove": "Select member…"
+      "selectRemove": "Select member…",
+      "selectClassmates": "Choose classmates from your section",
+      "selectOneClassmate": "Choose one classmate from your section",
+      "pickerPlaceholder": "Select a classmate…",
+      "pickerAllSelected": "Every available classmate is already selected",
+      "pickerAdd": "Add",
+      "pickerRemove": "Remove",
+      "pickerNone": "No classmates selected yet.",
+      "pickerEmpty": "No classmates are available — everyone in this section is already in a group."
     },
     "requests": {
       "add": "Add member",
@@ -250,11 +256,10 @@
       "heading": "Create your group",
       "title": "Project title",
       "leader": "You are the group leader",
-      "teammates": "Teammates",
-      "membersStaff": "Members (first listed becomes leader)",
+      "teammates": "Teammates from your section",
       "submit": "Create group",
-      "groupId": "Group ID (optional)",
-      "groupIdHint": "Leave empty to use the next sequential ID"
+      "memberCount": "{count} of {max} members selected",
+      "belowMinimum": "at least {min} required"
     },
     "myGroup": {
       "title": "My group",
