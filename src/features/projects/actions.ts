@@ -276,7 +276,7 @@ export async function createGroupAction(formData: FormData): Promise<ActionResul
     p_dashboard_id: parsed.data.dashboardId,
     p_group_id: parsed.data.groupId || null,
     p_project_title: parsed.data.projectTitle,
-    p_members: JSON.stringify(parsed.data.members),
+    p_members: parsed.data.members,
   });
   if (result.ok) revalidateProject(parsed.data.dashboardId, result.id);
   return result;
@@ -292,7 +292,7 @@ export async function addMembersAction(formData: FormData): Promise<ActionResult
 
   const result = await callRpc(supabase, "add_project_group_members", {
     p_group_id: groupId,
-    p_members: JSON.stringify(parsedMembers.data),
+    p_members: parsedMembers.data,
   });
   if (result.ok) await revalidateGroup(supabase, groupId);
   return result;
@@ -381,7 +381,7 @@ export async function requestMemberChangeAction(formData: FormData): Promise<Act
   const result = await callRpc(supabase, "request_project_member_change", {
     p_group_id: groupId,
     p_request_type: requestType,
-    p_member: requestType === "add" ? JSON.stringify(parsedMember?.data ?? {}) : null,
+    p_member: requestType === "add" ? (parsedMember?.data ?? {}) : null,
     p_member_id: memberId,
   });
   if (result.ok) await revalidateGroup(supabase, groupId);
@@ -428,8 +428,8 @@ export async function submitProjectAction(formData: FormData): Promise<ActionRes
 
   const result = await callRpc(supabase, "submit_project", {
     p_group_id: parsed.data.groupId,
-    p_responses: JSON.stringify(parsed.data.responses),
-    p_links: JSON.stringify(parsed.data.links),
+    p_responses: parsed.data.responses,
+    p_links: parsed.data.links,
   });
   if (result.ok) await revalidateGroup(supabase, parsed.data.groupId);
   return result;
