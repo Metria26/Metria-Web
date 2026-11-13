@@ -6,6 +6,7 @@ import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardControls } from "@/features/projects/ui/dashboard-controls";
 import { CreateGroupForm } from "@/features/projects/ui/create-group-form";
+import { listEligibleStudents } from "@/features/projects/data";
 import { DashboardStatusBadge, GroupStatusBadge } from "@/features/projects/ui/status-badge";
 import { formatDateTime } from "@/lib/time-format";
 
@@ -31,7 +32,7 @@ export default async function ProjectDashboardPage({
   const { data: profile } = user
     ? await supabase
         .from("profiles")
-        .select("id, display_name, roll_no")
+        .select("id, display_name, roll_no, email")
         .eq("auth_user_id", user.id)
         .maybeSingle()
     : { data: null };
@@ -55,13 +56,26 @@ export default async function ProjectDashboardPage({
     : { data: null };
   const isStaff = staffRow !== null;
 
-  const { data: myMembership } = profile
-    ? await supabase
-        .from("project_group_members")
-        .select("group_id")
-        .eq("profile_id", profile.id)
-        .maybeSingle()
-    : { data: null };
+  const { data: groupIdRows } = await supabase
+    .from("project_groups")
+    .select("id")
+    .eq("dashboard_id", dashboard.id)
+    .is("deleted_at", null);
+  const dashboardGroupIds = ((groupIdRows ?? []) as { id: string }[]).map((row) => row.id);
+  const groupCount = dashboardGroupIds.length;
+
+  // A student may belong to groups on several dashboards, so scope the
+  // membership lookup to this dashboard before maybeSingle().
+  const { data: myMembership } =
+    profile && dashboardGroupIds.length > 0
+      ? await supabase
+          .from("project_group_members")
+          .select("group_id")
+          .eq("profile_id", profile.id)
+          .in("group_id", dashboardGroupIds)
+          .limit(1)
+          .maybeSingle()
+      : { data: null };
 
   const { data: myGroupRow } = myMembership
     ? await supabase
@@ -73,12 +87,13 @@ export default async function ProjectDashboardPage({
         .maybeSingle()
     : { data: null };
 
-  const { data: groupIdRows } = await supabase
-    .from("project_groups")
-    .select("id")
-    .eq("dashboard_id", dashboard.id)
-    .is("deleted_at", null);
-  const groupCount = ((groupIdRows ?? []) as { id: string }[]).length;
+  const canCreateGroup =
+    !!profile &&
+    !isStaff &&
+    !myGroupRow &&
+    dashboard.status === "published" &&
+    dashboard.allow_student_groups;
+  const eligibleStudents = canCreateGroup ? await listEligibleStudents(supabase, dashboard.id) : [];
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-10">
@@ -172,13 +187,19 @@ export default async function ProjectDashboardPage({
                 </Link>
               </div>
             </div>
-          ) : dashboard.status === "published" && dashboard.allow_student_groups ? (
+          ) : canCreateGroup ? (
             <div className="grid gap-3">
               <h2 className="text-lg font-semibold">{t("createGroup.heading")}</h2>
               <CreateGroupForm
                 dashboardId={dashboard.id}
-                selfName={profile?.display_name ?? ""}
-                selfRegNo={profile?.roll_no ?? ""}
+                self={{
+                  profileId: profile?.id ?? "",
+                  name: profile?.display_name ?? "",
+                  regNo: profile?.roll_no || profile?.email.split("@")[0] || "",
+                }}
+                students={eligibleStudents}
+                minMembers={dashboard.min_members}
+                maxMembers={dashboard.max_members}
               />
             </div>
           ) : (

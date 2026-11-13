@@ -16,13 +16,16 @@
 --      writes; own-group members visible, other groups not; private TA notes
 --      and non-student-visible activity invisible; submit_project leader-only.
 --   E. Staff: draft visible; Group ID preview skips ledger conflicts and never
---      consumes; auto-issued IDs advance the counter; revision gating
---      (edit_not_allowed on resubmit without allow_edit_after_submission);
---      approve review flips group status; students see the public review.
+--      consumes; staff group creation is refused (students create groups);
+--      revision gating (edit_not_allowed on resubmit without
+--      allow_edit_after_submission); approve review flips group status;
+--      students see the public review.
+--   E2. Student: creates a group from section roster profile ids; the
+--      sequential Group ID skips ledger rows and advances the counter.
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
-SELECT plan(30);
+SELECT plan(33);
 
 -- ---------------------------------------------------------------------------
 -- A. Structural checks
@@ -216,16 +219,41 @@ SET LOCAL ROLE authenticated;
 
 SELECT is((SELECT count(*) FROM public.project_dashboards WHERE id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb0001'::uuid), 1::bigint, 'staff sees draft dashboards');
 SELECT is(public.next_project_group_id('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb0001'::uuid), 'COAL_P1_02', 'Group ID preview skips ledger conflicts (01 taken, 03 reserved)');
-SELECT lives_ok(
+SELECT throws_ok(
   $$SELECT public.create_project_group(
        'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb0001'::uuid,
        NULL,
        'Ledger Test Project',
        '[{"name":"New Kid","regNo":"24L-9100"}]'::jsonb)$$,
-  'staff can create a group with an auto-issued Group ID');
-SELECT is((SELECT count(*) FROM public.project_groups WHERE group_id = 'COAL_P1_02'::text), 1::bigint, 'auto-issued Group ID is COAL_P1_02');
-SELECT is((SELECT group_id_seq FROM public.project_dashboards WHERE id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb0001'::uuid), 2::integer, 'counter advanced to the consumed number');
-SELECT is(public.next_project_group_id('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb0001'::uuid), 'COAL_P1_04', 'next preview skips the reserved COAL_P1_03');
+  NULL, 'forbidden', 'staff can no longer create groups (students own group formation)');
+SELECT is((SELECT group_id_seq FROM public.project_dashboards WHERE id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb0001'::uuid), 0::integer, 'refused staff creation consumes no Group ID');
+SELECT is(public.next_project_group_id('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb0001'::uuid), 'COAL_P1_02', 'preview unchanged after a refused creation');
+
+-- ---------------------------------------------------------------------------
+-- E2. Student role (New Kid) creates a group from the section roster
+-- ---------------------------------------------------------------------------
+RESET ROLE;
+SELECT set_config('request.jwt.claims', json_build_object('sub', 'cccccccc-cccc-4ccc-8ccc-cccccccc0005', 'role', 'authenticated')::text, false);
+SET LOCAL ROLE authenticated;
+
+SELECT lives_ok(
+  $$SELECT public.create_project_group(
+       'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb0002'::uuid,
+       NULL,
+       'Ledger Test Project',
+       (SELECT jsonb_build_array(jsonb_build_object(
+          'profile_id', p.id, 'name', p.display_name, 'reg_no', p.roll_no))
+        FROM public.profiles p
+        WHERE p.auth_user_id = 'cccccccc-cccc-4ccc-8ccc-cccccccc0005'::uuid))$$,
+  'student creates a group from section roster profile ids');
+SELECT is((SELECT count(*) FROM public.project_groups WHERE group_id = 'PRJ_03'::text), 1::bigint, 'auto-issued Group ID is PRJ_03 (skips ledger rows)');
+SELECT is((SELECT group_id_seq FROM public.project_dashboards WHERE id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb0002'::uuid), 3::integer, 'counter advanced to the consumed number');
+
+-- Back to the TA for the remaining staff checks.
+RESET ROLE;
+SELECT set_config('request.jwt.claims', json_build_object('sub', 'cccccccc-cccc-4ccc-8ccc-cccccccc0001', 'role', 'authenticated')::text, false);
+SET LOCAL ROLE authenticated;
+SELECT is(public.next_project_group_id('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb0002'::uuid), 'PRJ_04', 'next preview follows the consumed sequence');
 SELECT throws_ok(
   $$SELECT public.create_project_dashboard(
        'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,

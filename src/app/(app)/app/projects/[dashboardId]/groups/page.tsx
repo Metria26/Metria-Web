@@ -5,7 +5,6 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { GroupsTable, type GroupRow } from "@/features/projects/ui/groups-table";
-import { CreateGroupForm } from "@/features/projects/ui/create-group-form";
 import { DashboardStatusBadge } from "@/features/projects/ui/status-badge";
 
 export const metadata: Metadata = {
@@ -138,14 +137,6 @@ export default async function ProjectGroupsPage({
           {t("hub.pendingRequests", { count: pendingByGroup.size })} — {t("groups.reviewInDetail")}
         </p>
       ) : null}
-
-      <section className="mt-10 grid gap-3">
-        <h2 className="text-lg font-semibold">{t("groups.createHeading")}</h2>
-        <p className="text-sm text-muted-foreground">{t("groups.createHint")}</p>
-        <div className="max-w-2xl">
-          <CreateGroupForm dashboardId={dashboard.id} showGroupId staff />
-        </div>
-      </section>
     </main>
   );
 }

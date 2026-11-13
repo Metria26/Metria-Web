@@ -111,12 +111,22 @@ export const fieldInputSchema = z.object({
 export type FieldInput = z.infer<typeof fieldInputSchema>;
 
 export const memberInputSchema = z.object({
+  /** Section roster id; when present the RPC derives name/roll number itself. */
+  profileId: z.string().uuid("studentRequired").optional(),
   name: z.string().trim().min(1, "nameRequired").max(120, "nameMax"),
   regNo: z.string().trim().min(1, "regRequired").max(40, "regMax"),
   memberRole: z.string().trim().max(80, "roleMax").optional().default("member"),
   responsibilities: z.string().trim().max(500, "responsibilitiesMax").optional().default(""),
 });
 export type MemberInput = z.infer<typeof memberInputSchema>;
+
+/** Roster row returned by `list_project_eligible_students`. */
+export type EligibleStudent = {
+  profile_id: string;
+  display_name: string;
+  roll_no: string;
+  email: string | null;
+};
 
 export const createGroupInputSchema = z.object({
   dashboardId: z.string().uuid("dashboardRequired"),

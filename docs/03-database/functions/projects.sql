@@ -22,10 +22,15 @@
 --   delete_project_dashboard(dashboard_id) -> void (hard delete cascading module rows; platform audit_log event)
 -- Group IDs:
 --   next_project_group_id(dashboard_id) -> text — pure preview, consumes nothing (STABLE candidate scan).
+-- Group formation (2026-11-13, supabase/migrations/20261113000000_a_projects_section_members.sql):
+--   list_project_eligible_students(dashboard_id) -> (profile_id, display_name, roll_no, email) — active students
+--     enrolled in the dashboard's section (or offering when section_id is NULL), excluding the caller and students
+--     already in a group for the offering; enrolled students read it for published dashboards, staff for any status.
 -- Groups & members:
---   create_project_group(dashboard_id, group_id, project_title, members jsonb) -> uuid — issues sequential ID under the
---     dashboard row lock when group_id is NULL (staff only for manual IDs); validates members (enrollment, other-group
---     conflicts, duplicates, size cap); student self-create requires published + allow_student_groups + caller as first member.
+--   create_project_group(dashboard_id, group_id, project_title, members jsonb) -> uuid — student-only (staff raises
+--     forbidden); issues the sequential ID under the dashboard row lock from the TA prefix; caller must be the first
+--     (leader) member; validates members (enrollment, other-group conflicts, duplicates, size cap). A member item may
+--     carry profile_id, in which case name/roll number are derived from profiles instead of client input.
 --   update_project_group(group_id, project_title, group_label, deadline_override_at) -> void (staff; ledger rename flow:
 --     insert new ledger row, release old with released_at, update group; old ID never reissued)
 --   add_project_group_members(group_id, members jsonb) -> void (leader or staff; re-runs full member validation)

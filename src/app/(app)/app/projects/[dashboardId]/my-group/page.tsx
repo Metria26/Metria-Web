@@ -14,6 +14,7 @@ import {
 } from "@/features/projects/ui/group-manage";
 import { GroupStatusBadge, SubmissionStatusBadge } from "@/features/projects/ui/status-badge";
 import { memberChangeState, studentContentAllowed } from "@/features/projects/rules";
+import { listEligibleStudents } from "@/features/projects/data";
 import { formatDateTime } from "@/lib/time-format";
 
 export const metadata: Metadata = {
@@ -49,12 +50,26 @@ export default async function MyGroupPage({
     .maybeSingle();
   if (!dashboard) notFound();
 
-  // Only the caller's own group is reachable (RLS also enforces this).
-  const { data: myMembership } = await supabase
-    .from("project_group_members")
-    .select("id, group_id")
-    .eq("profile_id", profile.id)
-    .maybeSingle();
+  // Only the caller's own group on this dashboard is reachable (RLS also
+  // enforces this). Scope by dashboard first: a student can be in groups on
+  // several dashboards, which breaks an unscoped maybeSingle().
+  const { data: dashboardGroupRows } = await supabase
+    .from("project_groups")
+    .select("id")
+    .eq("dashboard_id", dashboard.id)
+    .is("deleted_at", null);
+  const dashboardGroupIds = ((dashboardGroupRows ?? []) as { id: string }[]).map((row) => row.id);
+
+  const { data: myMembership } =
+    dashboardGroupIds.length > 0
+      ? await supabase
+          .from("project_group_members")
+          .select("id, group_id")
+          .eq("profile_id", profile.id)
+          .in("group_id", dashboardGroupIds)
+          .limit(1)
+          .maybeSingle()
+      : { data: null };
   const { data: group } = myMembership
     ? await supabase
         .from("project_groups")
@@ -195,6 +210,8 @@ export default async function MyGroupPage({
     allowMemberChangesAfterSubmission: dashboard.allow_member_changes_after_submission,
     requireMemberChangeApproval: dashboard.require_member_change_approval,
   });
+  const eligibleStudents =
+    memberState === "locked" ? [] : await listEligibleStudents(supabase, dashboard.id);
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-10">
@@ -264,6 +281,7 @@ export default async function MyGroupPage({
             state={memberState}
             members={members}
             leaderMemberId={group.leader_member_id}
+            students={eligibleStudents}
           />
         ) : (
           <p className="text-sm text-muted-foreground">{t("members.locked")}</p>

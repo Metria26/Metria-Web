@@ -20,8 +20,14 @@ import {
   updateReviewAction,
   upsertLinkAction,
 } from "../actions";
-import { GROUP_STATUSES, REVIEW_TYPES, type ActionResult } from "../contracts";
+import {
+  GROUP_STATUSES,
+  REVIEW_TYPES,
+  type ActionResult,
+  type EligibleStudent,
+} from "../contracts";
 import { parseBulkMembers } from "../rules";
+import { MemberPicker } from "./member-picker";
 
 export type MemberRow = {
   id: string;
@@ -1125,19 +1131,60 @@ export function StudentMemberControls({
   state,
   members,
   leaderMemberId,
+  students,
 }: {
   groupId: string;
   state: "direct" | "approval" | "locked";
   members: MemberRow[];
   leaderMemberId: string | null;
+  students: EligibleStudent[];
 }) {
   const t = useTranslations("Projects");
   const { run, pending, result } = useRunner();
   const [addOpen, setAddOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   if (state === "locked") {
     return <p className="text-sm text-muted-foreground">{t("members.locked")}</p>;
   }
+
+  const submit = () => {
+    const payloadMembers = selectedIds.flatMap((profileId) => {
+      const student = students.find((entry) => entry.profile_id === profileId);
+      if (!student) return [];
+      return [
+        {
+          profileId: student.profile_id,
+          name: student.display_name,
+          regNo: student.roll_no,
+          memberRole: "member",
+          responsibilities: "",
+        },
+      ];
+    });
+    if (payloadMembers.length === 0) return;
+
+    const payload = new FormData();
+    payload.set("groupId", groupId);
+    if (state === "approval") {
+      // The TA decides; send a member-change request instead of a direct add.
+      payload.set("requestType", "add");
+      payload.set("member", JSON.stringify(payloadMembers[0]));
+    } else {
+      payload.set("members", JSON.stringify(payloadMembers));
+    }
+    run(async () => {
+      const outcome =
+        state === "approval"
+          ? await requestMemberChangeAction(payload)
+          : await addMembersAction(payload);
+      if (outcome.ok) {
+        setSelectedIds([]);
+        setAddOpen(false);
+      }
+      return outcome;
+    });
+  };
 
   return (
     <div className="grid gap-3" data-testid="student-member-controls">
@@ -1152,63 +1199,32 @@ export function StudentMemberControls({
         </button>
       </div>
       {addOpen ? (
-        <form
-          className="grid gap-2 rounded-xl border p-3"
-          data-testid="add-member-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const formData = new FormData(event.currentTarget);
-            const members = [
-              {
-                name: String(formData.get("name") ?? ""),
-                regNo: String(formData.get("regNo") ?? ""),
-                memberRole: String(formData.get("memberRole") ?? "member"),
-                responsibilities: String(formData.get("responsibilities") ?? ""),
-              },
-            ];
-            const payload = new FormData();
-            payload.set("groupId", groupId);
-            payload.set("members", JSON.stringify(members));
-            run(() => addMembersAction(payload));
-          }}
-        >
-          <input type="hidden" name="groupId" value={groupId} />
-          <div className="grid gap-2 sm:grid-cols-2">
-            <input
-              name="name"
-              required
-              maxLength={120}
-              placeholder={t("members.name")}
-              className={inputClass}
-              data-testid="add-member-name"
-            />
-            <input
-              name="regNo"
-              required
-              maxLength={40}
-              placeholder={t("members.regNo")}
-              className={inputClass}
-              data-testid="add-member-reg"
-            />
-          </div>
-          <input
-            name="memberRole"
-            maxLength={80}
-            placeholder={t("members.role")}
-            className={inputClass}
-          />
-          <input
-            name="responsibilities"
-            maxLength={500}
-            placeholder={t("members.responsibilities")}
-            className={inputClass}
+        <div className="grid gap-2 rounded-xl border p-3" data-testid="add-member-form">
+          <MemberPicker
+            students={students}
+            selectedIds={selectedIds}
+            label={
+              state === "approval" ? t("members.selectOneClassmate") : t("members.selectClassmates")
+            }
+            disabled={pending}
+            onAdd={(student) =>
+              setSelectedIds((ids) =>
+                state === "approval" ? [student.profile_id] : [...ids, student.profile_id],
+              )
+            }
+            onRemove={(profileId) => setSelectedIds((ids) => ids.filter((id) => id !== profileId))}
           />
           <div>
-            <button type="submit" className={buttonClass} disabled={pending}>
-              {t("members.add")}
+            <button
+              type="button"
+              className={buttonClass}
+              disabled={pending || selectedIds.length === 0}
+              onClick={submit}
+            >
+              {state === "approval" ? t("members.sendRequest") : t("members.add")}
             </button>
           </div>
-        </form>
+        </div>
       ) : null}
       {state === "approval" ? (
         <p className="text-xs text-muted-foreground">{t("members.removeViaRequest")}</p>
