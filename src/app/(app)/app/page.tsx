@@ -6,9 +6,6 @@ import { createClient } from "@/lib/supabase/server";
 import { loadStudentDashboard } from "@/features/academics/dashboard";
 import { sanitizeAnnouncementHtml } from "@/features/academics/sanitize";
 import { AdSlot } from "@/features/ads/ui/ad-slot";
-import { PopunderNotice } from "@/features/ads/ui/popunder-notice";
-import { loadPrivateAdSurface } from "@/features/ads/app-surface";
-import { privatePopunderAllowed } from "@/features/ads/private-surface-rules";
 
 export const metadata = {
   title: "Dashboard",
@@ -98,10 +95,9 @@ export default async function DashboardPage() {
   }
 
   // Load dashboard data and user offerings concurrently
-  const [dashboard, offeringsRes, adSurface] = await Promise.all([
+  const [dashboard, offeringsRes] = await Promise.all([
     loadStudentDashboard(supabase),
     offeringQuery,
-    loadPrivateAdSurface(),
   ]);
 
   const offerings = (offeringsRes.data ?? []) as unknown as CourseOfferingRow[];
@@ -166,8 +162,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-10">
-      {privatePopunderAllowed(adSurface) ? <PopunderNotice /> : null}
-
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
       </div>

@@ -1008,10 +1008,13 @@
     "sponsored": "Sponsored",
     "sponsoredLinkLabel": "Sponsored link (opens in a new tab)",
     "popunderNotice": {
-      "title": "About the pop-under ads",
-      "body": "This page opens a sponsored tab (a pop-under) on some of your clicks. It is capped at 4 openings per day, so it can only happen during your first few clicks.",
-      "tip": "Least annoying way to handle it: keep one hand on CTRL + W and close the sponsored tab immediately. After 4 to 5 clicks it stops for the rest of the day.",
-      "confirm": "Got it"
+      "title": "Heads-up: a sponsored tab may open",
+      "body": "This home page has a pop-under ad. Sometimes when you click, a sponsored tab opens in the background while you stay here. It happens at most 4 times a day, and only in your first few clicks.",
+      "tipLead": "The easy trick:",
+      "tipBefore": "for your first 4 or 5 clicks, keep a hand on",
+      "tipAfter": "If a sponsored tab opens behind this one, press it and the tab is gone. Nothing to read, nothing to close by hand.",
+      "macTip": "On a Mac, use ⌘ + W instead of CTRL + W.",
+      "confirm": "Got it, thanks!"
     },
     "video": {
       "skip": "Skip ad",
