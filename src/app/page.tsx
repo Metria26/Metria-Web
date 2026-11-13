@@ -27,6 +27,7 @@ import {
   publicUnitAllowed,
 } from "@/features/ads/public-surface-rules";
 import { ConsentBanner } from "@/features/ads/ui/consent-banner";
+import { PopunderNotice } from "@/features/ads/ui/popunder-notice";
 import { isHilltopVastPathAllowed } from "@/features/ads/hilltop/config";
 import { HilltopVastPlayer } from "@/features/ads/hilltop/vast-player";
 import { AdsterraPopunder } from "@/features/ads/adsterra/popunder";
@@ -94,6 +95,7 @@ export default async function Home() {
 
   return (
     <div className="flex min-h-dvh flex-col">
+      {showPopunderNotice ? <PopunderNotice /> : null}
       <PublicHeader />
       <main id="main" className="flex flex-1 flex-col">
         <section className="relative isolate overflow-hidden">
