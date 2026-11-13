@@ -6,6 +6,7 @@ import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardForm } from "@/features/projects/ui/dashboard-form";
 import { FormBuilder, type FieldRow } from "@/features/projects/ui/form-builder";
+import { toUniversityDateTimeInput } from "@/lib/time-format";
 
 export const metadata: Metadata = {
   title: "Manage project dashboard",
@@ -82,9 +83,6 @@ export default async function ManageProjectDashboardPage({
     options: field.options ?? [],
   }));
 
-  const toLocal = (value: string | null) =>
-    value ? new Date(value).toISOString().slice(0, 16) : "";
-
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-10">
       <nav className="mb-4 text-sm">
@@ -114,8 +112,8 @@ export default async function ManageProjectDashboardPage({
             title: dashboard.title,
             description: dashboard.description,
             instructions: dashboard.instructions,
-            opensAt: toLocal(dashboard.opens_at),
-            deadlineAt: toLocal(dashboard.deadline_at),
+            opensAt: toUniversityDateTimeInput(dashboard.opens_at),
+            deadlineAt: toUniversityDateTimeInput(dashboard.deadline_at),
             lateAllowed: dashboard.late_allowed,
             allowEditAfterSubmission: dashboard.allow_edit_after_submission,
             allowMemberChangesAfterSubmission: dashboard.allow_member_changes_after_submission,

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { rpcTransport } from "@/lib/supabase/rpc";
+import { universityDateTimeInputToIso } from "@/lib/time-format";
 import {
   dashboardInputSchema,
   dashboardUpdateSchema,
@@ -60,8 +61,7 @@ function formBool(formData: FormData, key: string): boolean | undefined {
 function formDateOrNull(formData: FormData, key: string): string | null {
   const raw = emptyToUndefined(formData.get(key));
   if (!raw) return null;
-  const parsed = new Date(raw);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  return universityDateTimeInputToIso(raw);
 }
 
 function formUuid(formData: FormData, key: string): string | null {
@@ -139,8 +139,8 @@ export async function createDashboardAction(formData: FormData): Promise<ActionR
     p_title: data.title,
     p_description: data.description,
     p_instructions: data.instructions,
-    p_opens_at: data.opensAt ? new Date(data.opensAt).toISOString() : null,
-    p_deadline_at: data.deadlineAt ? new Date(data.deadlineAt).toISOString() : null,
+    p_opens_at: data.opensAt ? universityDateTimeInputToIso(data.opensAt) : null,
+    p_deadline_at: data.deadlineAt ? universityDateTimeInputToIso(data.deadlineAt) : null,
     p_late_allowed: data.lateAllowed,
     p_allow_edit_after_submission: data.allowEditAfterSubmission,
     p_allow_member_changes_after_submission: data.allowMemberChangesAfterSubmission,
