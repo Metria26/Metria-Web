@@ -75,7 +75,7 @@ export function StudentProjectGuide({
   ] as const;
 
   const lastIndex = slides.length - 1;
-  const slide = slides[index];
+  const slide = slides[index] ?? slides[0];
 
   useEffect(() => {
     if (!open) return;
