@@ -4,7 +4,11 @@ import { getTranslations } from "next-intl/server";
 import { EmptyState } from "@/components/states/empty-state";
 import { createClient } from "@/lib/supabase/server";
 import { loadStudentDashboard } from "@/features/academics/dashboard";
+import { sanitizeAnnouncementHtml } from "@/features/academics/sanitize";
 import { AdSlot } from "@/features/ads/ui/ad-slot";
+import { PopunderNotice } from "@/features/ads/ui/popunder-notice";
+import { loadPrivateAdSurface } from "@/features/ads/app-surface";
+import { privatePopunderAllowed } from "@/features/ads/private-surface-rules";
 
 export const metadata = {
   title: "Dashboard",
@@ -28,6 +32,8 @@ type CourseOfferingRow = {
   offering_code: string;
   courses: { code: string; title: string } | null;
 };
+
+type AnnouncedSectionRow = { id: string; offering_id: string; section_code: string };
 
 export default async function DashboardPage() {
   await connection();
@@ -92,12 +98,32 @@ export default async function DashboardPage() {
   }
 
   // Load dashboard data and user offerings concurrently
-  const [dashboard, offeringsRes] = await Promise.all([
+  const [dashboard, offeringsRes, adSurface] = await Promise.all([
     loadStudentDashboard(supabase),
     offeringQuery,
+    loadPrivateAdSurface(),
   ]);
 
   const offerings = (offeringsRes.data ?? []) as unknown as CourseOfferingRow[];
+
+  // The dashboard RPC returns section codes, not ids; resolve them in one query
+  // so "Open announcement" can deep-link to the section view of the course.
+  const announcedOfferingIds = [
+    ...new Set(dashboard.announcements.map((announcement) => announcement.offering_id)),
+  ];
+  const announcedSectionsRes =
+    announcedOfferingIds.length > 0
+      ? await supabase
+          .from("sections")
+          .select("id, offering_id, section_code")
+          .in("offering_id", announcedOfferingIds)
+      : { data: [] as AnnouncedSectionRow[] };
+  const sectionIdByOfferingCode = new Map(
+    ((announcedSectionsRes.data ?? []) as AnnouncedSectionRow[]).map((section) => [
+      `${section.offering_id}:${section.section_code}`,
+      section.id,
+    ]),
+  );
 
   // Group announcements by course code
   const announcementsByCourse = new Map<string, typeof dashboard.announcements>();
@@ -140,6 +166,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-10">
+      {privatePopunderAllowed(adSurface) ? <PopunderNotice /> : null}
+
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
       </div>
@@ -179,36 +207,47 @@ export default async function DashboardPage() {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {dashboard.announcements.map((announcement) => (
-              <div
-                key={announcement.id}
-                className="flex flex-col justify-between rounded-xl border bg-card p-6 shadow-sm transition-all hover:border-primary/50"
-              >
-                <div className="grid gap-2">
-                  <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
-                      {announcement.course_code} · {announcement.section_code}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {displayDateFormat.format(new Date(announcement.created_at))}
-                    </span>
+            {dashboard.announcements.map((announcement) => {
+              const sectionId = sectionIdByOfferingCode.get(
+                `${announcement.offering_id}:${announcement.section_code}`,
+              );
+              const href = sectionId
+                ? `/app/offerings/${announcement.offering_id}?sectionId=${sectionId}&tab=announcements#announcement-${announcement.id}`
+                : `/app/offerings/${announcement.offering_id}`;
+              return (
+                <div
+                  key={announcement.id}
+                  className="flex flex-col justify-between rounded-xl border bg-card p-6 shadow-sm transition-all hover:border-primary/50"
+                >
+                  <div className="grid gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
+                        {announcement.course_code} · {announcement.section_code}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {displayDateFormat.format(new Date(announcement.created_at))}
+                      </span>
+                    </div>
+                    <h3 className="font-semibold text-lg leading-snug">{announcement.title}</h3>
+                    <div
+                      className="text-sm text-muted-foreground prose prose-sm max-w-none line-clamp-3"
+                      dangerouslySetInnerHTML={{
+                        __html: sanitizeAnnouncementHtml(announcement.body_html),
+                      }}
+                    />
                   </div>
-                  <h3 className="font-semibold text-lg leading-snug">{announcement.title}</h3>
-                  <div
-                    className="text-sm text-muted-foreground prose prose-sm max-w-none line-clamp-3"
-                    dangerouslySetInnerHTML={{ __html: announcement.body_html }}
-                  />
+                  <div className="mt-4 pt-4 border-t flex justify-end">
+                    <Link
+                      href={href}
+                      className="inline-flex h-8 items-center rounded-lg border border-input bg-background px-3 text-xs font-medium transition-colors hover:bg-accent"
+                      data-testid="dashboard-open-announcement"
+                    >
+                      {t("openAnnouncement")}
+                    </Link>
+                  </div>
                 </div>
-                <div className="mt-4 pt-4 border-t flex justify-end">
-                  <Link
-                    href={`/app/offerings/${announcement.offering_id}`}
-                    className="text-xs font-medium text-primary hover:underline"
-                  >
-                    View Offering →
-                  </Link>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

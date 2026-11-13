@@ -33,7 +33,8 @@ export function AnnouncementList({
       {announcements.map((announcement) => (
         <li
           key={announcement.id}
-          className="grid gap-1 rounded-lg border bg-card px-4 py-3"
+          id={`announcement-${announcement.id}`}
+          className="grid scroll-mt-24 gap-1 rounded-lg border bg-card px-4 py-3"
           data-testid="announcement-item"
         >
           <div className="flex flex-wrap items-baseline justify-between gap-2">

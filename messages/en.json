@@ -527,6 +527,7 @@
     "pending": "Pending",
     "viewMarksheet": "Marksheet",
     "viewOffering": "Open",
+    "openAnnouncement": "Open announcement",
     "assessmentTypes": {
       "quiz": "Quiz",
       "exam": "Exam",
@@ -1006,6 +1007,12 @@
     "slotLabel": "Advertisement",
     "sponsored": "Sponsored",
     "sponsoredLinkLabel": "Sponsored link (opens in a new tab)",
+    "popunderNotice": {
+      "title": "About the pop-under ads",
+      "body": "This page opens a sponsored tab (a pop-under) on some of your clicks. It is capped at 4 openings per day, so it can only happen during your first few clicks.",
+      "tip": "Least annoying way to handle it: keep one hand on CTRL + W and close the sponsored tab immediately. After 4 to 5 clicks it stops for the rest of the day.",
+      "confirm": "Got it"
+    },
     "video": {
       "skip": "Skip ad",
       "mute": "Mute",
