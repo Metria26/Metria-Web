@@ -90,7 +90,7 @@
         "verify": {
           "title": "5. Verify that the submission was recorded",
           "alt": "Projects page showing the group under My project groups with a Submitted badge",
-          "body": "You are taken back to Projects. Under My project groups your group now shows the Submitted badge next to its Group ID.\n\nIf the badge still says Not submitted, your work was not recorded — open My group and submit again. Use the My group button any time to reopen your submission, links and TA feedback.",
+          "body": "Come back to the main Projects tab (from the yellow highlighted button). Under My project groups your group now shows the Submitted badge next to its Group ID.\n\nIf the badge still says Not submitted, your work was not recorded — open My group and submit again. Use the My group button any time to reopen your submission, links and TA feedback.",
           "highlight": "The Submitted badge and the My group button."
         }
       }

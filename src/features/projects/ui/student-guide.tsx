@@ -151,7 +151,7 @@ export function StudentProjectGuide({
               {t(`slides.${slide.copy}.body`)}
             </p>
 
-            <p className="rounded-lg border border-warning/50 bg-warning/10 px-3 py-2 text-sm font-semibold text-warning-foreground">
+            <p className="rounded-lg border border-warning/60 bg-warning/15 px-3 py-2 text-sm font-semibold text-foreground">
               {t("highlightPrefix")} {t(`slides.${slide.copy}.highlight`)}
             </p>
           </div>
