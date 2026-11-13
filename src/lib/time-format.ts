@@ -79,6 +79,42 @@ export function formatDateTime(value: string | Date): string {
   return fullDayTimeFormatter.format(new Date(value));
 }
 
+const dateTimeInputFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: UNIVERSITY_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/**
+ * Stored instant → datetime-local value in university time
+ * ("YYYY-MM-DDTHH:mm"). Rendering the raw ISO slice would show UTC.
+ */
+export function toUniversityDateTimeInput(value: string | Date | null | undefined): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const parts = dateTimeInputFormatter.formatToParts(date);
+  const part = (type: string) => parts.find((entry) => entry.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}T${part("hour")}:${part("minute")}`;
+}
+
+/**
+ * datetime-local value ("YYYY-MM-DDTHH:mm") interpreted as university wall
+ * time → ISO UTC. Asia/Karachi is UTC+05 with no DST, so the offset is exact.
+ */
+export function universityDateTimeInputToIso(raw: string | null | undefined): string | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec((raw ?? "").trim());
+  if (!match) return null;
+  const date = new Date(
+    `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6] ?? "00"}+05:00`,
+  );
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
 /** Asia/Karachi calendar date (YYYY-MM-DD) of an instant — day grouping key. */
 export function karachiDateKey(value: string | Date): string {
   const parts = new Intl.DateTimeFormat("en-CA", {

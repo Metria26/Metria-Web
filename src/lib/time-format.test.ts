@@ -4,6 +4,8 @@ import {
   formatSlotTime,
   formatSlotTimeRange,
   karachiDateKey,
+  toUniversityDateTimeInput,
+  universityDateTimeInputToIso,
 } from "./time-format";
 
 /**
@@ -45,5 +47,17 @@ describe("time-format", () => {
 
   it("formats the day heading as 'Monday, 9 Nov 2026'", () => {
     expect(formatDayHeading("2026-11-09T06:00:00+05:00")).toBe("Monday, 9 Nov 2026");
+  });
+
+  it("renders stored instants as Karachi wall time for datetime-local inputs", () => {
+    expect(toUniversityDateTimeInput("2026-11-13T05:00:00Z")).toBe("2026-11-13T10:00");
+    expect(toUniversityDateTimeInput("2026-11-13T19:00:00Z")).toBe("2026-11-14T00:00");
+    expect(toUniversityDateTimeInput(null)).toBe("");
+  });
+
+  it("parses datetime-local values as Karachi wall time, not server time", () => {
+    expect(universityDateTimeInputToIso("2026-11-13T10:00")).toBe("2026-11-13T05:00:00.000Z");
+    expect(universityDateTimeInputToIso("2026-11-13T00:00")).toBe("2026-11-12T19:00:00.000Z");
+    expect(universityDateTimeInputToIso("")).toBeNull();
   });
 });

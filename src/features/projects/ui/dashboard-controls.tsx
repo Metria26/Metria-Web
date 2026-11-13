@@ -11,6 +11,7 @@ import {
   setDeadlineAction,
 } from "../actions";
 import { type ActionResult } from "../contracts";
+import { toUniversityDateTimeInput } from "@/lib/time-format";
 
 const buttonClass =
   "inline-flex h-9 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50";
@@ -58,9 +59,6 @@ export function DashboardControls({
     formData.set("status", next);
     run(() => setDashboardStatusAction(formData));
   };
-
-  const localValue = (value: string | null) =>
-    value ? new Date(value).toISOString().slice(0, 16) : "";
 
   return (
     <div className="grid gap-4 rounded-xl border p-4" data-testid="dashboard-controls">
@@ -192,7 +190,7 @@ export function DashboardControls({
           <input
             type="datetime-local"
             name="opensAt"
-            defaultValue={localValue(opensAt)}
+            defaultValue={toUniversityDateTimeInput(opensAt)}
             className={inputClass}
           />
         </label>
@@ -203,7 +201,7 @@ export function DashboardControls({
           <input
             type="datetime-local"
             name="deadlineAt"
-            defaultValue={localValue(deadlineAt)}
+            defaultValue={toUniversityDateTimeInput(deadlineAt)}
             className={inputClass}
           />
         </label>
