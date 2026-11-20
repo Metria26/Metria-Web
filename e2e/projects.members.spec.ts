@@ -344,7 +344,7 @@ test.describe("projects member flows", () => {
   });
 
   test("leader card falls back to the email local part and create succeeds", async ({ page }) => {
-    await signInE2E(page, { email: STUDENTS[0].email, password: E2E_PASSWORD });
+    await signInE2E(page, { email: STUDENTS[0]!.email, password: E2E_PASSWORD });
     await page.goto(`/app/projects/${sandbox.dashboardA}`);
 
     // THE BUG FIX: roll_no is NULL for this profile — the leader box must show
@@ -368,7 +368,7 @@ test.describe("projects member flows", () => {
   });
 
   test("leader adds a teammate through the single form", async ({ page }) => {
-    await signInE2E(page, { email: STUDENTS[0].email, password: E2E_PASSWORD });
+    await signInE2E(page, { email: STUDENTS[0]!.email, password: E2E_PASSWORD });
     await page.goto(`/app/projects/${sandbox.dashboardA}/my-group`);
     await page.getByTestId("add-member-name").fill("QA Student Three");
     await page.getByTestId("add-member-reg").fill("l249903");
@@ -379,7 +379,7 @@ test.describe("projects member flows", () => {
   });
 
   test("bulk paste parses, previews and adds; bad lines are flagged", async ({ page }) => {
-    await signInE2E(page, { email: STUDENTS[0].email, password: E2E_PASSWORD });
+    await signInE2E(page, { email: STUDENTS[0]!.email, password: E2E_PASSWORD });
     await page.goto(`/app/projects/${sandbox.dashboardA}/my-group`);
     await page.getByTestId("bulk-members-toggle").click();
 
@@ -399,7 +399,7 @@ test.describe("projects member flows", () => {
   });
 
   test("re-adding an existing member is rejected as a duplicate", async ({ page }) => {
-    await signInE2E(page, { email: STUDENTS[0].email, password: E2E_PASSWORD });
+    await signInE2E(page, { email: STUDENTS[0]!.email, password: E2E_PASSWORD });
     await page.goto(`/app/projects/${sandbox.dashboardA}/my-group`);
     await page.getByTestId("add-member-name").fill("QA Student Three");
     await page.getByTestId("add-member-reg").fill("l249903");
@@ -411,7 +411,7 @@ test.describe("projects member flows", () => {
   });
 
   test("adding past the size cap is rejected as group full", async ({ page }) => {
-    await signInE2E(page, { email: STUDENTS[0].email, password: E2E_PASSWORD });
+    await signInE2E(page, { email: STUDENTS[0]!.email, password: E2E_PASSWORD });
     await page.goto(`/app/projects/${sandbox.dashboardA}/my-group`);
     await page.getByTestId("add-member-name").fill("QA Student Five");
     await page.getByTestId("add-member-reg").fill("l249905");
@@ -423,7 +423,7 @@ test.describe("projects member flows", () => {
   });
 
   test("unknown registration number reports a missing student", async ({ page }) => {
-    await signInE2E(page, { email: STUDENTS[0].email, password: E2E_PASSWORD });
+    await signInE2E(page, { email: STUDENTS[0]!.email, password: E2E_PASSWORD });
     await page.goto(`/app/projects/${sandbox.dashboardA}/my-group`);
     await page.getByTestId("add-member-name").fill("Ghost Student");
     await page.getByTestId("add-member-reg").fill("nobody99");
@@ -435,7 +435,7 @@ test.describe("projects member flows", () => {
   });
 
   test("a student already in another group is reported", async ({ page }) => {
-    await signInE2E(page, { email: STUDENTS[0].email, password: E2E_PASSWORD });
+    await signInE2E(page, { email: STUDENTS[0]!.email, password: E2E_PASSWORD });
     await page.goto(`/app/projects/${sandbox.dashboardA}/my-group`);
     await page.getByTestId("add-member-name").fill("QA Student Six");
     await page.getByTestId("add-member-reg").fill("l249906");
@@ -447,7 +447,7 @@ test.describe("projects member flows", () => {
   });
 
   test("a real but non-enrolled student is reported", async ({ page }) => {
-    await signInE2E(page, { email: STUDENTS[0].email, password: E2E_PASSWORD });
+    await signInE2E(page, { email: STUDENTS[0]!.email, password: E2E_PASSWORD });
     await page.goto(`/app/projects/${sandbox.dashboardA}/my-group`);
     await page.getByTestId("add-member-name").fill("Muhammad Zohaib");
     await page.getByTestId("add-member-reg").fill("l242530");
@@ -459,7 +459,7 @@ test.describe("projects member flows", () => {
   });
 
   test("leader removes a member and capacity frees up", async ({ page }) => {
-    await signInE2E(page, { email: STUDENTS[0].email, password: E2E_PASSWORD });
+    await signInE2E(page, { email: STUDENTS[0]!.email, password: E2E_PASSWORD });
     await page.goto(`/app/projects/${sandbox.dashboardA}/my-group`);
     await page
       .getByRole("combobox", { name: "Remove member" })
@@ -509,7 +509,7 @@ test.describe("projects member flows", () => {
   });
 
   test("solo create works on the approval dashboard", async ({ page }) => {
-    await signInE2E(page, { email: STUDENTS[6].email, password: E2E_PASSWORD });
+    await signInE2E(page, { email: STUDENTS[6]!.email, password: E2E_PASSWORD });
     await page.goto(`/app/projects/${sandbox.dashboardB}`);
     await page.getByTestId("create-group-title").fill("QA Approval Flight");
     await page.getByTestId("create-group-submit").click();
@@ -519,7 +519,7 @@ test.describe("projects member flows", () => {
   });
 
   test("leader sends an add request that the TA approves", async ({ page }) => {
-    await signInE2E(page, { email: STUDENTS[6].email, password: E2E_PASSWORD });
+    await signInE2E(page, { email: STUDENTS[6]!.email, password: E2E_PASSWORD });
     await page.goto(`/app/projects/${sandbox.dashboardB}/my-group`);
     await expect(page.getByTestId("student-member-controls")).toContainText(
       "TA approves member changes",
