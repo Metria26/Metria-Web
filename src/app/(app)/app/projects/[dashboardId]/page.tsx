@@ -36,6 +36,12 @@ export default async function ProjectDashboardPage({
         .eq("auth_user_id", user.id)
         .maybeSingle()
     : { data: null };
+  // Most real student profiles have roll_no = NULL (Google sign-in only sets
+  // display_name/email). private.project_resolve_member also matches the email
+  // local part, so that is the safe leader-regNo fallback — otherwise the
+  // auto-leader row failed Zod (regRequired) with a generic invalidInput error
+  // no matter what teammates the student added (owner report 2026-11-12).
+  const emailLocal = user?.email ? (user.email.split("@")[0] ?? "") : "";
 
   const { data: dashboard } = await supabase
     .from("project_dashboards")
@@ -139,6 +145,7 @@ export default async function ProjectDashboardPage({
             status={dashboard.status}
             opensAt={dashboard.opens_at}
             deadlineAt={dashboard.deadline_at}
+            lateAllowed={dashboard.late_allowed}
           />
           <div className="grid gap-3 sm:grid-cols-3">
             <Link
@@ -195,7 +202,7 @@ export default async function ProjectDashboardPage({
                 self={{
                   profileId: profile?.id ?? "",
                   name: profile?.display_name ?? "",
-                  regNo: profile?.roll_no || profile?.email.split("@")[0] || "",
+                  regNo: profile?.roll_no || emailLocal,
                 }}
                 students={eligibleStudents}
                 minMembers={dashboard.min_members}

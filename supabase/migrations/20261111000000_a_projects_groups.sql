@@ -150,6 +150,7 @@ DROP TRIGGER IF EXISTS project_group_members_touch ON public.project_group_membe
 
 -- Leader is a member pointer; declared after the members table exists.
 ALTER TABLE public.project_groups DROP CONSTRAINT IF EXISTS project_groups_leader_member_tenant_fk;
+ALTER TABLE public.project_groups DROP CONSTRAINT IF EXISTS project_groups_leader_member_fk;
 ALTER TABLE public.project_groups ADD CONSTRAINT project_groups_leader_member_fk FOREIGN KEY(leader_member_id) REFERENCES public.project_group_members(id) ON DELETE SET NULL;
 
 -- Pending add/remove member requests (require_member_change_approval flow).

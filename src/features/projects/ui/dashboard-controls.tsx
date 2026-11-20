@@ -27,11 +27,13 @@ export function DashboardControls({
   status,
   opensAt,
   deadlineAt,
+  lateAllowed,
 }: {
   dashboardId: string;
   status: string;
   opensAt: string | null;
   deadlineAt: string | null;
+  lateAllowed: boolean;
 }) {
   const t = useTranslations("Projects");
   const router = useRouter();
@@ -181,6 +183,12 @@ export function DashboardControls({
         onSubmit={(event) => {
           event.preventDefault();
           const formData = new FormData(event.currentTarget);
+          const opensAtInput = String(formData.get("opensAt") ?? "").trim();
+          const deadlineAtInput = String(formData.get("deadlineAt") ?? "").trim();
+          if (opensAtInput && deadlineAtInput && deadlineAtInput <= opensAtInput) {
+            setResult({ ok: false, error: "invalidInput" });
+            return;
+          }
           formData.set("dashboardId", dashboardId);
           run(() => setDeadlineAction(formData));
         }}
@@ -206,7 +214,7 @@ export function DashboardControls({
           />
         </label>
         <label className="inline-flex items-center gap-2 self-end text-xs">
-          <input type="checkbox" name="lateAllowed" />
+          <input type="checkbox" name="lateAllowed" defaultChecked={lateAllowed} />
           {t("fields.lateAllowed")}
         </label>
         <button type="submit" className={`${buttonClass} self-end`} disabled={pending}>
@@ -215,8 +223,12 @@ export function DashboardControls({
       </form>
 
       {result && !result.ok ? (
-        <p role="alert" className="text-sm text-destructive" data-testid="dashboard-controls-error">
-          {t(`errors.${result.error}`)}
+        <p
+          role="alert"
+          className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+          data-testid="dashboard-controls-error"
+        >
+          {t.has(`errors.${result.error}`) ? t(`errors.${result.error}`) : t("errors.generic")}
         </p>
       ) : null}
       {result && result.ok ? <p className="text-sm text-muted-foreground">{t("saved")}</p> : null}

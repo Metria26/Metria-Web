@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { formatDateTime } from "@/lib/time-format";
 import {
   addMembersAction,
   archiveGroupAction,
@@ -96,9 +97,15 @@ function useRunner(): {
 function ErrorText({ result }: { result: ActionResult | null }) {
   const t = useTranslations("Projects.errors");
   if (!result || result.ok) return null;
+  const key = result.error;
+  const message = t.has(key) ? t(key) : t("generic");
   return (
-    <p role="alert" className="text-xs text-destructive" data-testid="group-action-error">
-      {t(result.error)}
+    <p
+      role="alert"
+      className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+      data-testid="group-action-error"
+    >
+      {message}
     </p>
   );
 }
@@ -397,7 +404,9 @@ export function RequestsPanel({ requests }: { requests: RequestRow[] }) {
         >
           <span className="text-sm">
             {label(request)} ·{" "}
-            <span className="text-xs text-muted-foreground">{request.created_at}</span>
+            <span className="text-xs text-muted-foreground">
+              {formatDateTime(request.created_at)}
+            </span>
           </span>
           <div className="flex gap-1.5">
             <button
@@ -603,7 +612,7 @@ export function ReviewList({ groupId, reviews }: { groupId: string; reviews: Rev
                 ) : null}
               </p>
               <p className="text-xs text-muted-foreground">
-                {review.reviewer_name} · {review.created_at}
+                {review.reviewer_name} · {formatDateTime(review.created_at)}
               </p>
             </div>
             <div className="flex gap-1.5">

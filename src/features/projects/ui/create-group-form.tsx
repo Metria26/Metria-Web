@@ -115,8 +115,12 @@ export function CreateGroupForm({
       </p>
 
       {result && !result.ok ? (
-        <p role="alert" className="text-sm text-destructive" data-testid="create-group-error">
-          {t(`errors.${result.error}`)}
+        <p
+          role="alert"
+          className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+          data-testid="create-group-error"
+        >
+          {t.has(`errors.${result.error}`) ? t(`errors.${result.error}`) : t("errors.generic")}
         </p>
       ) : null}
 

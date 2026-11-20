@@ -8,67 +8,51 @@ import { isHttpUrl, type DashboardStatus, type GroupStatus } from "./contracts";
 
 /** Stable RPC error codes → i18n keys (messages pass through verbatim). */
 export function mapRpcError(message: string | null | undefined): string {
-  switch ((message ?? "").trim()) {
-    case "not_found":
-      return "notFound";
-    case "invalid_input":
-      return "invalidInput";
-    case "prefix_required":
-      return "prefixRequired";
-    case "duplicate_group_id":
-      return "duplicateGroupId";
-    case "student_not_found":
-      return "studentNotFound";
-    case "student_not_enrolled":
-      return "studentNotEnrolled";
-    case "student_in_group":
-      return "studentInGroup";
-    case "duplicate_member":
-      return "duplicateMember";
-    case "group_full":
-      return "groupFull";
-    case "group_too_small":
-      return "groupTooSmall";
-    case "group_size":
-      return "groupSize";
-    case "not_leader":
-      return "notLeader";
-    case "not_published":
-      return "notPublished";
-    case "dashboard_closed":
-      return "dashboardClosed";
-    case "not_open":
-      return "notOpen";
-    case "deadline_passed":
-      return "deadlinePassed";
-    case "edit_not_allowed":
-      return "editNotAllowed";
-    case "member_changes_locked":
-      return "memberChangesLocked";
-    case "approval_required":
-      return "approvalRequired";
-    case "approval_not_required":
-      return "approvalNotRequired";
-    case "request_pending":
-      return "requestPending";
-    case "request_not_pending":
-      return "requestNotPending";
-    case "field_required":
-      return "fieldRequired";
-    case "invalid_field":
-      return "invalidField";
-    case "invalid_url":
-      return "invalidUrl";
-    case "invalid_status":
-      return "invalidStatus";
-    case "too_many_links":
-      return "tooManyLinks";
-    case "forbidden":
-    case "unauthenticated":
-      return "notAuthorized";
-    default:
-      return "generic";
+  const raw = (message ?? "").trim();
+  const code = raw.toLowerCase();
+
+  // PostgREST/Supabase may wrap the raised message (e.g. "PGRST..." details or
+  // prefixed text). Match known stable codes by exact value first, then by a
+  // contained token so specific failures never collapse into a generic error.
+  const known: Record<string, string> = {
+    not_found: "notFound",
+    invalid_input: "invalidInput",
+    prefix_required: "prefixRequired",
+    duplicate_group_id: "duplicateGroupId",
+    student_not_found: "studentNotFound",
+    student_not_enrolled: "studentNotEnrolled",
+    student_in_group: "studentInGroup",
+    duplicate_member: "duplicateMember",
+    group_full: "groupFull",
+    group_too_small: "groupTooSmall",
+    group_size: "groupSize",
+    not_leader: "notLeader",
+    not_published: "notPublished",
+    dashboard_closed: "dashboardClosed",
+    not_open: "notOpen",
+    deadline_passed: "deadlinePassed",
+    edit_not_allowed: "editNotAllowed",
+    member_changes_locked: "memberChangesLocked",
+    approval_required: "approvalRequired",
+    approval_not_required: "approvalNotRequired",
+    request_pending: "requestPending",
+    request_not_pending: "requestNotPending",
+    field_required: "fieldRequired",
+    invalid_field: "invalidField",
+    invalid_url: "invalidUrl",
+    invalid_status: "invalidStatus",
+    too_many_links: "tooManyLinks",
+    forbidden: "notAuthorized",
+    unauthenticated: "notAuthorized",
+    permission_denied: "notAuthorized",
+  };
+
+  if (known[code]) return known[code] ?? "generic";
+  if (code.includes("permission denied") || code.includes("jwt")) return "notAuthorized";
+  for (const [token, key] of Object.entries(known)) {
+    if (code.includes(token)) return key;
   }
+  return "generic";
 }
 
 /** Postgres write error codes → i18n keys (RLS 42501, unique, FK, CHECK). */

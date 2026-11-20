@@ -1,13 +1,16 @@
 import { expect, type Page } from "@playwright/test";
 
 /**
- * Local Supabase stack constants — the default demo keys every
- * `supabase start` uses (publicly documented demo values, not secrets;
- * same values as .env.local). Google sign-in cannot be automated, so shell
- * tests use a fixture password user + the E2E_MODE-only session route.
+ * Supabase stack connection for fixture seeding. Defaults to the local stack
+ * (`supabase start` demo keys, publicly documented values, same as
+ * .env.local); E2E_SUPABASE_URL / E2E_SERVICE_ROLE_KEY / E2E_ANON_KEY
+ * override them so the suite can run against a linked remote project (the
+ * webServer env spreads process.env, and the dev server must be started with
+ * the matching NEXT_PUBLIC_* overrides).
  */
-const SUPABASE_URL = "http://127.0.0.1:54321";
+const SUPABASE_URL = process.env.E2E_SUPABASE_URL ?? "http://127.0.0.1:54321";
 const SERVICE_ROLE_KEY =
+  process.env.E2E_SERVICE_ROLE_KEY ??
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU";
 
 export const E2E_EMAIL = "e2e.student@lhr.nu.edu.pk";
@@ -29,6 +32,7 @@ export const E2E_ADMIN_PASSWORD = "e2e-Password123!";
 
 /** Default demo anon key (publicly documented local value, same as .env.local). */
 const ANON_KEY =
+  process.env.E2E_ANON_KEY ??
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
 
 /** Creates the fixture user through the local admin API (fires the F3 triggers). */
@@ -64,7 +68,16 @@ async function promoteMembership(
   return profile;
 }
 
-async function ensureAuthUser(email: string, password: string, fullName: string): Promise<string> {
+/** Stack URL/key for fixture-driven specs that need raw GoTrue admin calls. */
+export const E2E_STACK_URL = SUPABASE_URL;
+export const E2E_STACK_SERVICE_KEY = SERVICE_ROLE_KEY;
+
+/** Creates the fixture user through the admin API (fires the F3 triggers). */
+export async function ensureAuthUser(
+  email: string,
+  password: string,
+  fullName: string,
+): Promise<string> {
   const res = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
     method: "POST",
     headers: {

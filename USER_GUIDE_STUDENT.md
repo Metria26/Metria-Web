@@ -145,7 +145,36 @@ They may use simple formatting (bold, italic, bullet lists). Only announcements 
 
 ---
 
-## 10. Common messages and what they mean
+## 10. Projects and groups
+
+When a course has a published project dashboard, you can form a group to submit your work.
+
+### Finding the project
+1. Open your course offering. If a project is active, you will see a **Project** section or link.
+2. Click to open the **Project Dashboard** for your course.
+
+### Creating a group
+1. On the Project Dashboard, you will see the group formation rules (e.g., minimum and maximum group size).
+2. Click **Create Group**.
+3. Fill in the **Project Title** and (if enabled) a **Group ID**.
+4. Add your initial teammates by filling in their name and registration number.
+5. Click **Create Group**. You are now the leader and can see your group details.
+
+### Managing members
+If member changes are allowed (Direct mode):
+1. On your group page, use the **Add member** form to add more teammates.
+2. You can also use **Bulk add** to paste a list of names and registration numbers.
+3. Use the **Remove** dropdown to remove a member (as long as you have enough members left).
+
+If approval is required (Approval mode):
+- You can request changes to members. These requests are sent to your TA for approval.
+
+### Submitting
+1. When your group has formed and work is ready, ensure all members are added.
+2. Use the **Submit Project** form on your group page to enter responses or links.
+3. Once submitted, further member changes might be locked depending on the course rules.
+
+---
 
 | Message | What it means / what to do |
 | --- | --- |

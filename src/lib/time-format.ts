@@ -75,8 +75,11 @@ export function formatShortDayTime(value: string | Date): string {
 }
 
 /** "9 Nov 2026, 10:30 am" (window label with the full date). */
-export function formatDateTime(value: string | Date): string {
-  return fullDayTimeFormatter.format(new Date(value));
+export function formatDateTime(value: string | Date | null | undefined): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return fullDayTimeFormatter.format(date);
 }
 
 const dateTimeInputFormatter = new Intl.DateTimeFormat("en-CA", {
