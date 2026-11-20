@@ -265,7 +265,9 @@ export default async function ProjectGroupDetailPage({
           {activity.map((entry) => (
             <li key={entry.id}>
               <span className="font-medium text-foreground">{entry.actor_name}</span>{" "}
-              {t.has(`activity.${entry.action}`) ? t(`activity.${entry.action}`) : entry.action}{" "}
+              {t.has(`activity.${entry.action.replaceAll(".", "_")}`)
+                ? t(`activity.${entry.action.replaceAll(".", "_")}`)
+                : entry.action}{" "}
               {entry.entity_label} · {formatDateTime(entry.created_at)}
             </li>
           ))}

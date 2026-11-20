@@ -213,6 +213,24 @@ export default async function MyGroupPage({
   const eligibleStudents =
     memberState === "locked" ? [] : await listEligibleStudents(supabase, dashboard.id);
 
+  const effectiveDeadlineAt = group.deadline_override_at ?? dashboard.deadline_at ?? null;
+  // eslint-disable-next-line react-hooks/purity -- server render compares current time for submission window/deadline gating
+  const now = Date.now();
+  const opensAtMs = dashboard.opens_at ? Date.parse(dashboard.opens_at) : null;
+  const deadlineMs = effectiveDeadlineAt ? Date.parse(effectiveDeadlineAt) : null;
+  const isRevision = group.status === "revision_required";
+  let submissionBlockMessage: string | null = null;
+  if (dashboard.status !== "published" || group.archived_at !== null) {
+    submissionBlockMessage = t("errors.dashboardClosed");
+  } else if (!isRevision && opensAtMs !== null && now < opensAtMs) {
+    submissionBlockMessage = t("errors.notOpen");
+  } else if (!isRevision && deadlineMs !== null && now > deadlineMs && !dashboard.late_allowed) {
+    submissionBlockMessage = t("errors.deadlinePassed");
+  } else if (!canEditDetails) {
+    submissionBlockMessage = t("errors.editNotAllowed");
+  }
+  const canSubmitNow = canEditDetails && submissionBlockMessage === null;
+
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-10">
       <nav className="mb-4 text-sm">
@@ -229,7 +247,7 @@ export default async function MyGroupPage({
           <p className="text-xs text-muted-foreground">
             {dashboard.title} ·{" "}
             {t("myGroup.effectiveDeadline", {
-              date: formatDateTime(group.deadline_override_at ?? dashboard.deadline_at ?? null),
+              date: formatDateTime(effectiveDeadlineAt),
             })}
           </p>
         </div>
@@ -303,7 +321,21 @@ export default async function MyGroupPage({
       </Section>
 
       <Section title={t("sections.details")}>
-        {canEditDetails ? (
+        {submissionBlockMessage ? (
+          <p
+            role="status"
+            className="rounded-xl border border-warning/40 bg-warning/5 px-4 py-3 text-sm text-warning-foreground"
+            data-testid="submission-blocked"
+          >
+            {submissionBlockMessage}
+            {effectiveDeadlineAt ? (
+              <span className="mt-1 block text-xs opacity-90">
+                {t("myGroup.effectiveDeadline", { date: formatDateTime(effectiveDeadlineAt) })}
+              </span>
+            ) : null}
+          </p>
+        ) : null}
+        {canSubmitNow ? (
           <SubmissionForm
             groupId={group.id}
             fields={fields}
@@ -319,9 +351,9 @@ export default async function MyGroupPage({
               </div>
             ))}
           </dl>
-        ) : (
+        ) : !submissionBlockMessage ? (
           <p className="text-sm text-muted-foreground">{t("myGroup.noSubmissionYet")}</p>
-        )}
+        ) : null}
         {submissions.length > 0 ? (
           <ul className="mt-4 grid gap-1 text-xs text-muted-foreground">
             {submissions.map((submission) => (
@@ -386,7 +418,9 @@ export default async function MyGroupPage({
           {activity.map((entry) => (
             <li key={entry.id}>
               <span className="font-medium text-foreground">{entry.actor_name}</span>{" "}
-              {t.has(`activity.${entry.action}`) ? t(`activity.${entry.action}`) : entry.action}{" "}
+              {t.has(`activity.${entry.action.replaceAll(".", "_")}`)
+                ? t(`activity.${entry.action.replaceAll(".", "_")}`)
+                : entry.action}{" "}
               {entry.entity_label} · {formatDateTime(entry.created_at)}
             </li>
           ))}

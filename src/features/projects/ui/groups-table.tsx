@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { GROUP_STATUSES } from "../contracts";
 import { GroupStatusBadge, SubmissionStatusBadge } from "./status-badge";
+import { formatDateTime } from "@/lib/time-format";
 
 export type GroupRow = {
   id: string;
@@ -81,13 +82,6 @@ export function GroupsTable({ dashboardId, groups }: { dashboardId: string; grou
       return next;
     });
   };
-
-  const formatDateTime = (value: string | null) =>
-    value
-      ? new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(
-          new Date(value),
-        )
-      : "—";
 
   return (
     <div className="grid gap-4" data-testid="groups-table">

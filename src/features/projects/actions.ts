@@ -124,7 +124,7 @@ export async function createDashboardAction(formData: FormData): Promise<ActionR
     allowMemberChangesAfterSubmission: formBool(formData, "allowMemberChangesAfterSubmission"),
     requireMemberChangeApproval: formBool(formData, "requireMemberChangeApproval"),
     allowIndividual: formBool(formData, "allowIndividual"),
-    allowStudentGroups: formBool(formData, "allowStudentGroups") ?? true,
+    allowStudentGroups: formBool(formData, "allowStudentGroups") ?? false,
     minMembers: emptyToUndefined(formData.get("minMembers")),
     maxMembers: emptyToUndefined(formData.get("maxMembers")),
     groupIdPrefix: emptyToUndefined(formData.get("groupIdPrefix")),
@@ -170,7 +170,7 @@ export async function updateDashboardAction(formData: FormData): Promise<ActionR
     allowMemberChangesAfterSubmission: formBool(formData, "allowMemberChangesAfterSubmission"),
     requireMemberChangeApproval: formBool(formData, "requireMemberChangeApproval"),
     allowIndividual: formBool(formData, "allowIndividual"),
-    allowStudentGroups: formBool(formData, "allowStudentGroups") ?? true,
+    allowStudentGroups: formBool(formData, "allowStudentGroups") ?? false,
     minMembers: emptyToUndefined(formData.get("minMembers")),
     maxMembers: emptyToUndefined(formData.get("maxMembers")),
     groupIdPrefix: emptyToUndefined(formData.get("groupIdPrefix")),
@@ -218,7 +218,7 @@ export async function setDeadlineAction(formData: FormData): Promise<ActionResul
     p_dashboard_id: dashboardId,
     p_opens_at: formDateOrNull(formData, "opensAt"),
     p_deadline_at: formDateOrNull(formData, "deadlineAt"),
-    p_late_allowed: formBool(formData, "lateAllowed"),
+    p_late_allowed: formBool(formData, "lateAllowed") ?? false,
   });
   if (result.ok) revalidateProject(dashboardId);
   return result;
