@@ -1,3 +1,5 @@
+import { formatDateTime } from "@/lib/time-format";
+
 export function RolesAdminView({ data }: { data: Record<string, unknown>[] }) {
   return (
     <div className="space-y-6" data-testid="roles-admin-view">
@@ -27,7 +29,7 @@ export function RolesAdminView({ data }: { data: Record<string, unknown>[] }) {
                   </p>
                   {a.revoked_at && (
                     <p className="text-xs text-red-600">
-                      Revoked at: {new Date(a.revoked_at).toLocaleString()}
+                      Revoked at: {formatDateTime(a.revoked_at)}
                     </p>
                   )}
                 </div>

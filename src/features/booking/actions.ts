@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { rpcTransport } from "@/lib/supabase/rpc";
+import { universityDateTimeInputToIso } from "@/lib/time-format";
 import {
   bookingInputSchema,
   bulkReassignInputSchema,
@@ -70,6 +71,11 @@ export async function createPeriodAction(formData: FormData): Promise<ActionResu
     return { ok: false, error: evaluators.error ?? "invalidInput" };
   }
 
+  // datetime-local is a Karachi wall clock, not a server-local instant.
+  const startsAt = universityDateTimeInputToIso(parsed.data.startsAt);
+  const endsAt = universityDateTimeInputToIso(parsed.data.endsAt);
+  if (!startsAt || !endsAt) return { ok: false, error: "invalidInput" };
+
   // Period + evaluator list + initial seat assignments commit together.
   const { data: periodId, error } = await rpcTransport(supabase).rpc(
     "create_period_with_evaluators",
@@ -78,8 +84,8 @@ export async function createPeriodAction(formData: FormData): Promise<ActionResu
       p_offering_id: parsed.data.offeringId,
       p_section_id: parsed.data.sectionId,
       p_title: parsed.data.title,
-      p_starts_at: new Date(parsed.data.startsAt).toISOString(),
-      p_ends_at: new Date(parsed.data.endsAt).toISOString(),
+      p_starts_at: startsAt,
+      p_ends_at: endsAt,
       p_cutoff_hours: parsed.data.cutoffHours,
       p_evaluators: toRpcEvaluators(evaluators.data),
     },
@@ -104,13 +110,17 @@ export async function createSlotAction(formData: FormData): Promise<ActionResult
   });
   if (!parsed.success) return { ok: false, error: "invalidInput" };
 
+  const startsAt = universityDateTimeInputToIso(parsed.data.startsAt);
+  const endsAt = universityDateTimeInputToIso(parsed.data.endsAt);
+  if (!startsAt || !endsAt) return { ok: false, error: "invalidInput" };
+
   // The RPC creates the seat rows and applies the round-robin in the same
   // transaction as the slot — a direct INSERT would leave the slot seat-less.
   const { error } = await supabase.rpc("create_slot", {
     p_university_id: profile.university_id,
     p_period_id: parsed.data.periodId,
-    p_starts_at: new Date(parsed.data.startsAt).toISOString(),
-    p_ends_at: new Date(parsed.data.endsAt).toISOString(),
+    p_starts_at: startsAt,
+    p_ends_at: endsAt,
     p_capacity: parsed.data.capacity,
     p_location: parsed.data.location,
   });

@@ -30,7 +30,11 @@ export function remainingSeats(booked: number, capacity: number): number {
 
 /** Stable RPC error codes → i18n keys (messages pass through verbatim). */
 export function mapRpcError(message: string | null | undefined): string {
-  switch ((message ?? "").trim()) {
+  const normalized = (message ?? "").trim();
+  // PostgREST reports a missing/stale RPC with a schema-cache message rather
+  // than a stable code — make that actionable instead of a generic failure.
+  if (/could not find the function|schema cache/i.test(normalized)) return "serviceUnavailable";
+  switch (normalized) {
     case "slot_full":
       return "slotFull";
     case "already_booked":
@@ -45,6 +49,8 @@ export function mapRpcError(message: string | null | undefined): string {
       return "noActiveBooking";
     case "not_found":
       return "notFound";
+    case "invalid_input":
+      return "invalidInput";
     case "slot_overlap":
       return "slotOverlap";
     case "too_many_bookings":

@@ -114,87 +114,100 @@ export default async function BookingPeriodPage({
           </div>
 
           {canManage ? (
-            <ConfirmDeleteDialogButton
-              label={t("actions.deletePeriod")}
-              confirmMessage={t("confirm.deletePeriod", { title: period.title })}
-              requireTyping={period.title}
-              hiddenFields={{ periodId: period.id }}
-              action={deletePeriodAction}
-              testId="delete-period"
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <a
+                href={`/api/bookings/${period.id}/export`}
+                download
+                className="inline-flex h-9 items-center rounded-lg border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
+                data-testid="download-bookings-csv"
+              >
+                {t("actions.downloadCsv")}
+              </a>
+              <ConfirmDeleteDialogButton
+                label={t("actions.deletePeriod")}
+                confirmMessage={t("confirm.deletePeriod", { title: period.title })}
+                requireTyping={period.title}
+                hiddenFields={{ periodId: period.id }}
+                action={deletePeriodAction}
+                testId="delete-period"
+              />
+            </div>
           ) : null}
         </div>
       </div>
 
       <AdSlot pageType="booking" slotKey="booking-top" withSponsor />
 
-      {/* Student: evaluator is revealed only for slots the caller booked. */}
-      <section
-        className="grid gap-3 rounded-xl border bg-card p-6 shadow-sm"
-        aria-labelledby="my-evaluation-heading"
-        data-testid="my-evaluation-panel"
-      >
-        <div className="grid gap-1">
-          <h2 id="my-evaluation-heading" className="text-lg font-semibold">
-            {t("myEvaluation.title")}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {myBookings.length > 0 ? t("myEvaluation.hint") : t("myEvaluation.none")}
-          </p>
-        </div>
-        {myBookings.length > 0 ? (
-          <div className="grid gap-2">
-            {myBookings.map((slot) => {
-              const evaluator = slot.my_evaluator;
-              return (
-                <div
-                  key={slot.id}
-                  className="grid gap-2 rounded-lg border bg-muted/20 p-3"
-                  data-testid="my-evaluation-booking"
-                >
-                  <p className="text-sm font-semibold">
-                    {t("myEvaluation.slot")}: {formatSlotTime(slot.starts_at)} –{" "}
-                    {formatSlotTime(slot.ends_at)}
-                  </p>
-                  {evaluator ? (
-                    <div className="grid gap-1">
-                      <p className="text-sm" data-testid="my-evaluator-name">
-                        <span className="font-medium">{t("myEvaluation.evaluator")}: </span>
-                        <span className="break-words">{evaluator.name}</span>
-                      </p>
-                      <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-                        {evaluator.email ? (
-                          <p className="min-w-0 break-all" data-testid="my-evaluator-email">
-                            <span className="font-medium">{t("myEvaluation.email")}: </span>
-                            {evaluator.email}
-                          </p>
-                        ) : null}
-                        {evaluator.phone ? (
-                          <p className="min-w-0 break-words" data-testid="my-evaluator-phone">
-                            <span className="font-medium">{t("myEvaluation.phone")}: </span>
-                            {evaluator.phone}
-                          </p>
-                        ) : null}
-                        {evaluator.contact_note ? (
-                          <p className="min-w-0 break-words" data-testid="my-evaluator-note">
-                            <span className="font-medium">{t("myEvaluation.note")}: </span>
-                            {evaluator.contact_note}
-                          </p>
-                        ) : null}
-                        {!evaluator.email && !evaluator.phone && !evaluator.contact_note ? (
-                          <p className="text-muted-foreground">{t("myEvaluation.noContact")}</p>
-                        ) : null}
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">{t("schedule.noEvaluator")}</p>
-                  )}
-                </div>
-              );
-            })}
+      {/* Student: evaluator is revealed only for slots the caller booked. Staff
+          manage rosters elsewhere and never see this student prompt. */}
+      {!canManage ? (
+        <section
+          className="grid gap-3 rounded-xl border bg-card p-6 shadow-sm"
+          aria-labelledby="my-evaluation-heading"
+          data-testid="my-evaluation-panel"
+        >
+          <div className="grid gap-1">
+            <h2 id="my-evaluation-heading" className="text-lg font-semibold">
+              {t("myEvaluation.title")}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {myBookings.length > 0 ? t("myEvaluation.hint") : t("myEvaluation.none")}
+            </p>
           </div>
-        ) : null}
-      </section>
+          {myBookings.length > 0 ? (
+            <div className="grid gap-2">
+              {myBookings.map((slot) => {
+                const evaluator = slot.my_evaluator;
+                return (
+                  <div
+                    key={slot.id}
+                    className="grid gap-2 rounded-lg border bg-muted/20 p-3"
+                    data-testid="my-evaluation-booking"
+                  >
+                    <p className="text-sm font-semibold">
+                      {t("myEvaluation.slot")}: {formatSlotTime(slot.starts_at)} –{" "}
+                      {formatSlotTime(slot.ends_at)}
+                    </p>
+                    {evaluator ? (
+                      <div className="grid gap-1">
+                        <p className="text-sm" data-testid="my-evaluator-name">
+                          <span className="font-medium">{t("myEvaluation.evaluator")}: </span>
+                          <span className="break-words">{evaluator.name}</span>
+                        </p>
+                        <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                          {evaluator.email ? (
+                            <p className="min-w-0 break-all" data-testid="my-evaluator-email">
+                              <span className="font-medium">{t("myEvaluation.email")}: </span>
+                              {evaluator.email}
+                            </p>
+                          ) : null}
+                          {evaluator.phone ? (
+                            <p className="min-w-0 break-words" data-testid="my-evaluator-phone">
+                              <span className="font-medium">{t("myEvaluation.phone")}: </span>
+                              {evaluator.phone}
+                            </p>
+                          ) : null}
+                          {evaluator.contact_note ? (
+                            <p className="min-w-0 break-words" data-testid="my-evaluator-note">
+                              <span className="font-medium">{t("myEvaluation.note")}: </span>
+                              {evaluator.contact_note}
+                            </p>
+                          ) : null}
+                          {!evaluator.email && !evaluator.phone && !evaluator.contact_note ? (
+                            <p className="text-muted-foreground">{t("myEvaluation.noContact")}</p>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{t("schedule.noEvaluator")}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       {/* Slots Section — rectangular cards grouped by Asia/Karachi day */}
       <section className="grid gap-4 overflow-hidden" aria-labelledby="slots-heading">

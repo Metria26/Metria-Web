@@ -163,9 +163,16 @@ describe("stable error code mapping (api-contracts.md)", () => {
     expect(mapRpcError("slot_ended")).toBe("slotEnded");
     expect(mapRpcError("not_active")).toBe("notActive");
     expect(mapRpcError("not_found")).toBe("notFound");
+    expect(mapRpcError("invalid_input")).toBe("invalidInput");
     expect(mapRpcError("forbidden")).toBe("notAuthorized");
     expect(mapRpcError("unauthenticated")).toBe("notAuthorized");
     expect(mapRpcError("  slot_full  ")).toBe("slotFull");
+  });
+
+  it("maps stale RPC schema-cache errors to an actionable key", () => {
+    expect(
+      mapRpcError("Could not find the function public.save_period_evaluators in the schema cache"),
+    ).toBe("serviceUnavailable");
   });
 
   it("falls back to generic for unknown or missing messages", () => {

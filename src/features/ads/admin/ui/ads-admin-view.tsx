@@ -22,6 +22,7 @@ import {
 } from "../actions";
 import type { ActionResult } from "../contracts";
 import type { AdsAdminData } from "../data";
+import { formatDateTime } from "@/lib/time-format";
 
 /**
  * /admin/ads console view (AD3). Pure presentation over the server-loaded
@@ -325,11 +326,7 @@ export function AdsAdminView({ data }: { data: AdsAdminData }) {
                   <span className="text-sm">
                     {t("state.version", { n: row.version })}
                     <span className="ml-2 text-xs text-muted-foreground">
-                      {new Date(row.createdAt).toLocaleString("en-GB", {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                        timeZone: "UTC",
-                      })}
+                      {formatDateTime(row.createdAt)}
                     </span>
                     {row.version === latestVersion ? (
                       <Badge className="ml-2" data-state="latest">
