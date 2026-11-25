@@ -1,12 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
-import { buildBookingCsv } from "@/features/booking/csv";
+import { buildBookingWorkbook } from "@/features/booking/excel";
 import { loadPeriodBookingOverview } from "@/features/booking/overview";
 
 /**
- * GET /api/bookings/{periodId}/export — staff-only CSV of active bookings:
- * student, slot time (Asia/Karachi) and evaluator. The overview RPC already
- * hides student/evaluator rows from non-staff; can_manage is checked again so
- * a student can never download the roster.
+ * GET /api/bookings/{periodId}/export — staff-only .xlsx workbook of active
+ * bookings: student, email, slot date/time (Asia/Karachi), evaluator and seat.
+ * The overview RPC already hides student/evaluator rows from non-staff;
+ * can_manage is checked again so a student can never download the roster.
  */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -31,10 +31,11 @@ export async function GET(
   if (!overview) return new Response("Not found", { status: 404 });
   if (!overview.can_manage) return new Response("Forbidden", { status: 403 });
 
-  const fileName = `evaluation-bookings-${periodId.slice(0, 8)}.csv`;
-  return new Response(buildBookingCsv(overview), {
+  const buffer = await buildBookingWorkbook(overview);
+  const fileName = `evaluation-bookings-${periodId.slice(0, 8)}.xlsx`;
+  return new Response(buffer, {
     headers: {
-      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "Content-Disposition": `attachment; filename="${fileName}"`,
       "Cache-Control": "private, no-store",
     },

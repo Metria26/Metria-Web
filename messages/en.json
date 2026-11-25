@@ -614,7 +614,7 @@
       "bulkReassign": "Move all bookings",
       "removeEvaluator": "Remove evaluator",
       "deleteBooking": "Delete booking",
-      "downloadCsv": "Download CSV",
+      "downloadCsv": "Download Excel",
       "moveUp": "Move up",
       "moveDown": "Move down",
       "removeRow": "Remove"
@@ -721,14 +721,18 @@
     },
     "myEvaluation": {
       "title": "Your evaluation appointment",
-      "hint": "Your evaluator is shown here only after you book. Contact them using the details below.",
+      "yourEvaluator": "Your Evaluator",
+      "confirmed": "Appointment confirmed",
+      "assignedNote": "You must be evaluated by your assigned evaluator.",
+      "hint": "Your assigned evaluator and appointment details appear here once your booking is confirmed.",
       "slot": "Slot",
       "evaluator": "Evaluator",
       "email": "Email",
       "phone": "Phone",
       "note": "Contact note",
+      "contactDetails": "Contact details",
       "noContact": "No contact details were provided.",
-      "none": "Once you book a slot, your evaluator's name and contact details will appear here."
+      "none": "Book a slot and your evaluator will appear here."
     },
     "schedule": {
       "title": "Evaluator schedule",
@@ -776,7 +780,7 @@
       "filterSlot": "Slot",
       "allDays": "All days",
       "allSlots": "All slots",
-      "exportCsv": "Export CSV",
+      "exportCsv": "Export Excel",
       "colSlot": "Slot",
       "colStudent": "Student",
       "colEmail": "Roll / email",
