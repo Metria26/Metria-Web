@@ -57,6 +57,20 @@ export function mapRpcError(message: string | null | undefined): string {
       return "marksProtected";
     case "capacity_below_bookings":
       return "capacityBelowBookings";
+    case "capacity_seat_conflict":
+      return "capacitySeatConflict";
+    case "seat_unavailable":
+      return "seatUnavailable";
+    case "evaluator_has_bookings":
+      return "evaluatorHasBookings";
+    case "invalid_evaluator":
+      return "invalidEvaluator";
+    case "invalid_reference":
+      return "invalidReference";
+    case "too_many_evaluators":
+      return "tooManyEvaluators";
+    case "evaluator_required":
+      return "evaluatorRequired";
     case "forbidden":
     case "unauthenticated":
       return "notAuthorized";

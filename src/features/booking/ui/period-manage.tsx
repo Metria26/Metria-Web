@@ -2,9 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import type { BookingSlotOverview, BookingStudent } from "@/features/booking/overview";
+import type {
+  BookingEvaluator,
+  BookingSlotOverview,
+  BookingStudent,
+} from "@/features/booking/overview";
 import { formatShortDay, formatSlotTime, formatDateTime } from "@/lib/time-format";
 import { studentEmailLocalPart, compareStudentsByEmail } from "@/lib/student-sort";
+import { ConfirmDeleteDialogButton } from "@/components/ui/confirm-delete-dialog";
+import { deleteBookingAction } from "@/features/booking/actions";
+import { ReassignForm } from "./forms";
 
 /**
  * Staff-only roster of every booking in a period (T-A students are never sent
@@ -13,13 +20,18 @@ import { studentEmailLocalPart, compareStudentsByEmail } from "@/lib/student-sor
  * stable against payload reshuffles and matches the RPC ordering rule.
  */
 export function PeriodBookingsTable({
+  periodId,
   slots,
   students,
+  evaluators,
 }: {
+  periodId: string;
   slots: BookingSlotOverview[];
   students: BookingStudent[];
+  evaluators: BookingEvaluator[];
 }) {
   const t = useTranslations("Booking.staff");
+  const tBooking = useTranslations("Booking");
   const [dayFilter, setDayFilter] = useState("");
   const [slotFilter, setSlotFilter] = useState("");
 
@@ -76,6 +88,8 @@ export function PeriodBookingsTable({
       "student_email",
       "booked_at",
       "status",
+      "evaluator_name",
+      "seat_number",
     ];
     const lines = [
       header.join(","),
@@ -88,6 +102,8 @@ export function PeriodBookingsTable({
           row.student_email ?? "",
           row.booked_at ?? "",
           row.status,
+          row.evaluator_name ?? "",
+          row.seat_number != null ? String(row.seat_number) : "",
         ];
         return cells.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",");
       }),
@@ -159,21 +175,23 @@ export function PeriodBookingsTable({
         </button>
       </div>
 
-      <div className="overflow-x-hidden rounded-lg border">
-        <table className="w-full min-w-0 table-fixed text-left text-xs sm:table-auto">
+      <div className="overflow-x-auto rounded-lg border">
+        <table className="w-full min-w-[48rem] table-auto text-left text-xs">
           <thead className="bg-muted/60 text-muted-foreground">
             <tr>
               <th className="px-2 py-2 font-semibold sm:px-3">{t("colSlot")}</th>
               <th className="px-2 py-2 font-semibold sm:px-3">{t("colStudent")}</th>
               <th className="hidden px-3 py-2 font-semibold sm:table-cell">{t("colEmail")}</th>
-              <th className="hidden px-3 py-2 font-semibold sm:table-cell">{t("colBookedAt")}</th>
+              <th className="px-2 py-2 font-semibold sm:px-3">{t("colEvaluator")}</th>
+              <th className="hidden px-3 py-2 font-semibold lg:table-cell">{t("colBookedAt")}</th>
+              <th className="px-2 py-2 font-semibold sm:px-3">{t("colActions")}</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={4}
+                  colSpan={6}
                   className="px-3 py-4 text-muted-foreground"
                   data-testid="no-staff-bookings"
                 >
@@ -184,7 +202,10 @@ export function PeriodBookingsTable({
               rows.map((row, index) => {
                 const slot = slots.find((candidate) => candidate.id === row.slot_id);
                 return (
-                  <tr key={`${row.slot_id}-${index}`} className="border-t">
+                  <tr
+                    key={`${row.booking_id ?? row.slot_id}-${index}`}
+                    className="border-t align-top"
+                  >
                     <td className="px-2 py-2 sm:px-3">
                       <span className="block whitespace-nowrap font-medium">
                         {slot
@@ -202,8 +223,39 @@ export function PeriodBookingsTable({
                       </span>
                     </td>
                     <td className="hidden px-3 py-2 sm:table-cell">{row.student_email}</td>
-                    <td className="hidden whitespace-nowrap px-3 py-2 sm:table-cell">
+                    <td className="px-2 py-2 sm:px-3">
+                      <span className="block break-words font-medium">
+                        {row.evaluator_name ?? tBooking("schedule.noEvaluator")}
+                      </span>
+                      {row.seat_number != null ? (
+                        <span className="block text-muted-foreground">#{row.seat_number}</span>
+                      ) : null}
+                    </td>
+                    <td className="hidden whitespace-nowrap px-3 py-2 lg:table-cell">
                       {row.booked_at ? formatDateTime(row.booked_at) : ""}
+                    </td>
+                    <td className="px-2 py-2 sm:px-3">
+                      {row.booking_id ? (
+                        <div className="flex flex-wrap items-start gap-2">
+                          <ReassignForm
+                            periodId={periodId}
+                            bookingId={row.booking_id}
+                            evaluators={evaluators}
+                            compact
+                          />
+                          <ConfirmDeleteDialogButton
+                            label={tBooking("actions.deleteBooking")}
+                            confirmMessage={tBooking("confirm.deleteBooking", {
+                              student: row.student_name,
+                              time: slot ? formatSlotTime(slot.starts_at) : "",
+                            })}
+                            hiddenFields={{ periodId, bookingId: row.booking_id }}
+                            action={deleteBookingAction}
+                            testId={`delete-booking-${row.booking_id.slice(0, 8)}`}
+                            buttonClass="inline-flex h-8 items-center rounded-lg border border-destructive/40 bg-background px-2 text-xs font-medium text-destructive hover:bg-destructive/10"
+                          />
+                        </div>
+                      ) : null}
                     </td>
                   </tr>
                 );

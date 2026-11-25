@@ -7,6 +7,31 @@ import { z } from "zod";
  * (never emails). The payload is parsed here so contract drift fails loudly.
  */
 
+/** Evaluator details are staff-only except for the caller's own booking. */
+export const bookingEvaluatorSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  email: z.string().nullable(),
+  phone: z.string().nullable(),
+  contact_note: z.string().nullable(),
+  position: z.coerce.number(),
+});
+export type BookingEvaluator = z.infer<typeof bookingEvaluatorSchema>;
+
+export const myBookingEvaluatorSchema = bookingEvaluatorSchema.omit({ position: true });
+
+export const bookingSeatSchema = z.object({
+  id: z.string().uuid(),
+  seat_number: z.coerce.number(),
+  evaluator_id: z.string().uuid().nullable(),
+  evaluator_name: z.string().nullable(),
+  booking_id: z.string().uuid().nullable(),
+  student_name: z.string().nullable(),
+  student_email: z.string().nullable(),
+  status: z.string().nullable(),
+});
+export type BookingSeat = z.infer<typeof bookingSeatSchema>;
+
 export const bookingSlotOverviewSchema = z.object({
   id: z.string().uuid(),
   starts_at: z.string(),
@@ -15,6 +40,10 @@ export const bookingSlotOverviewSchema = z.object({
   location: z.string().nullable(),
   booked: z.coerce.number(),
   my_booking_id: z.string().uuid().nullable(),
+  /** Never populated for slots the student has not booked. */
+  my_evaluator: myBookingEvaluatorSchema.nullable(),
+  /** Staff-only; empty array for students. */
+  seats: z.array(bookingSeatSchema),
 });
 
 export const bookingPeriodSchema = z.object({
@@ -38,11 +67,17 @@ export const bookingStudentSchema = z.object({
   student_email: z.string().optional(),
   booked_at: z.string().optional(),
   status: z.string(),
+  booking_id: z.string().uuid().optional(),
+  seat_number: z.coerce.number().optional(),
+  evaluator_id: z.string().uuid().nullable().optional(),
+  evaluator_name: z.string().nullable().optional(),
 });
 
 export const periodBookingOverviewSchema = z.object({
   period: bookingPeriodSchema,
   can_manage: z.boolean(),
+  /** Staff-only; always [] for students so evaluators stay hidden pre-booking. */
+  evaluators: z.array(bookingEvaluatorSchema),
   slots: z.array(bookingSlotOverviewSchema),
   students: z.array(bookingStudentSchema),
 });

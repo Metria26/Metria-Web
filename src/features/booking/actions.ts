@@ -5,15 +5,23 @@ import { createClient } from "@/lib/supabase/server";
 import { rpcTransport } from "@/lib/supabase/rpc";
 import {
   bookingInputSchema,
+  bulkReassignInputSchema,
   cancelBookingInputSchema,
+  deleteBookingInputSchema,
+  evaluatorsInputSchema,
+  evaluatorInputSchema,
   periodInputSchema,
+  reassignEvaluatorInputSchema,
+  removeEvaluatorInputSchema,
   slotCapacityInputSchema,
   slotInputSchema,
   switchBookingInputSchema,
   type ActionResult,
+  type EvaluatorInput,
 } from "./contracts";
 import { bulkSlotsInputSchema, planBulkSlots } from "./bulk-slots";
-import { mapRpcError, mapWriteError } from "./rules";
+import { loadPeriodBookingOverview } from "./overview";
+import { mapRpcError } from "./rules";
 
 function emptyToUndefined(value: FormDataEntryValue | null): string | undefined {
   if (typeof value !== "string") return undefined;
@@ -57,19 +65,28 @@ export async function createPeriodAction(formData: FormData): Promise<ActionResu
   });
   if (!parsed.success) return { ok: false, error: "invalidInput" };
 
-  const { error } = await supabase.from("evaluation_periods").insert({
-    university_id: profile.university_id,
-    created_by: profile.id,
-    offering_id: parsed.data.offeringId,
-    section_id: parsed.data.sectionId,
-    title: parsed.data.title,
-    starts_at: new Date(parsed.data.startsAt).toISOString(),
-    ends_at: new Date(parsed.data.endsAt).toISOString(),
-    cutoff_hours: parsed.data.cutoffHours,
-  });
-  if (error) return { ok: false, error: mapWriteError(error.code) };
+  const evaluators = parseEvaluators(emptyToUndefined(formData.get("evaluators")) ?? "[]");
+  if (evaluators.error || !evaluators.data) {
+    return { ok: false, error: evaluators.error ?? "invalidInput" };
+  }
 
-  revalidatePath("/app/bookings");
+  // Period + evaluator list + initial seat assignments commit together.
+  const { data: periodId, error } = await rpcTransport(supabase).rpc(
+    "create_period_with_evaluators",
+    {
+      p_university_id: profile.university_id,
+      p_offering_id: parsed.data.offeringId,
+      p_section_id: parsed.data.sectionId,
+      p_title: parsed.data.title,
+      p_starts_at: new Date(parsed.data.startsAt).toISOString(),
+      p_ends_at: new Date(parsed.data.endsAt).toISOString(),
+      p_cutoff_hours: parsed.data.cutoffHours,
+      p_evaluators: toRpcEvaluators(evaluators.data),
+    },
+  );
+  if (error) return { ok: false, error: mapRpcError(error.message) };
+
+  revalidatePeriod(String(periodId));
   return { ok: true };
 }
 
@@ -87,18 +104,19 @@ export async function createSlotAction(formData: FormData): Promise<ActionResult
   });
   if (!parsed.success) return { ok: false, error: "invalidInput" };
 
-  const { error } = await supabase.from("slots").insert({
-    university_id: profile.university_id,
-    created_by: profile.id,
-    period_id: parsed.data.periodId,
-    starts_at: new Date(parsed.data.startsAt).toISOString(),
-    ends_at: new Date(parsed.data.endsAt).toISOString(),
-    capacity: parsed.data.capacity,
-    location: parsed.data.location.length > 0 ? parsed.data.location : null,
+  // The RPC creates the seat rows and applies the round-robin in the same
+  // transaction as the slot — a direct INSERT would leave the slot seat-less.
+  const { error } = await supabase.rpc("create_slot", {
+    p_university_id: profile.university_id,
+    p_period_id: parsed.data.periodId,
+    p_starts_at: new Date(parsed.data.startsAt).toISOString(),
+    p_ends_at: new Date(parsed.data.endsAt).toISOString(),
+    p_capacity: parsed.data.capacity,
+    p_location: parsed.data.location,
   });
-  if (error) return { ok: false, error: mapWriteError(error.code) };
+  if (error) return { ok: false, error: mapRpcError(error.message) };
 
-  revalidatePath(`/app/bookings/${parsed.data.periodId}`);
+  revalidatePeriod(parsed.data.periodId);
   return { ok: true };
 }
 
@@ -156,6 +174,77 @@ const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
 function formUuid(formData: FormData, key: string): string | null {
   const value = emptyToUndefined(formData.get(key));
   return value && uuidPattern.test(value) ? value : null;
+}
+
+/** All evaluator/booking mutations change the same three cached routes. */
+function revalidatePeriod(periodId: string): void {
+  revalidatePath("/app/bookings");
+  revalidatePath(`/app/bookings/${periodId}`);
+  revalidatePath("/app");
+}
+
+/** JSON editor payload → validated evaluator records (no hardcoded names). */
+function parseEvaluators(raw: string): { data?: EvaluatorInput[]; error?: string } {
+  let json: unknown;
+  try {
+    json = JSON.parse(raw);
+  } catch {
+    return { error: "invalidInput" };
+  }
+  const parsed = evaluatorInputSchema.array().safeParse(json);
+  if (!parsed.success || parsed.data.length > 50) return { error: "invalidInput" };
+
+  const ids = parsed.data.filter((item) => item.id).map((item) => item.id);
+  const positions = parsed.data.map((item) => item.position);
+  if (new Set(ids).size !== ids.length || new Set(positions).size !== positions.length) {
+    return { error: "invalidInput" };
+  }
+  return { data: parsed.data };
+}
+
+function toRpcEvaluators(items: EvaluatorInput[]) {
+  return items.map((item) => ({
+    ...(item.id ? { id: item.id } : {}),
+    name: item.name,
+    email: item.email || null,
+    phone: item.phone || null,
+    contact_note: item.contactNote || null,
+    position: item.position,
+  }));
+}
+
+/**
+ * Non-blocking duplicate warnings computed with the same pure rule the UI uses.
+ * They never prevent the mutation — only inform the TA afterwards.
+ */
+async function reassignmentWarning(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  periodId: string,
+  change: { bookingId?: string; fromEvaluatorId?: string; toEvaluatorId: string },
+): Promise<string | undefined> {
+  const overview = await loadPeriodBookingOverview(supabase, periodId);
+  if (!overview) return undefined;
+
+  for (const slot of overview.slots) {
+    const booked = slot.seats.filter(
+      (seat) => seat.booking_id !== null && seat.evaluator_id !== null,
+    );
+    if (change.bookingId) {
+      const target = booked.find((seat) => seat.booking_id === change.bookingId);
+      if (!target || target.evaluator_id === change.toEvaluatorId) continue;
+      if (
+        booked.some((seat) => seat.id !== target.id && seat.evaluator_id === change.toEvaluatorId)
+      ) {
+        return "duplicateEvaluatorSlot";
+      }
+    } else if (change.fromEvaluatorId) {
+      const moving = booked.some((seat) => seat.evaluator_id === change.fromEvaluatorId);
+      if (moving && booked.some((seat) => seat.evaluator_id === change.toEvaluatorId)) {
+        return "duplicateEvaluatorSlot";
+      }
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -278,5 +367,130 @@ export async function deleteSlotAction(formData: FormData): Promise<ActionResult
   if (error) return { ok: false, error: mapRpcError(error.message) };
   revalidatePath(`/app/bookings/${periodId}`);
   revalidatePath("/app/bookings");
+  return { ok: true };
+}
+
+/**
+ * Staff: create, edit, reorder, add or remove evaluators. Existing ids are
+ * preserved; removed evaluators are refused while they still have bookings.
+ */
+export async function saveEvaluatorsAction(formData: FormData): Promise<ActionResult> {
+  const { supabase, profile } = await callerProfile();
+  if (!profile) return { ok: false, error: "notAuthorized" };
+
+  const parsed = evaluatorsInputSchema.safeParse({
+    periodId: emptyToUndefined(formData.get("periodId")),
+    evaluators: emptyToUndefined(formData.get("evaluators")) ?? "[]",
+  });
+  if (!parsed.success) return { ok: false, error: "invalidInput" };
+
+  const evaluators = parseEvaluators(parsed.data.evaluators);
+  if (evaluators.error || !evaluators.data) {
+    return { ok: false, error: evaluators.error ?? "invalidInput" };
+  }
+
+  const { error } = await rpcTransport(supabase).rpc("save_period_evaluators", {
+    p_period_id: parsed.data.periodId,
+    p_evaluators: toRpcEvaluators(evaluators.data),
+  });
+  if (error) return { ok: false, error: mapRpcError(error.message) };
+
+  revalidatePeriod(parsed.data.periodId);
+  return { ok: true };
+}
+
+/** Staff: reassign one booking/seat to a different evaluator. */
+export async function reassignEvaluatorAction(formData: FormData): Promise<ActionResult> {
+  const { supabase, profile } = await callerProfile();
+  if (!profile) return { ok: false, error: "notAuthorized" };
+
+  const parsed = reassignEvaluatorInputSchema.safeParse({
+    periodId: emptyToUndefined(formData.get("periodId")),
+    bookingId: emptyToUndefined(formData.get("bookingId")),
+    evaluatorId: emptyToUndefined(formData.get("evaluatorId")),
+  });
+  if (!parsed.success) return { ok: false, error: "invalidInput" };
+
+  const warning = await reassignmentWarning(supabase, parsed.data.periodId, {
+    bookingId: parsed.data.bookingId,
+    toEvaluatorId: parsed.data.evaluatorId,
+  });
+  const { error } = await rpcTransport(supabase).rpc("reassign_booking_evaluator", {
+    p_booking_id: parsed.data.bookingId,
+    p_evaluator_id: parsed.data.evaluatorId,
+  });
+  if (error) return { ok: false, error: mapRpcError(error.message) };
+
+  revalidatePeriod(parsed.data.periodId);
+  return { ok: true, ...(warning ? { warning } : {}) };
+}
+
+/** Staff: move all of one evaluator's bookings to another evaluator. */
+export async function bulkReassignEvaluatorAction(formData: FormData): Promise<ActionResult> {
+  const { supabase, profile } = await callerProfile();
+  if (!profile) return { ok: false, error: "notAuthorized" };
+
+  const parsed = bulkReassignInputSchema.safeParse({
+    periodId: emptyToUndefined(formData.get("periodId")),
+    fromEvaluatorId: emptyToUndefined(formData.get("fromEvaluatorId")),
+    toEvaluatorId: emptyToUndefined(formData.get("toEvaluatorId")),
+  });
+  if (!parsed.success) return { ok: false, error: "invalidInput" };
+
+  const warning = await reassignmentWarning(supabase, parsed.data.periodId, {
+    fromEvaluatorId: parsed.data.fromEvaluatorId,
+    toEvaluatorId: parsed.data.toEvaluatorId,
+  });
+  const { error } = await rpcTransport(supabase).rpc("bulk_reassign_evaluator", {
+    p_period_id: parsed.data.periodId,
+    p_from_evaluator_id: parsed.data.fromEvaluatorId,
+    p_to_evaluator_id: parsed.data.toEvaluatorId,
+  });
+  if (error) return { ok: false, error: mapRpcError(error.message) };
+
+  revalidatePeriod(parsed.data.periodId);
+  return { ok: true, ...(warning ? { warning } : {}) };
+}
+
+/** Staff: remove an evaluator, moving their bookings to a replacement first. */
+export async function removeEvaluatorAction(formData: FormData): Promise<ActionResult> {
+  const { supabase, profile } = await callerProfile();
+  if (!profile) return { ok: false, error: "notAuthorized" };
+
+  const parsed = removeEvaluatorInputSchema.safeParse({
+    periodId: emptyToUndefined(formData.get("periodId")),
+    evaluatorId: emptyToUndefined(formData.get("evaluatorId")),
+    replacementId: emptyToUndefined(formData.get("replacementId")),
+  });
+  if (!parsed.success) return { ok: false, error: "invalidInput" };
+
+  const { error } = await rpcTransport(supabase).rpc("remove_period_evaluator", {
+    p_period_id: parsed.data.periodId,
+    p_evaluator_id: parsed.data.evaluatorId,
+    p_replacement_id: parsed.data.replacementId ?? null,
+  });
+  if (error) return { ok: false, error: mapRpcError(error.message) };
+
+  revalidatePeriod(parsed.data.periodId);
+  return { ok: true };
+}
+
+/** Staff: hard-delete one booking and release its seat. */
+export async function deleteBookingAction(formData: FormData): Promise<ActionResult> {
+  const { supabase, profile } = await callerProfile();
+  if (!profile) return { ok: false, error: "notAuthorized" };
+
+  const parsed = deleteBookingInputSchema.safeParse({
+    periodId: emptyToUndefined(formData.get("periodId")),
+    bookingId: emptyToUndefined(formData.get("bookingId")),
+  });
+  if (!parsed.success) return { ok: false, error: "invalidInput" };
+
+  const { error } = await rpcTransport(supabase).rpc("delete_booking", {
+    p_booking_id: parsed.data.bookingId,
+  });
+  if (error) return { ok: false, error: mapRpcError(error.message) };
+
+  revalidatePeriod(parsed.data.periodId);
   return { ok: true };
 }

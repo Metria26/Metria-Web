@@ -511,7 +511,9 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          evaluator_id: string | null
           period_id: string
+          seat_id: string | null
           slot_id: string
           status: string
           student_id: string
@@ -521,8 +523,10 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          evaluator_id?: string | null
           id?: string
           period_id: string
+          seat_id?: string | null
           slot_id: string
           status?: string
           student_id: string
@@ -532,8 +536,10 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          evaluator_id?: string | null
           id?: string
           period_id?: string
+          seat_id?: string | null
           slot_id?: string
           status?: string
           student_id?: string
@@ -959,6 +965,63 @@ export type Database = {
           },
           {
             foreignKeyName: "evaluation_periods_university_fk"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_period_evaluators: {
+        Row: {
+          contact_note: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          name: string
+          period_id: string
+          phone: string | null
+          position: number
+          university_id: string
+          updated_at: string
+        }
+        Insert: {
+          contact_note?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          period_id: string
+          phone?: string | null
+          position: number
+          university_id: string
+          updated_at?: string
+        }
+        Update: {
+          contact_note?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          period_id?: string
+          phone?: string | null
+          position?: number
+          university_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_period_evaluators_period_tenant_fk"
+            columns: ["university_id", "period_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_periods"
+            referencedColumns: ["university_id", "id"]
+          },
+          {
+            foreignKeyName: "evaluation_period_evaluators_university_fk"
             columns: ["university_id"]
             isOneToOne: false
             referencedRelation: "universities"
@@ -2242,6 +2305,58 @@ export type Database = {
           },
         ]
       }
+      slot_seats: {
+        Row: {
+          created_at: string
+          evaluator_id: string | null
+          id: string
+          seat_number: number
+          slot_id: string
+          university_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          evaluator_id?: string | null
+          id?: string
+          seat_number: number
+          slot_id: string
+          university_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          evaluator_id?: string | null
+          id?: string
+          seat_number?: number
+          slot_id?: string
+          university_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slot_seats_evaluator_tenant_fk"
+            columns: ["university_id", "evaluator_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_period_evaluators"
+            referencedColumns: ["university_id", "id"]
+          },
+          {
+            foreignKeyName: "slot_seats_slot_tenant_fk"
+            columns: ["university_id", "slot_id"]
+            isOneToOne: false
+            referencedRelation: "slots"
+            referencedColumns: ["university_id", "id"]
+          },
+          {
+            foreignKeyName: "slot_seats_university_fk"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sponsor_slots: {
         Row: {
           created_at: string
@@ -2589,8 +2704,40 @@ export type Database = {
         }
         Returns: string
       }
+      bulk_reassign_evaluator: {
+        Args: {
+          p_from_evaluator_id: string
+          p_period_id: string
+          p_to_evaluator_id: string
+        }
+        Returns: number
+      }
       cancel_booking: { Args: { p_booking_id: string }; Returns: string }
       confirm_mark_import: { Args: { p_batch_id: string }; Returns: Json }
+      create_period_with_evaluators: {
+        Args: {
+          p_cutoff_hours: number
+          p_ends_at: string
+          p_evaluators: Json
+          p_offering_id: string
+          p_section_id: string
+          p_starts_at: string
+          p_title: string
+          p_university_id: string
+        }
+        Returns: string
+      }
+      create_slot: {
+        Args: {
+          p_capacity: number
+          p_ends_at: string
+          p_location: string
+          p_period_id: string
+          p_starts_at: string
+          p_university_id: string
+        }
+        Returns: string
+      }
       create_slots_bulk: {
         Args: {
           p_capacity: number
@@ -2611,6 +2758,7 @@ export type Database = {
         Args: { p_announcement_id: string }
         Returns: undefined
       }
+      delete_booking: { Args: { p_booking_id: string }; Returns: undefined }
       delete_assessment: {
         Args: { p_assessment_id: string; p_force?: boolean }
         Returns: undefined
@@ -2643,6 +2791,22 @@ export type Database = {
         Returns: Json
       }
       period_booking_overview: { Args: { p_period_id: string }; Returns: Json }
+      reassign_booking_evaluator: {
+        Args: { p_booking_id: string; p_evaluator_id: string }
+        Returns: undefined
+      }
+      remove_period_evaluator: {
+        Args: {
+          p_evaluator_id: string
+          p_period_id: string
+          p_replacement_id?: string
+        }
+        Returns: undefined
+      }
+      save_period_evaluators: {
+        Args: { p_evaluators: Json; p_period_id: string }
+        Returns: undefined
+      }
       student_dashboard: { Args: never; Returns: Json }
       switch_booking: {
         Args: { p_period_id: string; p_target_slot_id: string }
