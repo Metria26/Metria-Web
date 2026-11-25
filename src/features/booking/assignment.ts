@@ -144,6 +144,39 @@ export function redistributeUnbookedSeats(
   return walkSeats(slots, seats, evaluators, true);
 }
 
+/**
+ * Workload balance for ACTIVE bookings: one global round-robin across the
+ * period (slot order, then seat number). Counts differ by at most one, so no
+ * evaluator is idle while another carries extra students. Cancelled/free seats
+ * are deliberately excluded — they are filled by the seat rotation instead.
+ * The SQL `private.balance_period_evaluators` implements the same walk.
+ */
+export function balanceBookedSeats(
+  slots: readonly SlotRef[],
+  seats: readonly SeatRef[],
+  evaluators: readonly EvaluatorRef[],
+): SeatAssignment[] {
+  const evaluatorIds = orderedEvaluatorIds(evaluators);
+  const booked = seats.filter((seat) => seat.booked);
+  // Keep the SQL's slot ordering when slot references are available.
+  const slotOrder = new Map(orderedSlots(slots).map((slot, index) => [slot.id, index]));
+  booked.sort(
+    (a, b) =>
+      (slotOrder.get(a.slot_id) ?? Number.MAX_SAFE_INTEGER) -
+        (slotOrder.get(b.slot_id) ?? Number.MAX_SAFE_INTEGER) ||
+      a.seat_number - b.seat_number ||
+      compareText(a.id, b.id),
+  );
+
+  if (evaluatorIds.length === 0) {
+    return booked.map((seat) => ({ seatId: seat.id, evaluatorId: null }));
+  }
+  return booked.map((seat, index) => ({
+    seatId: seat.id,
+    evaluatorId: evaluatorIds[index % evaluatorIds.length]!,
+  }));
+}
+
 /** Merge assignments back into seat rows (keeps seat identity stable). */
 export function applyAssignments(
   seats: readonly SeatRef[],

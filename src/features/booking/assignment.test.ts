@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyAssignments,
   assignEvaluators,
+  balanceBookedSeats,
   bookedSeatCountForEvaluator,
   bulkReassignSeatEvaluator,
   duplicateBookingSeatIds,
@@ -166,6 +167,37 @@ describe("redistribution after adding an evaluator", () => {
     const map = assignmentMap([slots[0]!], bookedWithB, ABC);
     expect(map.get("s1")).toBe("B");
     expect(map.get("s2")).toBe("C"); // A would come first, but B is taken; C is free
+  });
+});
+
+describe("balanced workload after bookings and cancellations", () => {
+  it("spreads active bookings so counts differ by at most one", () => {
+    const slots = generateSlots(3, 3);
+    const seats = generateSeats(slots).map((current, index) => ({
+      ...current,
+      booked: index < 7, // 7 students, 3 evaluators → 3 / 2 / 2
+      evaluator_id: "A", // deliberately skewed before the balance
+    }));
+
+    const assignments = balanceBookedSeats(slots, seats, ABC);
+    const counts = new Map(ABC.map((current) => [current.id, 0]));
+    for (const assignment of assignments) {
+      if (assignment.evaluatorId) {
+        counts.set(assignment.evaluatorId, (counts.get(assignment.evaluatorId) ?? 0) + 1);
+      }
+    }
+    expect([...counts.values()].sort()).toEqual([2, 2, 3]);
+    expect(assignments).toHaveLength(7);
+  });
+
+  it("released seats are not counted as work and no evaluator is idle", () => {
+    const slots = generateSlots(2, 3);
+    const seats = generateSeats(slots).map((current, index) => ({
+      ...current,
+      booked: index === 0 || index === 3, // two students left
+    }));
+    const assignments = balanceBookedSeats(slots, seats, ABC);
+    expect(assignments.map((current) => current.evaluatorId)).toEqual(["A", "B"]);
   });
 });
 
