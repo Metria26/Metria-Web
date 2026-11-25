@@ -80,43 +80,6 @@ export function PeriodBookingsTable({
   const activeBookedCount = students.filter((student) => student.status === "active").length;
   const freeSlots = slots.filter((slot) => slot.booked < slot.capacity).length;
 
-  const exportCsv = () => {
-    const header = [
-      "slot_start_iso",
-      "slot_time",
-      "student_name",
-      "student_email",
-      "booked_at",
-      "status",
-      "evaluator_name",
-      "seat_number",
-    ];
-    const lines = [
-      header.join(","),
-      ...rows.map((row) => {
-        const slot = slots.find((candidate) => candidate.id === row.slot_id);
-        const cells = [
-          slot?.starts_at ?? "",
-          slot ? `${formatSlotTime(slot.starts_at)} - ${formatSlotTime(slot.ends_at)}` : "",
-          row.student_name,
-          row.student_email ?? "",
-          row.booked_at ?? "",
-          row.status,
-          row.evaluator_name ?? "",
-          row.seat_number != null ? String(row.seat_number) : "",
-        ];
-        return cells.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",");
-      }),
-    ];
-    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "bookings.csv";
-    anchor.click();
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <div className="grid gap-3" data-testid="period-bookings-table">
       {/* Count summary (total slots / booked / free) */}
@@ -165,26 +128,26 @@ export function PeriodBookingsTable({
             ))}
           </select>
         </label>
-        <button
-          type="button"
-          onClick={exportCsv}
+        <a
+          href={`/api/bookings/${periodId}/export`}
+          download
           className="ml-auto inline-flex h-8 items-center rounded-lg border border-input bg-background px-3 text-xs font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
           data-testid="export-bookings-csv"
         >
           {t("exportCsv")}
-        </button>
+        </a>
       </div>
 
       <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full min-w-[48rem] table-auto text-left text-xs">
+        <table className="w-full min-w-[56rem] table-auto text-left text-xs">
           <thead className="bg-muted/60 text-muted-foreground">
             <tr>
-              <th className="px-2 py-2 font-semibold sm:px-3">{t("colSlot")}</th>
-              <th className="px-2 py-2 font-semibold sm:px-3">{t("colStudent")}</th>
+              <th className="px-3 py-3 font-semibold">{t("colSlot")}</th>
+              <th className="px-3 py-3 font-semibold">{t("colStudent")}</th>
               <th className="hidden px-3 py-2 font-semibold sm:table-cell">{t("colEmail")}</th>
-              <th className="px-2 py-2 font-semibold sm:px-3">{t("colEvaluator")}</th>
+              <th className="px-3 py-3 font-semibold">{t("colEvaluator")}</th>
               <th className="hidden px-3 py-2 font-semibold lg:table-cell">{t("colBookedAt")}</th>
-              <th className="px-2 py-2 font-semibold sm:px-3">{t("colActions")}</th>
+              <th className="px-3 py-3 font-semibold">{t("colActions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -206,7 +169,7 @@ export function PeriodBookingsTable({
                     key={`${row.booking_id ?? row.slot_id}-${index}`}
                     className="border-t align-top"
                   >
-                    <td className="px-2 py-2 sm:px-3">
+                    <td className="min-w-0 px-3 py-3 align-top">
                       <span className="block whitespace-nowrap font-medium">
                         {slot
                           ? `${formatSlotTime(slot.starts_at)} – ${formatSlotTime(slot.ends_at)}`
@@ -216,14 +179,16 @@ export function PeriodBookingsTable({
                         {formatShortDay(slot?.starts_at ?? "")}
                       </span>
                     </td>
-                    <td className="px-2 py-2 sm:px-3">
-                      <span className="block font-medium">{row.student_name}</span>
+                    <td className="min-w-0 px-3 py-3 align-top">
+                      <span className="block break-words font-medium">{row.student_name}</span>
                       <span className="block whitespace-nowrap text-muted-foreground sm:hidden">
                         {studentEmailLocalPart(row.student_email ?? "")}
                       </span>
                     </td>
-                    <td className="hidden px-3 py-2 sm:table-cell">{row.student_email}</td>
-                    <td className="px-2 py-2 sm:px-3">
+                    <td className="hidden min-w-0 break-all px-3 py-3 align-top sm:table-cell">
+                      {row.student_email}
+                    </td>
+                    <td className="min-w-0 px-3 py-3 align-top">
                       <span className="block break-words font-medium">
                         {row.evaluator_name ?? tBooking("schedule.noEvaluator")}
                       </span>
@@ -231,10 +196,10 @@ export function PeriodBookingsTable({
                         <span className="block text-muted-foreground">#{row.seat_number}</span>
                       ) : null}
                     </td>
-                    <td className="hidden whitespace-nowrap px-3 py-2 lg:table-cell">
+                    <td className="hidden whitespace-nowrap px-3 py-3 align-top lg:table-cell">
                       {row.booked_at ? formatDateTime(row.booked_at) : ""}
                     </td>
-                    <td className="px-2 py-2 sm:px-3">
+                    <td className="min-w-0 px-3 py-3 align-top">
                       {row.booking_id ? (
                         <div className="flex flex-wrap items-start gap-2">
                           <ReassignForm

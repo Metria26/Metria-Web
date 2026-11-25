@@ -112,7 +112,7 @@ export function EvaluatorSchedule({
           {rows.map((group) => (
             <section
               key={group.evaluator.id}
-              className="grid content-start gap-2 rounded-lg border bg-muted/20 p-3"
+              className="grid min-w-0 content-start gap-2 rounded-2xl border border-white/20 bg-background/60 p-4 shadow-sm backdrop-blur-md dark:border-white/10"
               data-testid="evaluator-schedule-group"
             >
               <h4 className="text-sm font-semibold">{group.evaluator.name}</h4>
@@ -120,7 +120,7 @@ export function EvaluatorSchedule({
                 {group.entries.map((entry, index) => (
                   <li
                     key={`${entry.slotStart}-${entry.seatNumber}-${index}`}
-                    className="grid gap-0.5 rounded-md bg-background/70 px-2 py-1.5 text-xs"
+                    className="grid min-w-0 gap-0.5 rounded-xl bg-card/70 px-2.5 py-2 text-xs shadow-sm"
                   >
                     <span className="font-medium">
                       {formatSlotTime(entry.slotStart)} · {t("seat")} {entry.seatNumber}
@@ -155,14 +155,14 @@ export function SeatSchedule({
     <div className="grid gap-2" data-testid="seat-schedule">
       <p className="text-sm text-muted-foreground">{t("seats.hint")}</p>
       <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full min-w-[42rem] table-auto text-left text-xs">
+        <table className="w-full min-w-[48rem] table-auto text-left text-xs">
           <thead className="bg-muted/60 text-muted-foreground">
             <tr>
-              <th className="px-2 py-2 font-semibold">{t("seats.slot")}</th>
-              <th className="px-2 py-2 font-semibold">{t("seats.seat")}</th>
-              <th className="px-2 py-2 font-semibold">{t("seats.evaluator")}</th>
-              <th className="px-2 py-2 font-semibold">{t("seats.student")}</th>
-              <th className="px-2 py-2 font-semibold">{t("staff.colActions")}</th>
+              <th className="px-3 py-3 font-semibold">{t("seats.slot")}</th>
+              <th className="px-3 py-3 font-semibold">{t("seats.seat")}</th>
+              <th className="px-3 py-3 font-semibold">{t("seats.evaluator")}</th>
+              <th className="px-3 py-3 font-semibold">{t("seats.student")}</th>
+              <th className="px-3 py-3 font-semibold">{t("staff.colActions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -176,23 +176,23 @@ export function SeatSchedule({
               slots.map((slot) =>
                 slot.seats.map((seat) => (
                   <tr key={seat.id} className="border-t align-top">
-                    <td className="whitespace-nowrap px-2 py-2 font-medium">
+                    <td className="whitespace-nowrap px-3 py-3 font-medium">
                       {formatSlotTime(slot.starts_at)}
                     </td>
-                    <td className="px-2 py-2">#{seat.seat_number}</td>
-                    <td className="px-2 py-2">
+                    <td className="min-w-0 px-3 py-3 align-top">#{seat.seat_number}</td>
+                    <td className="min-w-0 px-3 py-3 align-top">
                       <span className="block break-words font-medium">
                         {seat.evaluator_name ?? t("schedule.noEvaluator")}
                       </span>
                     </td>
-                    <td className="px-2 py-2">
+                    <td className="min-w-0 px-3 py-3 align-top">
                       <span className="block break-words">
                         {seat.student_name ?? (
                           <em className="text-muted-foreground">{t("seats.free")}</em>
                         )}
                       </span>
                     </td>
-                    <td className="px-2 py-2">
+                    <td className="min-w-0 px-3 py-3 align-top">
                       {seat.booking_id ? (
                         <div className="flex flex-wrap items-start gap-2">
                           <ReassignForm

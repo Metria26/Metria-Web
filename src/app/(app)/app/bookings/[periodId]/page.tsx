@@ -38,22 +38,31 @@ const statusClasses: Record<SlotCardStatus, { border: string; badge: string }> =
     badge: "bg-primary/15 text-primary",
   },
   free: {
-    border: "border border-success",
+    border: "border-2 border-success/70",
     badge: "bg-success/15 text-success-foreground",
   },
   almost_full: {
-    border: "border border-warning",
+    border: "border-2 border-warning/70",
     badge: "bg-warning/20 text-warning-foreground",
   },
   full: {
-    border: "border border-muted bg-muted/30 opacity-80",
+    border: "border-2 border-muted/50 bg-muted/20 opacity-80",
     badge: "bg-muted text-muted-foreground",
   },
   cutoff_passed: {
-    border: "border border-muted bg-muted/30 opacity-80",
+    border: "border-2 border-muted/50 bg-muted/20 opacity-80",
     badge: "bg-muted text-muted-foreground",
   },
 };
+
+/**
+ * Shared glassmorphism surfaces. Translucent backgrounds + backdrop blur keep
+ * the frosted look in both themes; white rings and soft shadows add depth.
+ */
+const glassCard =
+  "relative overflow-hidden rounded-2xl border border-white/25 bg-card/75 shadow-lg shadow-primary/5 ring-1 ring-white/10 backdrop-blur-xl dark:border-white/10 dark:bg-card/60";
+const glassInner =
+  "rounded-2xl border border-white/20 bg-background/60 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-background/40";
 
 export default async function BookingPeriodPage({
   params,
@@ -76,8 +85,9 @@ export default async function BookingPeriodPage({
   return (
     <div className="flex flex-col gap-8 max-w-5xl mx-auto py-2">
       {/* Header Card */}
-      <div className="rounded-xl border bg-card p-6 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className={`${glassCard} p-6`}>
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-linear-to-br from-primary/12 via-transparent to-transparent" />
+        <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
           <div className="grid gap-2">
             <Link
               href="/app/bookings"
@@ -142,39 +152,120 @@ export default async function BookingPeriodPage({
           manage rosters elsewhere and never see this student prompt. */}
       {!canManage ? (
         <section
-          className="grid gap-3 rounded-xl border bg-card p-6 shadow-sm"
+          className={`${glassCard} p-6`}
           aria-labelledby="my-evaluation-heading"
           data-testid="my-evaluation-panel"
         >
-          <div className="grid gap-1">
-            <h2 id="my-evaluation-heading" className="text-lg font-semibold">
-              {t("myEvaluation.title")}
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {myBookings.length > 0 ? t("myEvaluation.hint") : t("myEvaluation.none")}
-            </p>
-          </div>
-          {myBookings.length > 0 ? (
-            <div className="grid gap-2">
-              {myBookings.map((slot) => {
-                const evaluator = slot.my_evaluator;
-                return (
-                  <div
-                    key={slot.id}
-                    className="grid gap-2 rounded-lg border bg-muted/20 p-3"
-                    data-testid="my-evaluation-booking"
-                  >
-                    <p className="text-sm font-semibold">
-                      {t("myEvaluation.slot")}: {formatSlotTime(slot.starts_at)} –{" "}
-                      {formatSlotTime(slot.ends_at)}
-                    </p>
-                    {evaluator ? (
-                      <div className="grid gap-1">
-                        <p className="text-sm" data-testid="my-evaluator-name">
-                          <span className="font-medium">{t("myEvaluation.evaluator")}: </span>
-                          <span className="break-words">{evaluator.name}</span>
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-linear-to-br from-primary/12 via-transparent to-transparent" />
+          <div className="relative z-10 grid gap-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex min-w-0 items-start gap-3">
+                <span
+                  className="grid size-10 shrink-0 place-items-center rounded-2xl border border-primary/20 bg-primary/10 text-lg text-primary shadow-inner"
+                  aria-hidden
+                >
+                  🎓
+                </span>
+                <div className="grid min-w-0 gap-1">
+                  <h2 id="my-evaluation-heading" className="text-xl font-semibold tracking-tight">
+                    {t("myEvaluation.title")}
+                  </h2>
+                  <p className="max-w-xl text-sm text-muted-foreground">
+                    {myBookings.length > 0
+                      ? t("myEvaluation.assignedNote")
+                      : t("myEvaluation.none")}
+                  </p>
+                </div>
+              </div>
+              {myBookings.length > 0 ? (
+                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-success/30 bg-success/10 px-3 py-1 text-xs font-semibold text-success-foreground">
+                  <span className="size-1.5 rounded-full bg-success" aria-hidden />
+                  {t("myEvaluation.confirmed")}
+                </span>
+              ) : null}
+            </div>
+
+            {myBookings.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {myBookings.map((slot) => {
+                  const evaluator = slot.my_evaluator;
+                  const initials = evaluator?.name
+                    ? evaluator.name
+                        .trim()
+                        .split(/\s+/)
+                        .slice(0, 2)
+                        .map((part) => part[0]?.toUpperCase() ?? "")
+                        .join("")
+                    : "?";
+                  const hasContact = Boolean(
+                    evaluator?.email || evaluator?.phone || evaluator?.contact_note,
+                  );
+
+                  return (
+                    <article
+                      key={slot.id}
+                      className={`${glassInner} grid content-start gap-4 p-5`}
+                      data-testid="my-evaluation-booking"
+                    >
+                      <div className="flex min-w-0 flex-wrap items-end justify-between gap-2 border-b border-white/15 pb-3 dark:border-white/10">
+                        <div className="grid min-w-0 gap-0.5">
+                          <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                            {t("myEvaluation.slot")}
+                          </span>
+                          <span
+                            className="whitespace-nowrap text-base font-semibold tabular-nums"
+                            data-testid="my-evaluation-slot"
+                          >
+                            {formatSlotTime(slot.starts_at)} – {formatSlotTime(slot.ends_at)}
+                          </span>
+                        </div>
+                        {slot.location ? (
+                          <span className="max-w-full break-words rounded-lg border border-white/20 bg-background/50 px-2.5 py-1 text-xs text-muted-foreground">
+                            📍 {slot.location}
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <div className="grid min-w-0 gap-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                          {t("myEvaluation.yourEvaluator")}
                         </p>
-                        <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                        {evaluator ? (
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div
+                              className="grid size-12 shrink-0 place-items-center rounded-2xl bg-linear-to-br from-primary to-primary/60 text-sm font-bold text-primary-foreground shadow-md"
+                              aria-hidden
+                            >
+                              {initials}
+                            </div>
+                            <div className="grid min-w-0 gap-0.5">
+                              <p
+                                className="truncate text-lg font-semibold"
+                                data-testid="my-evaluator-name"
+                                title={evaluator.name}
+                              >
+                                {evaluator.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {t("myEvaluation.evaluator")}
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">
+                            {t("schedule.noEvaluator")}
+                          </p>
+                        )}
+                      </div>
+
+                      {evaluator && hasContact ? (
+                        <div
+                          className="grid min-w-0 gap-1.5 rounded-xl border border-white/15 bg-background/40 p-3 text-xs dark:border-white/10"
+                          data-testid="my-evaluator-contact"
+                        >
+                          <p className="font-semibold uppercase tracking-wider text-muted-foreground">
+                            {t("myEvaluation.contactDetails")}
+                          </p>
                           {evaluator.email ? (
                             <p className="min-w-0 break-all" data-testid="my-evaluator-email">
                               <span className="font-medium">{t("myEvaluation.email")}: </span>
@@ -193,19 +284,22 @@ export default async function BookingPeriodPage({
                               {evaluator.contact_note}
                             </p>
                           ) : null}
-                          {!evaluator.email && !evaluator.phone && !evaluator.contact_note ? (
-                            <p className="text-muted-foreground">{t("myEvaluation.noContact")}</p>
-                          ) : null}
                         </div>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">{t("schedule.noEvaluator")}</p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : null}
+                      ) : (
+                        <p className="w-fit rounded-full border border-dashed border-muted-foreground/30 bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground">
+                          {t("myEvaluation.noContact")}
+                        </p>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-primary/20 bg-primary/5 p-6 text-center text-sm text-muted-foreground">
+                {t("myEvaluation.hint")}
+              </div>
+            )}
+          </div>
         </section>
       ) : null}
 
@@ -232,17 +326,17 @@ export default async function BookingPeriodPage({
               <details
                 key={group.key}
                 open
-                className="grid gap-3 rounded-xl"
+                className="grid min-w-0 gap-3 rounded-2xl"
                 data-testid={`slot-day-${groupIndex}`}
               >
-                <summary className="cursor-pointer select-none rounded-lg border bg-muted/40 px-3 py-2 text-sm font-semibold">
+                <summary className="cursor-pointer select-none rounded-xl border border-white/20 bg-background/60 px-3 py-2.5 text-sm font-semibold shadow-sm backdrop-blur-md dark:border-white/10">
                   {formatDayHeading(`${group.key}T06:00:00+05:00`)}
                   <span className="ml-2 text-xs font-normal text-muted-foreground">
                     ({group.slots.length})
                   </span>
                 </summary>
                 <div
-                  className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                  className="grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3"
                   data-testid="booking-slots"
                 >
                   {group.slots.map((slot) => {
@@ -255,37 +349,37 @@ export default async function BookingPeriodPage({
                     return (
                       <div
                         key={slot.id}
-                        className={`grid content-start gap-2 rounded-xl bg-card p-4 shadow-sm transition-all hover:shadow-md ${classes.border}`}
+                        className={`grid min-w-0 content-start gap-3 rounded-2xl bg-card/75 p-4 shadow-sm ring-1 ring-white/15 backdrop-blur-md transition-shadow hover:shadow-md dark:ring-white/10 ${classes.border}`}
                         data-testid="booking-slot"
                         data-slot-id={slot.id}
                         data-slot-status={status}
                       >
-                        <div className="flex items-start justify-between gap-2">
+                        <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
                           <span
-                            className="font-semibold text-sm whitespace-nowrap"
+                            className="min-w-0 break-words text-sm font-semibold tabular-nums"
                             data-testid="slot-time"
                           >
                             {formatSlotTime(slot.starts_at)} - {formatSlotTime(slot.ends_at)}
                           </span>
                           <span
-                            className={`inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ${classes.badge}`}
+                            className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ${classes.badge}`}
                             data-testid="slot-status"
                           >
                             {t(`statuses.${status}`)}
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span data-testid="slot-capacity">
+                        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                          <span className="shrink-0 tabular-nums" data-testid="slot-capacity">
                             {slot.booked}/{slot.capacity}
                           </span>
                           {slot.location ? (
-                            <span className="truncate">📍 {slot.location}</span>
+                            <span className="min-w-0 break-all">📍 {slot.location}</span>
                           ) : null}
                         </div>
 
                         {/* Student actions */}
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
                           {slot.my_booking_id ? (
                             <span
                               data-testid="my-booking"
@@ -321,7 +415,7 @@ export default async function BookingPeriodPage({
                         {/* Staff panel: capacity edit + delete + roster */}
                         {canManage ? (
                           <div
-                            className="mt-1 border-t pt-2 grid gap-2"
+                            className="mt-1 grid min-w-0 gap-2 border-t border-white/15 pt-3 dark:border-white/10"
                             data-testid="slot-students"
                           >
                             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -346,16 +440,19 @@ export default async function BookingPeriodPage({
                                 {t("noStudents")}
                               </span>
                             ) : (
-                              <ul className="grid gap-1 bg-muted/30 rounded-lg p-2">
+                              <ul className="grid min-w-0 gap-1 rounded-xl border border-white/10 bg-background/50 p-2 dark:border-white/10">
                                 {slotStudents.map((student, index) => (
                                   <li
                                     key={`${student.slot_id}-${index}`}
-                                    className="text-xs flex items-center justify-between gap-2 py-0.5"
+                                    className="flex min-w-0 items-center justify-between gap-2 rounded-lg px-1 py-1 text-xs"
                                   >
-                                    <span className="font-medium truncate">
+                                    <span className="min-w-0 break-words font-medium">
                                       {student.student_name}
                                     </span>
-                                    <span className="whitespace-nowrap text-muted-foreground">
+                                    <span
+                                      className="max-w-[45%] min-w-0 shrink-0 truncate text-muted-foreground"
+                                      title={student.student_email ?? ""}
+                                    >
                                       {(student.student_email ?? "").split("@")[0]}
                                     </span>
                                   </li>
@@ -384,10 +481,7 @@ export default async function BookingPeriodPage({
       {canManage ? (
         <>
           {/* Staff: TA-authored evaluator roster (no accounts, no hardcoding). */}
-          <section
-            className="grid gap-4 rounded-xl border bg-card p-6 shadow-sm"
-            aria-labelledby="evaluators-heading"
-          >
+          <section className={`${glassCard} grid gap-4 p-6`} aria-labelledby="evaluators-heading">
             <div className="grid gap-1">
               <h2 id="evaluators-heading" className="text-lg font-semibold">
                 {t("evaluators.title")} ({t("evaluators.count", { count: evaluators.length })})
@@ -401,10 +495,7 @@ export default async function BookingPeriodPage({
           </section>
 
           {/* Staff: reassignment + deletion with explicit replacement. */}
-          <section
-            className="grid gap-6 rounded-xl border bg-card p-6 shadow-sm"
-            aria-labelledby="reassign-heading"
-          >
+          <section className={`${glassCard} grid gap-6 p-6`} aria-labelledby="reassign-heading">
             <div className="grid gap-2">
               <h2 id="reassign-heading" className="text-lg font-semibold">
                 {t("reassign.title")}
@@ -412,24 +503,21 @@ export default async function BookingPeriodPage({
               <p className="text-sm text-muted-foreground">{t("reassign.hint")}</p>
               <BulkReassignForm periodId={period.id} evaluators={evaluators} />
             </div>
-            <div className="grid gap-2 border-t pt-4">
+            <div className="grid min-w-0 gap-2 border-t border-white/15 pt-4 dark:border-white/10">
               <h3 className="text-base font-semibold">{t("evaluators.removeTitle")}</h3>
               <RemoveEvaluatorForm periodId={period.id} evaluators={evaluators} />
             </div>
           </section>
 
           {/* Staff: per-evaluator view and the full seat-by-seat assignment. */}
-          <section
-            className="grid gap-6 rounded-xl border bg-card p-6 shadow-sm"
-            aria-labelledby="schedule-heading"
-          >
+          <section className={`${glassCard} grid gap-6 p-6`} aria-labelledby="schedule-heading">
             <div className="grid gap-2">
               <h2 id="schedule-heading" className="text-lg font-semibold">
                 {t("schedule.title")}
               </h2>
               <EvaluatorSchedule slots={slots} evaluators={evaluators} />
             </div>
-            <div className="grid gap-2 border-t pt-4">
+            <div className="grid min-w-0 gap-2 border-t border-white/15 pt-4 dark:border-white/10">
               <h3 className="text-base font-semibold">{t("seats.title")}</h3>
               <SeatSchedule periodId={period.id} slots={slots} evaluators={evaluators} />
             </div>
@@ -437,7 +525,7 @@ export default async function BookingPeriodPage({
 
           {/* Staff roster: all bookings, filters + counts + CSV */}
           <section
-            className="grid gap-4 rounded-xl border bg-card p-6 shadow-sm"
+            className={`${glassCard} grid gap-4 p-6`}
             aria-labelledby="staff-bookings-heading"
           >
             <h2 id="staff-bookings-heading" className="text-lg font-semibold">
@@ -452,10 +540,7 @@ export default async function BookingPeriodPage({
           </section>
 
           {/* Staff: bulk generation + single slot */}
-          <section
-            className="grid gap-6 rounded-xl border bg-card p-6 shadow-sm"
-            aria-labelledby="manage-slots-heading"
-          >
+          <section className={`${glassCard} grid gap-6 p-6`} aria-labelledby="manage-slots-heading">
             <div className="grid gap-2">
               <h2 id="manage-slots-heading" className="text-lg font-semibold">
                 {t("bulk.title")}
@@ -463,7 +548,7 @@ export default async function BookingPeriodPage({
               <p className="text-sm text-muted-foreground">{t("bulk.hint")}</p>
               <BulkSlotForm periodId={period.id} evaluatorCount={evaluators.length} />
             </div>
-            <div className="grid gap-2 border-t pt-4">
+            <div className="grid min-w-0 gap-2 border-t border-white/15 pt-4 dark:border-white/10">
               <h3 className="text-base font-semibold">{t("addSlot")}</h3>
               <SlotForm periodId={period.id} evaluatorCount={evaluators.length} />
             </div>
