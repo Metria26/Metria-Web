@@ -156,7 +156,7 @@ export default async function BookingPeriodPage({
           aria-labelledby="my-evaluation-heading"
           data-testid="my-evaluation-panel"
         >
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-linear-to-br from-primary/12 via-transparent to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-linear-to-br from-primary/6 via-transparent to-transparent" />
           <div className="relative z-10 grid gap-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex min-w-0 items-start gap-3">
@@ -178,8 +178,8 @@ export default async function BookingPeriodPage({
                 </div>
               </div>
               {myBookings.length > 0 ? (
-                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-success/30 bg-success/10 px-3 py-1 text-xs font-semibold text-success-foreground">
-                  <span className="size-1.5 rounded-full bg-success" aria-hidden />
+                <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-success/50 bg-success px-3.5 py-1.5 text-xs font-bold text-success-foreground shadow-md shadow-success/25 ring-2 ring-white/30 dark:ring-white/10">
+                  <span className="size-2 rounded-full bg-success-foreground" aria-hidden />
                   {t("myEvaluation.confirmed")}
                 </span>
               ) : null}
@@ -392,8 +392,22 @@ export default async function BookingPeriodPage({
                                 closedReason={closed === "open" ? undefined : closed}
                               />
                             </span>
-                          ) : canManage ? null : hasBookingInPeriod ? (
-                            open > 0 && status !== "cutoff_passed" ? (
+                          ) : canManage ? null : status === "full" ? (
+                            <span
+                              className="inline-flex items-center rounded-lg border border-muted bg-muted/50 px-2.5 py-1 text-xs font-semibold text-foreground"
+                              data-testid="slot-full-hint"
+                            >
+                              {t("statuses.full")}
+                            </span>
+                          ) : status === "cutoff_passed" ? (
+                            <span
+                              className="inline-flex items-center rounded-lg border border-muted bg-muted/50 px-2.5 py-1 text-xs font-semibold text-muted-foreground"
+                              data-testid="slot-cutoff-hint"
+                            >
+                              {t("statuses.cutoff_passed")}
+                            </span>
+                          ) : hasBookingInPeriod ? (
+                            open > 0 ? (
                               <SwitchButton periodId={period.id} slotId={slot.id} />
                             ) : (
                               <span className="text-xs text-muted-foreground italic">
@@ -401,8 +415,7 @@ export default async function BookingPeriodPage({
                               </span>
                             )
                           ) : (
-                            open > 0 &&
-                            status !== "cutoff_passed" && (
+                            open > 0 && (
                               <BookButton
                                 periodId={period.id}
                                 slotId={slot.id}
