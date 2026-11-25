@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import { createClient } from "@/lib/supabase/server";
+import { formatDateTime } from "@/lib/time-format";
 
 /**
  * GET /api/projects/export (owner request 2026-11-11, section 11)
@@ -251,7 +252,7 @@ export async function GET(request: Request): Promise<Response> {
       leaderName,
       group.status,
       group.submission_status,
-      group.submitted_at ? new Date(group.submitted_at).toISOString() : "",
+      group.submitted_at ? formatDateTime(group.submitted_at) : "",
       (linksByGroup.get(group.id) ?? []).join("\n"),
     ]);
   }

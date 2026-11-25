@@ -614,6 +614,7 @@
       "bulkReassign": "Move all bookings",
       "removeEvaluator": "Remove evaluator",
       "deleteBooking": "Delete booking",
+      "downloadCsv": "Download CSV",
       "moveUp": "Move up",
       "moveDown": "Move down",
       "removeRow": "Remove"
@@ -650,6 +651,7 @@
       "slotEnded": "This slot already took place.",
       "notActive": "This booking is no longer active.",
       "notFound": "That record no longer exists.",
+      "serviceUnavailable": "That feature is not available yet. Ask an administrator to apply the latest database update.",
       "generic": "Something went wrong. Please try again.",
       "noActiveBooking": "You have no active booking in this period to switch.",
       "slotOverlap": "Some generated slots overlap slots that already exist in this period. Adjust times or remove the conflicting slots first.",

@@ -58,6 +58,8 @@ describe("time-format", () => {
   it("parses datetime-local values as Karachi wall time, not server time", () => {
     expect(universityDateTimeInputToIso("2026-11-13T10:00")).toBe("2026-11-13T05:00:00.000Z");
     expect(universityDateTimeInputToIso("2026-11-13T00:00")).toBe("2026-11-12T19:00:00.000Z");
+    // 5:33 PM PKT used to be stored as 17:33Z and displayed as 10:33 PM.
+    expect(universityDateTimeInputToIso("2026-11-25T17:33")).toBe("2026-11-25T12:33:00.000Z");
     expect(universityDateTimeInputToIso("")).toBeNull();
   });
 });
