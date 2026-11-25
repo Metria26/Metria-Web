@@ -9,12 +9,16 @@ import { groupSlotsByDay, slotStatus, type SlotCardStatus } from "@/features/boo
 import { cancelState, remainingSeats } from "@/features/booking/rules";
 import {
   BookButton,
+  BulkReassignForm,
   BulkSlotForm,
   CancelButton,
   CapacityForm,
+  EvaluatorManageForm,
+  RemoveEvaluatorForm,
   SlotForm,
   SwitchButton,
 } from "@/features/booking/ui/forms";
+import { EvaluatorSchedule, SeatSchedule } from "@/features/booking/ui/evaluator-schedule";
 import { PeriodBookingsTable } from "@/features/booking/ui/period-manage";
 import { deletePeriodAction, deleteSlotAction } from "@/features/booking/actions";
 import { ConfirmDeleteDialogButton } from "@/components/ui/confirm-delete-dialog";
@@ -64,8 +68,9 @@ export default async function BookingPeriodPage({
   const overview = await loadPeriodBookingOverview(supabase, periodId);
   if (!overview) notFound();
 
-  const { period, can_manage: canManage, slots, students } = overview;
+  const { period, can_manage: canManage, evaluators, slots, students } = overview;
   const hasBookingInPeriod = slots.some((slot) => slot.my_booking_id !== null);
+  const myBookings = slots.filter((slot) => slot.my_booking_id !== null);
   const dayGroups = groupSlotsByDay(slots);
 
   return (
@@ -122,6 +127,74 @@ export default async function BookingPeriodPage({
       </div>
 
       <AdSlot pageType="booking" slotKey="booking-top" withSponsor />
+
+      {/* Student: evaluator is revealed only for slots the caller booked. */}
+      <section
+        className="grid gap-3 rounded-xl border bg-card p-6 shadow-sm"
+        aria-labelledby="my-evaluation-heading"
+        data-testid="my-evaluation-panel"
+      >
+        <div className="grid gap-1">
+          <h2 id="my-evaluation-heading" className="text-lg font-semibold">
+            {t("myEvaluation.title")}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {myBookings.length > 0 ? t("myEvaluation.hint") : t("myEvaluation.none")}
+          </p>
+        </div>
+        {myBookings.length > 0 ? (
+          <div className="grid gap-2">
+            {myBookings.map((slot) => {
+              const evaluator = slot.my_evaluator;
+              return (
+                <div
+                  key={slot.id}
+                  className="grid gap-2 rounded-lg border bg-muted/20 p-3"
+                  data-testid="my-evaluation-booking"
+                >
+                  <p className="text-sm font-semibold">
+                    {t("myEvaluation.slot")}: {formatSlotTime(slot.starts_at)} –{" "}
+                    {formatSlotTime(slot.ends_at)}
+                  </p>
+                  {evaluator ? (
+                    <div className="grid gap-1">
+                      <p className="text-sm" data-testid="my-evaluator-name">
+                        <span className="font-medium">{t("myEvaluation.evaluator")}: </span>
+                        <span className="break-words">{evaluator.name}</span>
+                      </p>
+                      <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                        {evaluator.email ? (
+                          <p className="min-w-0 break-all" data-testid="my-evaluator-email">
+                            <span className="font-medium">{t("myEvaluation.email")}: </span>
+                            {evaluator.email}
+                          </p>
+                        ) : null}
+                        {evaluator.phone ? (
+                          <p className="min-w-0 break-words" data-testid="my-evaluator-phone">
+                            <span className="font-medium">{t("myEvaluation.phone")}: </span>
+                            {evaluator.phone}
+                          </p>
+                        ) : null}
+                        {evaluator.contact_note ? (
+                          <p className="min-w-0 break-words" data-testid="my-evaluator-note">
+                            <span className="font-medium">{t("myEvaluation.note")}: </span>
+                            {evaluator.contact_note}
+                          </p>
+                        ) : null}
+                        {!evaluator.email && !evaluator.phone && !evaluator.contact_note ? (
+                          <p className="text-muted-foreground">{t("myEvaluation.noContact")}</p>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{t("schedule.noEvaluator")}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+      </section>
 
       {/* Slots Section — rectangular cards grouped by Asia/Karachi day */}
       <section className="grid gap-4 overflow-hidden" aria-labelledby="slots-heading">
@@ -277,9 +350,11 @@ export default async function BookingPeriodPage({
                               </ul>
                             )}
                             <CapacityForm
+                              key={`${slot.id}-${slot.capacity}`}
                               slotId={slot.id}
                               capacity={slot.capacity}
                               booked={slot.booked}
+                              evaluatorCount={evaluators.length}
                             />
                           </div>
                         ) : null}
@@ -295,6 +370,58 @@ export default async function BookingPeriodPage({
 
       {canManage ? (
         <>
+          {/* Staff: TA-authored evaluator roster (no accounts, no hardcoding). */}
+          <section
+            className="grid gap-4 rounded-xl border bg-card p-6 shadow-sm"
+            aria-labelledby="evaluators-heading"
+          >
+            <div className="grid gap-1">
+              <h2 id="evaluators-heading" className="text-lg font-semibold">
+                {t("evaluators.title")} ({t("evaluators.count", { count: evaluators.length })})
+              </h2>
+            </div>
+            <EvaluatorManageForm
+              key={evaluators.map((item) => `${item.id}:${item.position}:${item.name}`).join("|")}
+              periodId={period.id}
+              evaluators={evaluators}
+            />
+          </section>
+
+          {/* Staff: reassignment + deletion with explicit replacement. */}
+          <section
+            className="grid gap-6 rounded-xl border bg-card p-6 shadow-sm"
+            aria-labelledby="reassign-heading"
+          >
+            <div className="grid gap-2">
+              <h2 id="reassign-heading" className="text-lg font-semibold">
+                {t("reassign.title")}
+              </h2>
+              <p className="text-sm text-muted-foreground">{t("reassign.hint")}</p>
+              <BulkReassignForm periodId={period.id} evaluators={evaluators} />
+            </div>
+            <div className="grid gap-2 border-t pt-4">
+              <h3 className="text-base font-semibold">{t("evaluators.removeTitle")}</h3>
+              <RemoveEvaluatorForm periodId={period.id} evaluators={evaluators} />
+            </div>
+          </section>
+
+          {/* Staff: per-evaluator view and the full seat-by-seat assignment. */}
+          <section
+            className="grid gap-6 rounded-xl border bg-card p-6 shadow-sm"
+            aria-labelledby="schedule-heading"
+          >
+            <div className="grid gap-2">
+              <h2 id="schedule-heading" className="text-lg font-semibold">
+                {t("schedule.title")}
+              </h2>
+              <EvaluatorSchedule slots={slots} evaluators={evaluators} />
+            </div>
+            <div className="grid gap-2 border-t pt-4">
+              <h3 className="text-base font-semibold">{t("seats.title")}</h3>
+              <SeatSchedule periodId={period.id} slots={slots} evaluators={evaluators} />
+            </div>
+          </section>
+
           {/* Staff roster: all bookings, filters + counts + CSV */}
           <section
             className="grid gap-4 rounded-xl border bg-card p-6 shadow-sm"
@@ -303,7 +430,12 @@ export default async function BookingPeriodPage({
             <h2 id="staff-bookings-heading" className="text-lg font-semibold">
               {t("staff.title")}
             </h2>
-            <PeriodBookingsTable slots={slots} students={students} />
+            <PeriodBookingsTable
+              periodId={period.id}
+              slots={slots}
+              students={students}
+              evaluators={evaluators}
+            />
           </section>
 
           {/* Staff: bulk generation + single slot */}
@@ -316,11 +448,11 @@ export default async function BookingPeriodPage({
                 {t("bulk.title")}
               </h2>
               <p className="text-sm text-muted-foreground">{t("bulk.hint")}</p>
-              <BulkSlotForm periodId={period.id} />
+              <BulkSlotForm periodId={period.id} evaluatorCount={evaluators.length} />
             </div>
             <div className="grid gap-2 border-t pt-4">
               <h3 className="text-base font-semibold">{t("addSlot")}</h3>
-              <SlotForm periodId={period.id} />
+              <SlotForm periodId={period.id} evaluatorCount={evaluators.length} />
             </div>
           </section>
         </>

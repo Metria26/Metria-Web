@@ -13,6 +13,8 @@ function slot(overrides: Partial<BookingSlotOverview>): BookingSlotOverview {
     location: null,
     booked: 0,
     my_booking_id: null,
+    my_evaluator: null,
+    seats: [],
     ...overrides,
   });
 }

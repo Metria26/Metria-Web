@@ -61,4 +61,45 @@ export const slotCapacityInputSchema = z.object({
   capacity: z.coerce.number().int("capacityInteger").min(1, "capacityMin").max(500, "capacityMax"),
 });
 
-export type ActionResult = { ok: true } | { ok: false; error: string };
+/** An evaluator is a plain record: no account, no login. Order is explicit. */
+export const evaluatorInputSchema = z.object({
+  id: z.string().uuid("invalidInput").optional(),
+  name: z.string().trim().min(1, "evaluatorNameRequired").max(120, "evaluatorNameMax"),
+  email: z.string().trim().max(254, "emailMax").optional(),
+  phone: z.string().trim().max(60, "evaluatorContactMax").optional(),
+  contactNote: z.string().trim().max(500, "evaluatorNoteMax").optional(),
+  position: z.coerce.number().int("invalidInput").min(0, "invalidInput").max(999, "invalidInput"),
+});
+export type EvaluatorInput = z.infer<typeof evaluatorInputSchema>;
+
+/** The evaluator list arrives as a JSON string from the client editor. */
+export const evaluatorsInputSchema = z.object({
+  periodId: z.string().uuid("periodRequired"),
+  evaluators: z.string().min(1, "evaluatorRequired"),
+});
+
+export const reassignEvaluatorInputSchema = z.object({
+  periodId: z.string().uuid("periodRequired"),
+  bookingId: z.string().uuid("bookingRequired"),
+  evaluatorId: z.string().uuid("evaluatorRequired"),
+});
+
+export const bulkReassignInputSchema = z.object({
+  periodId: z.string().uuid("periodRequired"),
+  fromEvaluatorId: z.string().uuid("evaluatorRequired"),
+  toEvaluatorId: z.string().uuid("evaluatorRequired"),
+});
+
+export const removeEvaluatorInputSchema = z.object({
+  periodId: z.string().uuid("periodRequired"),
+  evaluatorId: z.string().uuid("evaluatorRequired"),
+  replacementId: z.string().uuid().optional(),
+});
+
+export const deleteBookingInputSchema = z.object({
+  periodId: z.string().uuid("periodRequired"),
+  bookingId: z.string().uuid("bookingRequired"),
+});
+
+/** Success may carry a non-blocking warning (e.g. duplicate evaluator in a slot). */
+export type ActionResult = { ok: true; warning?: string } | { ok: false; error: string };

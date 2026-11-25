@@ -592,7 +592,11 @@
       "endsAt": "Ends",
       "cutoffHours": "Cutoff hours before slot",
       "capacity": "Capacity",
-      "location": "Location (optional)"
+      "location": "Location (optional)",
+      "evaluatorName": "Evaluator name",
+      "evaluatorEmail": "Email (optional)",
+      "evaluatorPhone": "Phone (optional)",
+      "evaluatorContactNote": "Contact note (optional)"
     },
     "actions": {
       "savePeriod": "Create period",
@@ -603,11 +607,22 @@
       "deleteSlot": "Delete slot",
       "delete": "Delete",
       "switchHere": "Switch here",
-      "saveCapacity": "Save"
+      "saveCapacity": "Save",
+      "addEvaluator": "Add evaluator",
+      "saveEvaluators": "Save evaluators",
+      "reassign": "Reassign",
+      "bulkReassign": "Move all bookings",
+      "removeEvaluator": "Remove evaluator",
+      "deleteBooking": "Delete booking",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "removeRow": "Remove"
     },
     "confirm": {
       "deletePeriod": "Delete period \"{title}\"? All of its slots, bookings and waitlist entries will also be removed.",
-      "deleteSlot": "Delete the {time} slot? Its {bookings, plural, =0 {bookings} =1 {booking} other {# bookings}} will be released and removed."
+      "deleteSlot": "Delete the {time} slot? Its {bookings, plural, =0 {bookings} =1 {booking} other {# bookings}} will be released and removed.",
+      "deleteEvaluator": "Remove evaluator \"{name}\"? Booked seats must be moved to a replacement first.",
+      "deleteBooking": "Delete the booking for {student} at {time}? The seat will be released."
     },
     "statuses": {
       "active": "booked",
@@ -641,7 +656,22 @@
       "outsidePeriod": "Generated slots must stay inside the period window.",
       "tooManySlots": "That would create more than 500 slots. Reduce the range or slots per day.",
       "capacityBelowBookings": "Capacity cannot go below the current number of active bookings.",
+      "capacitySeatConflict": "A booked seat sits beyond the new capacity. Move those bookings to earlier seats first.",
+      "seatUnavailable": "No pre-assigned seat is free in this slot. Try another slot.",
+      "evaluatorHasBookings": "That evaluator still has booked seats. Reassign them (or choose a replacement) first.",
+      "invalidEvaluator": "Choose an evaluator from this period.",
+      "tooManyEvaluators": "A period can have at most 50 evaluators.",
+      "evaluatorNameRequired": "Enter the evaluator's name.",
+      "evaluatorNameMax": "Evaluator names are limited to 120 characters.",
+      "emailMax": "Email is limited to 254 characters.",
+      "evaluatorContactMax": "Phone/contact is limited to 60 characters.",
+      "evaluatorNoteMax": "Contact notes are limited to 500 characters.",
+      "evaluatorRequired": "Add at least one evaluator to save this list.",
+      "bookingRequired": "Select a booking to reassign.",
       "genericAction": "That did not work. Please try again."
+    },
+    "warnings": {
+      "duplicateEvaluatorSlot": "Saved. Note: two seats in the same slot now have the same evaluator."
     },
     "bulk": {
       "title": "Generate slots",
@@ -671,6 +701,70 @@
       "submit": "Generate slots",
       "saving": "Generating…"
     },
+    "evaluators": {
+      "title": "Evaluators",
+      "hint": "Add the people who will evaluate students. Give each one a name and, if you like, email, phone or a short contact note. Order here drives the seat rotation — no account or login is needed.",
+      "empty": "No evaluators yet. Slots will work as before until you add one.",
+      "namePlaceholder": "e.g. Dr. Sara Ahmed",
+      "count": "{count, plural, =1 {1 evaluator} other {# evaluators}}",
+      "saved": "Evaluator list saved.",
+      "capacityWarning": "Capacity {capacity} exceeds the {count, plural, =1 {1 evaluator} other {# evaluators}} in this period, so some seats will share an evaluator. This is allowed.",
+      "editTitle": "Edit / add / remove evaluators",
+      "removeTitle": "Remove an evaluator",
+      "removeHint": "If the evaluator has booked seats, choose a replacement in the same action. Unbooked seats are redistributed automatically.",
+      "selectEvaluator": "Select evaluator",
+      "replacement": "Replacement (required only if this evaluator has bookings)",
+      "none": "No replacement",
+      "removed": "Evaluator removed; bookings were moved and seats redistributed."
+    },
+    "myEvaluation": {
+      "title": "Your evaluation appointment",
+      "hint": "Your evaluator is shown here only after you book. Contact them using the details below.",
+      "slot": "Slot",
+      "evaluator": "Evaluator",
+      "email": "Email",
+      "phone": "Phone",
+      "note": "Contact note",
+      "noContact": "No contact details were provided.",
+      "none": "Once you book a slot, your evaluator's name and contact details will appear here."
+    },
+    "schedule": {
+      "title": "Evaluator schedule",
+      "hint": "One row per booked seat, grouped by evaluator. Copy it for your records or print it for the evaluation desk.",
+      "empty": "No booked seats to schedule yet.",
+      "evaluator": "Evaluator",
+      "slot": "Slot",
+      "seat": "Seat",
+      "student": "Student",
+      "copy": "Copy schedule",
+      "copied": "Copied.",
+      "print": "Print",
+      "noEvaluator": "No evaluator assigned"
+    },
+    "seats": {
+      "title": "Seat assignments",
+      "hint": "Seats are assigned when slots are created. Booked seats never move automatically; use the reassignment controls to change them.",
+      "empty": "No seats yet.",
+      "slot": "Slot",
+      "seat": "Seat",
+      "evaluator": "Evaluator",
+      "student": "Student",
+      "free": "Free"
+    },
+    "reassign": {
+      "title": "Reassign a booking",
+      "hint": "Move one student's booking to another evaluator. The evaluator changes only for this booking.",
+      "selectBooking": "Student / slot",
+      "selectEvaluator": "New evaluator",
+      "submit": "Reassign booking",
+      "success": "Booking reassigned.",
+      "bulkTitle": "Move all of one evaluator's bookings",
+      "bulkHint": "Use this when an evaluator can no longer attend (for example, \"move B's students to D\").",
+      "from": "Current evaluator",
+      "to": "New evaluator",
+      "bulkSubmit": "Move all bookings",
+      "bulkSuccess": "Bookings moved."
+    },
     "staff": {
       "title": "All bookings",
       "totalSlots": "{count, plural, =1 {1 slot} other {# slots}}",
@@ -685,6 +779,8 @@
       "colStudent": "Student",
       "colEmail": "Roll / email",
       "colBookedAt": "Booked at",
+      "colEvaluator": "Evaluator",
+      "colActions": "Reassign / delete",
       "empty": "No bookings yet.",
       "orderingNote": "Ordered by slot time, then roll number/email (A→Z)."
     }

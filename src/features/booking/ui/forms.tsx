@@ -5,14 +5,19 @@ import { useTranslations } from "next-intl";
 import type { ActionResult } from "@/features/booking/contracts";
 import {
   bookSlotAction,
+  bulkReassignEvaluatorAction,
   cancelBookingAction,
   createPeriodAction,
   createSlotAction,
   generateSlotsAction,
+  removeEvaluatorAction,
+  reassignEvaluatorAction,
+  saveEvaluatorsAction,
   switchSlotAction,
   updateSlotCapacityAction,
 } from "@/features/booking/actions";
 import { planBulkSlots } from "@/features/booking/bulk-slots";
+import type { BookingEvaluator } from "@/features/booking/overview";
 import { formatSlotTime } from "@/lib/time-format";
 
 type SelectOption = { id: string; label: string };
@@ -25,6 +30,7 @@ const buttonClass =
   "inline-flex h-9 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50";
 const wFullButton =
   "inline-flex h-10 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50";
+const EMPTY_EVALUATORS: BookingEvaluator[] = [];
 
 function FormError({ state, testId }: { state: ActionResult | null; testId: string }) {
   const t = useTranslations("Booking");
@@ -33,6 +39,190 @@ function FormError({ state, testId }: { state: ActionResult | null; testId: stri
     <p role="alert" data-testid={testId} className="text-sm text-destructive">
       {t(`errors.${state.error}`)}
     </p>
+  );
+}
+
+/** Non-blocking feedback: the action succeeded but staff should be aware. */
+function FormWarning({ state, testId }: { state: ActionResult | null; testId: string }) {
+  const t = useTranslations("Booking");
+  if (!state?.ok || !state.warning) return null;
+  return (
+    <p role="status" data-testid={testId} className="text-sm text-warning-foreground">
+      {t(`warnings.${state.warning}`)}
+    </p>
+  );
+}
+
+type EvaluatorRow = {
+  id?: string;
+  name: string;
+  email: string;
+  phone: string;
+  contactNote: string;
+  position: number;
+};
+
+/**
+ * TA-authored evaluator roster. Nothing is hardcoded: every name and contact
+ * value is typed here and serialized into the hidden `evaluators` JSON field.
+ * Existing ids are preserved so booked seats keep their evaluator on save.
+ */
+export function EvaluatorEditor({ initial = EMPTY_EVALUATORS }: { initial?: BookingEvaluator[] }) {
+  const t = useTranslations("Booking");
+  const [rows, setRows] = useState<EvaluatorRow[]>(() =>
+    [...initial]
+      .sort((a, b) => a.position - b.position || a.id.localeCompare(b.id))
+      .map((item) => ({
+        id: item.id,
+        name: item.name,
+        email: item.email ?? "",
+        phone: item.phone ?? "",
+        contactNote: item.contact_note ?? "",
+        position: item.position,
+      })),
+  );
+
+  const update = (index: number, patch: Partial<EvaluatorRow>) =>
+    setRows((previous) =>
+      previous.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row)),
+    );
+
+  const move = (index: number, offset: number) => {
+    setRows((previous) => {
+      const next = [...previous];
+      const target = index + offset;
+      if (target < 0 || target >= next.length) return previous;
+      [next[index], next[target]] = [next[target]!, next[index]!];
+      return next.map((row, rowIndex) => ({ ...row, position: rowIndex }));
+    });
+  };
+
+  const removeRow = (index: number) =>
+    setRows((previous) =>
+      previous
+        .filter((_, rowIndex) => rowIndex !== index)
+        .map((row, rowIndex) => ({ ...row, position: rowIndex })),
+    );
+
+  const addRow = () =>
+    setRows((previous) => [
+      ...previous,
+      { name: "", email: "", phone: "", contactNote: "", position: previous.length },
+    ]);
+
+  const json = JSON.stringify(rows.map((row, index) => ({ ...row, position: index })));
+  const rowButton =
+    "inline-flex h-8 items-center rounded-lg border border-input bg-background px-2.5 text-xs font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-40";
+
+  return (
+    <div className="grid gap-3" data-testid="evaluator-editor">
+      <input type="hidden" name="evaluators" value={json} />
+      {rows.length === 0 ? (
+        <p className="text-sm text-muted-foreground" data-testid="evaluators-empty">
+          {t("evaluators.empty")}
+        </p>
+      ) : null}
+      <ul className="grid gap-2">
+        {rows.map((row, index) => (
+          <li
+            key={row.id ?? `new-${index}`}
+            className="grid gap-2 rounded-lg border bg-muted/20 p-3"
+            data-testid={`evaluator-row-${index}`}
+          >
+            <div className="grid gap-2 sm:grid-cols-3">
+              <label className="grid gap-1.5">
+                <span className={labelClass}>{t("fields.evaluatorName")}</span>
+                <input
+                  name={`evaluator-name-${index}`}
+                  required
+                  maxLength={120}
+                  value={row.name}
+                  onChange={(event) => update(index, { name: event.target.value })}
+                  placeholder={t("evaluators.namePlaceholder")}
+                  className={fieldClass}
+                  data-testid={`evaluator-name-${index}`}
+                />
+              </label>
+              <label className="grid gap-1.5">
+                <span className={labelClass}>{t("fields.evaluatorEmail")}</span>
+                <input
+                  type="email"
+                  name={`evaluator-email-${index}`}
+                  maxLength={254}
+                  value={row.email}
+                  onChange={(event) => update(index, { email: event.target.value })}
+                  className={fieldClass}
+                  data-testid={`evaluator-email-${index}`}
+                />
+              </label>
+              <label className="grid gap-1.5">
+                <span className={labelClass}>{t("fields.evaluatorPhone")}</span>
+                <input
+                  name={`evaluator-phone-${index}`}
+                  maxLength={60}
+                  value={row.phone}
+                  onChange={(event) => update(index, { phone: event.target.value })}
+                  className={fieldClass}
+                  data-testid={`evaluator-phone-${index}`}
+                />
+              </label>
+            </div>
+            <label className="grid gap-1.5">
+              <span className={labelClass}>{t("fields.evaluatorContactNote")}</span>
+              <input
+                name={`evaluator-note-${index}`}
+                maxLength={500}
+                value={row.contactNote}
+                onChange={(event) => update(index, { contactNote: event.target.value })}
+                className={fieldClass}
+                data-testid={`evaluator-note-${index}`}
+              />
+            </label>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => move(index, -1)}
+                disabled={index === 0}
+                className={rowButton}
+                data-testid={`evaluator-up-${index}`}
+                aria-label={t("actions.moveUp")}
+              >
+                ↑ {t("actions.moveUp")}
+              </button>
+              <button
+                type="button"
+                onClick={() => move(index, 1)}
+                disabled={index === rows.length - 1}
+                className={rowButton}
+                data-testid={`evaluator-down-${index}`}
+                aria-label={t("actions.moveDown")}
+              >
+                ↓ {t("actions.moveDown")}
+              </button>
+              <button
+                type="button"
+                onClick={() => removeRow(index)}
+                className={`${rowButton} text-destructive`}
+                data-testid={`evaluator-remove-${index}`}
+              >
+                {t("actions.removeRow")}
+              </button>
+              <span className="text-xs text-muted-foreground">
+                {t("evaluators.count", { count: rows.length })}
+              </span>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        onClick={addRow}
+        className="inline-flex h-9 w-fit items-center rounded-lg border border-primary/40 bg-primary/5 px-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-ring"
+        data-testid="evaluator-add"
+      >
+        {t("actions.addEvaluator")}
+      </button>
+    </div>
   );
 }
 
@@ -140,6 +330,11 @@ export function PeriodForm({
           data-testid="period-cutoff"
         />
       </label>
+      <div className="grid gap-2 border-t pt-3">
+        <h3 className="text-base font-semibold">{t("evaluators.title")}</h3>
+        <p className="text-sm text-muted-foreground">{t("evaluators.hint")}</p>
+        <EvaluatorEditor />
+      </div>
       <FormError state={state} testId="period-form-error" />
       {state?.ok ? (
         <p className="text-sm text-muted-foreground" data-testid="period-success">
@@ -154,8 +349,15 @@ export function PeriodForm({
 }
 
 /** Staff: add a slot with capacity to a period. */
-export function SlotForm({ periodId }: { periodId: string }) {
+export function SlotForm({
+  periodId,
+  evaluatorCount = 0,
+}: {
+  periodId: string;
+  evaluatorCount?: number;
+}) {
   const t = useTranslations("Booking");
+  const [capacity, setCapacity] = useState("1");
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
     async (_prev, formData) => createSlotAction(formData),
     null,
@@ -195,6 +397,8 @@ export function SlotForm({ periodId }: { periodId: string }) {
             min={1}
             max={500}
             required
+            value={capacity}
+            onChange={(event) => setCapacity(event.target.value)}
             className={fieldClass}
             data-testid="slot-capacity"
           />
@@ -209,6 +413,15 @@ export function SlotForm({ periodId }: { periodId: string }) {
           />
         </label>
       </div>
+      {evaluatorCount > 0 && Number(capacity) > evaluatorCount ? (
+        <p
+          role="status"
+          className="text-sm text-warning-foreground"
+          data-testid="slot-capacity-warning"
+        >
+          {t("evaluators.capacityWarning", { capacity, count: evaluatorCount })}
+        </p>
+      ) : null}
       <FormError state={state} testId="slot-form-error" />
       {state?.ok ? (
         <p className="text-sm text-muted-foreground" data-testid="slot-success">
@@ -296,12 +509,15 @@ export function CapacityForm({
   slotId,
   capacity,
   booked,
+  evaluatorCount = 0,
 }: {
   slotId: string;
   capacity: number;
   booked: number;
+  evaluatorCount?: number;
 }) {
   const t = useTranslations("Booking");
+  const [value, setValue] = useState(String(capacity));
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
     async (_prev, formData) => updateSlotCapacityAction(formData),
     null,
@@ -310,7 +526,7 @@ export function CapacityForm({
   return (
     <form
       action={formAction}
-      className="flex items-center gap-2"
+      className="grid gap-2"
       data-testid={`capacity-form-${slotId.slice(0, 8)}`}
     >
       <input type="hidden" name="slotId" value={slotId} />
@@ -321,32 +537,38 @@ export function CapacityForm({
           name="capacity"
           min={booked > 0 ? booked : 1}
           max={500}
-          defaultValue={capacity}
           required
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
           className="h-9 w-20 rounded-lg border border-input bg-background px-2 text-sm focus-visible:outline-2 focus-visible:outline-ring"
           data-testid={`capacity-input-${slotId.slice(0, 8)}`}
         />
       </label>
-      <button
-        type="submit"
-        disabled={pending}
-        className="inline-flex h-9 items-center rounded-lg border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50"
-        data-testid={`capacity-save-${slotId.slice(0, 8)}`}
-      >
-        {pending ? t("saving") : t("actions.saveCapacity")}
-      </button>
-      {state && !state.ok ? (
-        <p
-          role="alert"
-          className="text-xs text-destructive"
-          data-testid={`capacity-error-${slotId.slice(0, 8)}`}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="submit"
+          disabled={pending}
+          className="inline-flex h-9 items-center rounded-lg border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50"
+          data-testid={`capacity-save-${slotId.slice(0, 8)}`}
         >
-          {state.error === "capacityBelowBookings"
-            ? t("errors.capacityBelowBookings")
-            : t("errors.genericAction")}
+          {pending ? t("saving") : t("actions.saveCapacity")}
+        </button>
+        {state && !state.ok ? (
+          <p
+            role="alert"
+            className="text-xs text-destructive"
+            data-testid={`capacity-error-${slotId.slice(0, 8)}`}
+          >
+            {t(`errors.${state.error}`)}
+          </p>
+        ) : null}
+        {state?.ok ? <p className="text-xs text-muted-foreground">{t("capacityUpdated")}</p> : null}
+      </div>
+      {evaluatorCount > 0 && Number(value) > evaluatorCount ? (
+        <p role="status" className="text-xs text-warning-foreground">
+          {t("evaluators.capacityWarning", { capacity: value, count: evaluatorCount })}
         </p>
       ) : null}
-      {state?.ok ? <p className="text-xs text-muted-foreground">{t("capacityUpdated")}</p> : null}
     </form>
   );
 }
@@ -358,8 +580,16 @@ type BulkFormState = ActionResult | null;
  * live preview ("This will create N slots across D days") listing every
  * planned slot before anything is saved. The RPC re-validates authoritatively.
  */
-export function BulkSlotForm({ periodId }: { periodId: string }) {
+export function BulkSlotForm({
+  periodId,
+  evaluatorCount = 0,
+}: {
+  periodId: string;
+  evaluatorCount?: number;
+}) {
   const t = useTranslations("Booking.bulk");
+  const tEvaluators = useTranslations("Booking.evaluators");
+  const [capacity, setCapacity] = useState("1");
   const [state, formAction, pending] = useActionState<BulkFormState, FormData>(
     async (_prev, formData) => generateSlotsAction(formData),
     null,
@@ -499,7 +729,8 @@ export function BulkSlotForm({ periodId }: { periodId: string }) {
             min={1}
             max={500}
             required
-            defaultValue={1}
+            value={capacity}
+            onChange={(event) => setCapacity(event.target.value)}
             className={fieldClass}
             data-testid="bulk-capacity"
           />
@@ -514,6 +745,16 @@ export function BulkSlotForm({ periodId }: { periodId: string }) {
           />
         </label>
       </div>
+
+      {evaluatorCount > 0 && Number(capacity) > evaluatorCount ? (
+        <p
+          role="status"
+          className="text-sm text-warning-foreground"
+          data-testid="bulk-capacity-warning"
+        >
+          {tEvaluators("capacityWarning", { capacity, count: evaluatorCount })}
+        </p>
+      ) : null}
 
       {/* Live preview: exact schedule the RPC will create. */}
       <div className="grid gap-2 rounded-lg border bg-muted/30 p-3" data-testid="bulk-preview">
@@ -593,6 +834,287 @@ export function CancelButton({
           {t(closedReason === "cutoff" ? "cancelClosedCutoff" : "cancelClosedEnded")}
         </p>
       ) : null}
+    </form>
+  );
+}
+
+/** Staff: edit names/contacts, reorder, add or remove evaluators in one save. */
+export function EvaluatorManageForm({
+  periodId,
+  evaluators,
+}: {
+  periodId: string;
+  evaluators: BookingEvaluator[];
+}) {
+  const t = useTranslations("Booking");
+  const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
+    async (_prev, formData) => saveEvaluatorsAction(formData),
+    null,
+  );
+
+  return (
+    <form action={formAction} className="grid max-w-3xl gap-3" data-testid="evaluator-manage-form">
+      <input type="hidden" name="periodId" value={periodId} />
+      <p className="text-sm text-muted-foreground">{t("evaluators.hint")}</p>
+      <EvaluatorEditor initial={evaluators} />
+      <FormError state={state} testId="evaluator-manage-error" />
+      {state?.ok ? (
+        <p
+          role="status"
+          className="text-sm text-muted-foreground"
+          data-testid="evaluator-manage-success"
+        >
+          {t("evaluators.saved")}
+        </p>
+      ) : null}
+      <button
+        type="submit"
+        disabled={pending}
+        className={buttonClass}
+        data-testid="evaluator-manage-save"
+      >
+        {pending ? t("saving") : t("actions.saveEvaluators")}
+      </button>
+    </form>
+  );
+}
+
+/** Staff: remove an evaluator, optionally moving their bookings in one action. */
+export function RemoveEvaluatorForm({
+  periodId,
+  evaluators,
+}: {
+  periodId: string;
+  evaluators: BookingEvaluator[];
+}) {
+  const t = useTranslations("Booking");
+  const [evaluatorId, setEvaluatorId] = useState("");
+  const [replacementId, setReplacementId] = useState("");
+  const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
+    async (_prev, formData) => removeEvaluatorAction(formData),
+    null,
+  );
+
+  return (
+    <form action={formAction} className="grid max-w-md gap-3" data-testid="remove-evaluator-form">
+      <input type="hidden" name="periodId" value={periodId} />
+      <p className="text-sm text-muted-foreground">{t("evaluators.removeHint")}</p>
+      <label className="grid gap-1.5">
+        <span className={labelClass}>{t("evaluators.selectEvaluator")}</span>
+        <select
+          name="evaluatorId"
+          required
+          value={evaluatorId}
+          onChange={(event) => setEvaluatorId(event.target.value)}
+          className={fieldClass}
+          data-testid="remove-evaluator-select"
+        >
+          <option value="" disabled>
+            {t("selectPlaceholder")}
+          </option>
+          {evaluators.map((evaluator) => (
+            <option key={evaluator.id} value={evaluator.id}>
+              {evaluator.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="grid gap-1.5">
+        <span className={labelClass}>{t("evaluators.replacement")}</span>
+        <select
+          name="replacementId"
+          value={replacementId}
+          onChange={(event) => setReplacementId(event.target.value)}
+          className={fieldClass}
+          data-testid="remove-evaluator-replacement"
+        >
+          <option value="">{t("evaluators.none")}</option>
+          {evaluators
+            .filter((evaluator) => evaluator.id !== evaluatorId)
+            .map((evaluator) => (
+              <option key={evaluator.id} value={evaluator.id}>
+                {evaluator.name}
+              </option>
+            ))}
+        </select>
+      </label>
+      <FormError state={state} testId="remove-evaluator-error" />
+      {state?.ok ? (
+        <p
+          role="status"
+          className="text-sm text-muted-foreground"
+          data-testid="remove-evaluator-success"
+        >
+          {t("evaluators.removed")}
+        </p>
+      ) : null}
+      <button
+        type="submit"
+        disabled={pending || evaluators.length === 0}
+        className="inline-flex h-9 w-fit items-center rounded-lg border border-destructive/40 bg-background px-3 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50"
+        data-testid="remove-evaluator-submit"
+      >
+        {pending ? t("saving") : t("actions.removeEvaluator")}
+      </button>
+    </form>
+  );
+}
+
+/** Staff: reassign one booking; a duplicate in the same slot is only a warning. */
+export function ReassignForm({
+  periodId,
+  bookingId,
+  evaluators,
+  compact = false,
+}: {
+  periodId: string;
+  bookingId: string;
+  evaluators: BookingEvaluator[];
+  compact?: boolean;
+}) {
+  const t = useTranslations("Booking");
+  const [evaluatorId, setEvaluatorId] = useState("");
+  const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
+    async (_prev, formData) => reassignEvaluatorAction(formData),
+    null,
+  );
+
+  return (
+    <form
+      action={formAction}
+      className={compact ? "grid gap-1" : "grid max-w-md gap-3"}
+      data-testid={`reassign-form-${bookingId.slice(0, 8)}`}
+    >
+      <input type="hidden" name="periodId" value={periodId} />
+      <input type="hidden" name="bookingId" value={bookingId} />
+      <label className="grid gap-1">
+        {compact ? null : <span className={labelClass}>{t("reassign.selectEvaluator")}</span>}
+        <select
+          name="evaluatorId"
+          required
+          value={evaluatorId}
+          onChange={(event) => setEvaluatorId(event.target.value)}
+          className={
+            compact
+              ? "h-8 w-full rounded-lg border border-input bg-background px-2 text-xs"
+              : fieldClass
+          }
+          data-testid={`reassign-evaluator-${bookingId.slice(0, 8)}`}
+        >
+          <option value="" disabled>
+            {t("selectPlaceholder")}
+          </option>
+          {evaluators.map((evaluator) => (
+            <option key={evaluator.id} value={evaluator.id}>
+              {evaluator.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <button
+        type="submit"
+        disabled={pending || evaluators.length === 0}
+        className={
+          compact
+            ? "inline-flex h-8 items-center rounded-lg border border-primary/40 bg-primary/5 px-2 text-xs font-medium text-primary hover:bg-primary/10 disabled:opacity-50"
+            : buttonClass
+        }
+        data-testid={`reassign-submit-${bookingId.slice(0, 8)}`}
+      >
+        {pending ? t("saving") : t("actions.reassign")}
+      </button>
+      <FormError state={state} testId={`reassign-error-${bookingId.slice(0, 8)}`} />
+      <FormWarning state={state} testId={`reassign-warning-${bookingId.slice(0, 8)}`} />
+      {state?.ok && !state.warning ? (
+        <span className="text-xs text-muted-foreground">{t("reassign.success")}</span>
+      ) : null}
+    </form>
+  );
+}
+
+/** Staff: bulk move ("B can't come — move B's students to D"). */
+export function BulkReassignForm({
+  periodId,
+  evaluators,
+}: {
+  periodId: string;
+  evaluators: BookingEvaluator[];
+}) {
+  const t = useTranslations("Booking");
+  const [fromId, setFromId] = useState("");
+  const [toId, setToId] = useState("");
+  const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
+    async (_prev, formData) => bulkReassignEvaluatorAction(formData),
+    null,
+  );
+
+  return (
+    <form action={formAction} className="grid max-w-md gap-3" data-testid="bulk-reassign-form">
+      <input type="hidden" name="periodId" value={periodId} />
+      <p className="text-sm text-muted-foreground">{t("reassign.bulkHint")}</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="grid gap-1.5">
+          <span className={labelClass}>{t("reassign.from")}</span>
+          <select
+            name="fromEvaluatorId"
+            required
+            value={fromId}
+            onChange={(event) => setFromId(event.target.value)}
+            className={fieldClass}
+            data-testid="bulk-reassign-from"
+          >
+            <option value="" disabled>
+              {t("selectPlaceholder")}
+            </option>
+            {evaluators.map((evaluator) => (
+              <option key={evaluator.id} value={evaluator.id}>
+                {evaluator.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="grid gap-1.5">
+          <span className={labelClass}>{t("reassign.to")}</span>
+          <select
+            name="toEvaluatorId"
+            required
+            value={toId}
+            onChange={(event) => setToId(event.target.value)}
+            className={fieldClass}
+            data-testid="bulk-reassign-to"
+          >
+            <option value="" disabled>
+              {t("selectPlaceholder")}
+            </option>
+            {evaluators
+              .filter((evaluator) => evaluator.id !== fromId)
+              .map((evaluator) => (
+                <option key={evaluator.id} value={evaluator.id}>
+                  {evaluator.name}
+                </option>
+              ))}
+          </select>
+        </label>
+      </div>
+      <FormError state={state} testId="bulk-reassign-error" />
+      <FormWarning state={state} testId="bulk-reassign-warning" />
+      {state?.ok && !state.warning ? (
+        <p
+          role="status"
+          className="text-sm text-muted-foreground"
+          data-testid="bulk-reassign-success"
+        >
+          {t("reassign.bulkSuccess")}
+        </p>
+      ) : null}
+      <button
+        type="submit"
+        disabled={pending || evaluators.length < 2}
+        className={buttonClass}
+        data-testid="bulk-reassign-submit"
+      >
+        {pending ? t("saving") : t("reassign.bulkSubmit")}
+      </button>
     </form>
   );
 }
