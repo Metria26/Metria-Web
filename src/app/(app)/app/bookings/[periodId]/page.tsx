@@ -373,6 +373,14 @@ export default async function BookingPeriodPage({
                           <span className="shrink-0 tabular-nums" data-testid="slot-capacity">
                             {slot.booked}/{slot.capacity}
                           </span>
+                          <span
+                            className={`shrink-0 font-semibold tabular-nums ${
+                              open === 0 ? "text-destructive" : "text-success"
+                            }`}
+                            data-testid="slot-seats-left"
+                          >
+                            {t("seatsLeft", { count: open })}
+                          </span>
                           {slot.location ? (
                             <span className="min-w-0 break-all">📍 {slot.location}</span>
                           ) : null}

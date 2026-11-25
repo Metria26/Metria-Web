@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { ActionResult } from "@/features/booking/contracts";
 import {
@@ -446,10 +447,14 @@ export function BookButton({
   disabled?: boolean;
 }) {
   const t = useTranslations("Booking");
+  const router = useRouter();
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
     async (_prev, formData) => bookSlotAction(formData),
     null,
   );
+  useEffect(() => {
+    if (state?.ok) router.refresh();
+  }, [state, router]);
 
   return (
     <form action={formAction} className="grid justify-items-start gap-1">
@@ -482,10 +487,14 @@ export function SwitchButton({
   disabled?: boolean;
 }) {
   const t = useTranslations("Booking");
+  const router = useRouter();
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
     async (_prev, formData) => switchSlotAction(formData),
     null,
   );
+  useEffect(() => {
+    if (state?.ok) router.refresh();
+  }, [state, router]);
 
   return (
     <form action={formAction} className="grid justify-items-start gap-1">
@@ -811,10 +820,14 @@ export function CancelButton({
   closedReason?: "cutoff" | "ended";
 }) {
   const t = useTranslations("Booking");
+  const router = useRouter();
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
     async (_prev, formData) => cancelBookingAction(formData),
     null,
   );
+  useEffect(() => {
+    if (state?.ok) router.refresh();
+  }, [state, router]);
 
   return (
     <form action={formAction} className="grid justify-items-start gap-1">

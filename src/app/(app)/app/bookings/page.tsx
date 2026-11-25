@@ -117,7 +117,7 @@ export default async function BookingsPage() {
             return (
               <div
                 key={period.id}
-                className="group flex flex-col justify-between rounded-xl border bg-card p-6 shadow-sm transition-all hover:border-primary hover:shadow-md"
+                className="group flex min-w-0 flex-col justify-between rounded-2xl border border-white/20 bg-card/75 p-6 shadow-sm backdrop-blur-md transition-all hover:border-primary/50 hover:shadow-md dark:border-white/10"
                 data-testid="booking-period"
               >
                 <div className="grid gap-2">
@@ -134,14 +134,14 @@ export default async function BookingsPage() {
                     data-testid="booking-period-link"
                     className="rounded focus-visible:outline-2 focus-visible:outline-ring"
                   >
-                    <h2 className="font-semibold text-lg group-hover:text-primary transition-colors">
+                    <h2 className="break-words font-semibold text-lg group-hover:text-primary transition-colors">
                       {period.title}
                     </h2>
                     {courseTitle ? (
                       <p className="text-xs text-muted-foreground mt-0.5">{courseTitle}</p>
                     ) : null}
                   </Link>
-                  <div className="text-xs text-muted-foreground mt-2 pt-3 border-t flex items-center gap-1.5">
+                  <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1.5 border-t pt-3 text-xs text-muted-foreground">
                     <span>🕒</span>
                     <span>
                       {t("window", {
