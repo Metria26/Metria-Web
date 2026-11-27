@@ -13,6 +13,7 @@ import {
   evaluatorInputSchema,
   periodInputSchema,
   reassignEvaluatorInputSchema,
+  redistributeInputSchema,
   removeEvaluatorInputSchema,
   slotCapacityInputSchema,
   slotInputSchema,
@@ -478,6 +479,28 @@ export async function removeEvaluatorAction(formData: FormData): Promise<ActionR
     p_period_id: parsed.data.periodId,
     p_evaluator_id: parsed.data.evaluatorId,
     p_replacement_id: parsed.data.replacementId ?? null,
+  });
+  if (error) return { ok: false, error: mapRpcError(error.message) };
+
+  revalidatePeriod(parsed.data.periodId);
+  return { ok: true };
+}
+
+/**
+ * Staff: redistribute every active booking evenly across all evaluators.
+ * Unlike single/bulk reassign, this balances the whole period, not one TA.
+ */
+export async function redistributeEvaluatorsAction(formData: FormData): Promise<ActionResult> {
+  const { supabase, profile } = await callerProfile();
+  if (!profile) return { ok: false, error: "notAuthorized" };
+
+  const parsed = redistributeInputSchema.safeParse({
+    periodId: emptyToUndefined(formData.get("periodId")),
+  });
+  if (!parsed.success) return { ok: false, error: "invalidInput" };
+
+  const { error } = await rpcTransport(supabase).rpc("redistribute_booking_evaluators", {
+    p_period_id: parsed.data.periodId,
   });
   if (error) return { ok: false, error: mapRpcError(error.message) };
 

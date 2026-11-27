@@ -613,6 +613,7 @@
       "saveEvaluators": "Save evaluators",
       "reassign": "Reassign",
       "bulkReassign": "Move all bookings",
+      "redistribute": "Redistribute evaluations",
       "removeEvaluator": "Remove evaluator",
       "deleteBooking": "Delete booking",
       "downloadCsv": "Download Excel",
@@ -770,7 +771,10 @@
       "from": "Current evaluator",
       "to": "New evaluator",
       "bulkSubmit": "Move all bookings",
-      "bulkSuccess": "Bookings moved."
+      "bulkSuccess": "Bookings moved.",
+      "redistributeTitle": "Balance every evaluator",
+      "redistributeHint": "Spreads all active bookings evenly across every evaluator in this period. New or removed evaluators are included automatically.",
+      "redistributed": "Evaluations redistributed evenly."
     },
     "staff": {
       "title": "All bookings",
