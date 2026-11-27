@@ -324,7 +324,7 @@ BEGIN
       END LOOP;
       v_slots_created := v_slots_created + 1;
     END LOOP;
-  END FOR;
+  END LOOP;
 
   -- Move every active booking exactly where the preview said it would go.
   FOR v_row IN SELECT value FROM jsonb_array_elements(p_plan) LOOP
