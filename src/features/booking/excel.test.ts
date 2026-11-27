@@ -165,8 +165,10 @@ describe("group-aware planBookingRows", () => {
       "Zoe Clark",
       "Solo Student",
     ]);
-    if (rows[0]!.kind !== "booking" || rows[3]!.kind !== "booking") return;
-    expect(rows[0].group).toBe("G1");
+    const firstRow = rows[0];
+    const lastRow = rows[3];
+    if (firstRow?.kind !== "booking" || lastRow?.kind !== "booking") return;
+    expect(firstRow.group).toBe("G1");
     expect(rows.slice(0, 3).map((row) => (row.kind === "booking" ? row.group : ""))).toEqual([
       "G1",
       "",
@@ -178,8 +180,8 @@ describe("group-aware planBookingRows", () => {
       "l250636",
     ]);
     expect(rows.slice(0, 3).every((row) => row.kind === "booking" && row.seat === 1)).toBe(true);
-    expect(rows[3].group).toBe("");
-    expect(rows[3].rollNo).toBe("");
+    expect(lastRow.group).toBe("");
+    expect(lastRow.rollNo).toBe("");
   });
 
   it("does not emit a member twice when that member also booked separately", () => {
