@@ -11,6 +11,7 @@ import { formatShortDay, formatSlotTime, formatDateTime } from "@/lib/time-forma
 import { studentEmailLocalPart, compareStudentsByEmail } from "@/lib/student-sort";
 import { ConfirmDeleteDialogButton } from "@/components/ui/confirm-delete-dialog";
 import { deleteBookingAction } from "@/features/booking/actions";
+import { ExportControls } from "./export-controls";
 import { ReassignForm } from "./forms";
 
 /**
@@ -128,14 +129,14 @@ export function PeriodBookingsTable({
             ))}
           </select>
         </label>
-        <a
-          href={`/api/bookings/${periodId}/export`}
-          download
-          className="ml-auto inline-flex h-8 items-center rounded-lg border border-input bg-background px-3 text-xs font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
-          data-testid="export-bookings-csv"
-        >
-          {t("exportCsv")}
-        </a>
+        <div className="ml-auto">
+          <ExportControls
+            periodId={periodId}
+            evaluators={evaluators}
+            compact
+            mainTestId="export-bookings-csv"
+          />
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-lg border">

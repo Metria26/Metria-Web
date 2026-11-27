@@ -593,13 +593,17 @@ type BulkFormState = ActionResult | null;
 export function BulkSlotForm({
   periodId,
   evaluatorCount = 0,
+  defaultCapacity = "1",
+  defaultSlotMinutes = "30",
 }: {
   periodId: string;
   evaluatorCount?: number;
+  defaultCapacity?: string;
+  defaultSlotMinutes?: string;
 }) {
   const t = useTranslations("Booking.bulk");
   const tEvaluators = useTranslations("Booking.evaluators");
-  const [capacity, setCapacity] = useState("1");
+  const [capacity, setCapacity] = useState(defaultCapacity);
   const [state, formAction, pending] = useActionState<BulkFormState, FormData>(
     async (_prev, formData) => generateSlotsAction(formData),
     null,
@@ -609,7 +613,7 @@ export function BulkSlotForm({
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [dailyStart, setDailyStart] = useState("09:00");
-  const [slotMinutes, setSlotMinutes] = useState("30");
+  const [slotMinutes, setSlotMinutes] = useState(defaultSlotMinutes);
   const [gapMinutes, setGapMinutes] = useState("0");
 
   const preview = useMemo(() => {
