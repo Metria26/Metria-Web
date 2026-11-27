@@ -190,14 +190,39 @@ describe("balanced workload after bookings and cancellations", () => {
     expect(assignments).toHaveLength(7);
   });
 
-  it("released seats are not counted as work and no evaluator is idle", () => {
+  it("only active bookings count as work", () => {
     const slots = generateSlots(2, 3);
     const seats = generateSeats(slots).map((current, index) => ({
       ...current,
       booked: index === 0 || index === 3, // two students left
     }));
     const assignments = balanceBookedSeats(slots, seats, ABC);
-    expect(assignments.map((current) => current.evaluatorId)).toEqual(["A", "B"]);
+    expect(assignments.map((current) => current.evaluatorId)).toEqual(["A", "A"]);
+  });
+
+  it("rotates past evaluators already used when capacity is below evaluator count", () => {
+    const slots = generateSlots(3, 3); // 3 seats per slot
+    const seats = generateSeats(slots).map((current) => ({ ...current, booked: true }));
+    const evaluators = [...ABC, evaluator("D", 3)];
+
+    const assignments = balanceBookedSeats(slots, seats, evaluators);
+    // slot 1: A,B,C | slot 2: D,A,B | slot 3: C,D,A
+    expect(assignments.map((current) => current.evaluatorId)).toEqual([
+      "A",
+      "B",
+      "C",
+      "D",
+      "A",
+      "B",
+      "C",
+      "D",
+      "A",
+    ]);
+    const counts = new Map(evaluators.map((current) => [current.id, 0]));
+    for (const assignment of assignments) {
+      counts.set(assignment.evaluatorId!, (counts.get(assignment.evaluatorId!) ?? 0) + 1);
+    }
+    expect([...counts.values()].sort()).toEqual([2, 2, 2, 3]);
   });
 });
 
