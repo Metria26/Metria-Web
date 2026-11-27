@@ -226,6 +226,13 @@ export function previewRestructure(
   options: RestructureOptions,
 ): RestructurePreview {
   const dayMap = new Map(options.days.map((day) => [day.key, day]));
+  // Invalid number inputs must not crash the live preview. Keep a safe plan
+  // shape, surface a per-day error, and disable Apply until they are fixed.
+  const capacityValid = Number.isInteger(options.capacity) && options.capacity >= 1;
+  const durationValid =
+    Number.isInteger(options.slotMinutes) && options.slotMinutes >= 1 && options.slotMinutes <= 240;
+  const planValid = capacityValid && durationValid;
+  const capacity = capacityValid ? options.capacity : 1;
   const evaluatorList = [...data.evaluators].sort(
     (a, b) => a.position - b.position || a.id.localeCompare(b.id),
   );
@@ -250,68 +257,76 @@ export function previewRestructure(
 
   for (const input of options.days) {
     const dayStudents = studentsByDay.get(input.key) ?? [];
-    const neededSlots = Math.ceil(dayStudents.length / options.capacity);
+    const neededSlots = Math.ceil(dayStudents.length / capacity);
     const { spans, overflow } = timeline(
       input,
       options.slotMinutes,
       neededSlots,
       options.fillAfterLast,
     );
-    let error = overflow
-      ? `Only ${spans.length} slot(s) fit before ${input.end}; ${dayStudents.length} student(s) need ${neededSlots}.`
-      : null;
+    let error = !planValid
+      ? !capacityValid
+        ? "Seats per slot must be at least 1."
+        : "Slot duration must be between 1 and 240 minutes."
+      : overflow
+        ? `Only ${spans.length} slot(s) fit before ${input.end}; ${dayStudents.length} student(s) need ${neededSlots}.`
+        : null;
 
-    const newSlots: RestructureNewSlot[] = spans.map((span, index) => {
-      const seatEvaluators: RestructureSeatEvaluator[] = [];
-      const used = new Set<string>();
-      for (let seat = 1; seat <= options.capacity; seat += 1) {
-        let evaluatorId: string | null = null;
-        if (!options.keepEvaluator && evaluatorList.length > 0) {
-          if (evaluatorList.length < options.capacity) {
-            error ??= `Add at least ${options.capacity} evaluators to avoid repeats within one slot.`;
-          } else {
-            for (let step = 0; step < evaluatorList.length; step += 1) {
-              const candidate = evaluatorList[(evaluatorCursor + step) % evaluatorList.length]!;
-              if (!used.has(candidate.id)) {
-                evaluatorId = candidate.id;
-                break;
+    const newSlots: RestructureNewSlot[] = planValid
+      ? spans.map((span, index) => {
+          const seatEvaluators: RestructureSeatEvaluator[] = [];
+          const used = new Set<string>();
+          for (let seat = 1; seat <= capacity; seat += 1) {
+            let evaluatorId: string | null = null;
+            if (!options.keepEvaluator && evaluatorList.length > 0) {
+              if (evaluatorList.length < capacity) {
+                error ??= `Add at least ${capacity} evaluators to avoid repeats within one slot.`;
+              } else {
+                for (let step = 0; step < evaluatorList.length; step += 1) {
+                  const candidate = evaluatorList[(evaluatorCursor + step) % evaluatorList.length]!;
+                  if (!used.has(candidate.id)) {
+                    evaluatorId = candidate.id;
+                    break;
+                  }
+                }
+                used.add(evaluatorId!);
+                evaluatorCursor = (evaluatorCursor + 1) % evaluatorList.length;
               }
             }
-            used.add(evaluatorId!);
-            evaluatorCursor = (evaluatorCursor + 1) % evaluatorList.length;
+            seatEvaluators.push({ seat, evaluatorId });
           }
-        }
-        seatEvaluators.push({ seat, evaluatorId });
-      }
-      return {
-        key: `${input.key}-${index + 1}`,
-        dayKey: input.key,
-        startsAt: new Date(span.startsAt).toISOString(),
-        endsAt: new Date(span.endsAt).toISOString(),
-        capacity: options.capacity,
-        seatEvaluators,
-      };
-    });
+          return {
+            key: `${input.key}-${index + 1}`,
+            dayKey: input.key,
+            startsAt: new Date(span.startsAt).toISOString(),
+            endsAt: new Date(span.endsAt).toISOString(),
+            capacity,
+            seatEvaluators,
+          };
+        })
+      : [];
 
     const evaluatorByName = new Map(evaluatorList.map((item) => [item.id, item.name]));
     const perSlot = new Map<string, Set<string>>();
     const rows: RestructureRow[] = dayStudents.map((student, index) => {
-      const slot = newSlots[Math.floor(index / options.capacity)];
-      const seat = (index % options.capacity) + 1;
+      const slot = newSlots[Math.floor(index / capacity)];
+      const seat = (index % capacity) + 1;
       const seatEvaluator = slot?.seatEvaluators.find((item) => item.seat === seat);
       const evaluatorId = options.keepEvaluator
         ? student.evaluatorId
         : (seatEvaluator?.evaluatorId ?? null);
-      if (evaluatorId) {
-        const used = perSlot.get(slot!.key) ?? new Set<string>();
+      // An overflowing/invalid plan has no slot for this student. Keep the row
+      // visible with a placeholder instead of dereferencing a missing slot.
+      if (evaluatorId && slot) {
+        const used = perSlot.get(slot.key) ?? new Set<string>();
         if (used.has(evaluatorId)) {
           error ??= "Two students in one slot would get the same evaluator. Choose rebalance.";
         }
         used.add(evaluatorId);
-        perSlot.set(slot!.key, used);
+        perSlot.set(slot.key, used);
       }
-      if (slot && options.keepEvaluator) {
-        seatEvaluator!.evaluatorId = evaluatorId;
+      if (slot && options.keepEvaluator && seatEvaluator) {
+        seatEvaluator.evaluatorId = evaluatorId;
       }
       const timeChanged = slot
         ? slot.startsAt !== new Date(student.slotStartsAt).toISOString()
