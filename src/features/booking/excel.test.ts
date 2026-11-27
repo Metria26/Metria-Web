@@ -1,15 +1,24 @@
-import { describe, expect, it } from "vitest";
+import ExcelJS from "exceljs";
+import { describe, expect, it, vi } from "vitest";
 import {
+  addFormattedSheet,
+  buildBookingWorkbook,
   cleanStudentName,
   evaluatorFileSlug,
   planBookingRows,
   sanitizeSheetName,
   sortBookingRows,
 } from "./excel";
-import type { BookingSlotOverview, BookingStudent } from "./overview";
+import type { ExportGroup } from "./export-groups";
+import type { BookingSlotOverview, BookingStudent, PeriodBookingOverview } from "./overview";
 
 const evaluatorA = "55555555-5555-4555-8555-555555555555";
 const evaluatorB = "66666666-6666-4666-8666-666666666666";
+const groupBookingId = "77777777-7777-4777-8777-777777777777";
+const otherBookingId = "88888888-8888-4888-8888-888888888888";
+const bookerId = "11111111-1111-4111-8111-111111111111";
+const memberId = "22222222-2222-4222-8222-222222222222";
+const secondMemberId = "33333333-3333-4333-8333-333333333333";
 
 const slot = (id: string, startsAt: string): BookingSlotOverview => ({
   id,
@@ -39,6 +48,35 @@ const student = (
   seat_number: seat,
   evaluator_id: evaluatorId,
   evaluator_name: evaluatorId === evaluatorA ? "M Zohaib" : "M Ahmad Khan",
+});
+
+const groupRoster = (bookingId: string): ExportGroup => ({
+  bookingId,
+  groupId: "G1",
+  memberCount: 3,
+  members: [
+    {
+      profileId: memberId,
+      name: "Zoe Clark BS(CS) 2025 FAST NU LHR",
+      rollNo: "l250636",
+      email: "zoe@example.com",
+      isBooker: false,
+    },
+    {
+      profileId: bookerId,
+      name: "Booker Ali BS(CS) 2025 FAST NU LHR",
+      rollNo: "l250637",
+      email: "booker@example.com",
+      isBooker: true,
+    },
+    {
+      profileId: secondMemberId,
+      name: "Amy Khan",
+      rollNo: "l250638",
+      email: "amy@example.com",
+      isBooker: false,
+    },
+  ],
 });
 
 describe("cleanStudentName", () => {
@@ -102,6 +140,128 @@ describe("planBookingRows", () => {
     const plan = planBookingRows(students, slots, evaluatorB);
     expect(plan).toHaveLength(1);
     expect(plan[0]).toMatchObject({ kind: "booking", student: "Fajar Fatima Majid" });
+  });
+});
+
+describe("group-aware planBookingRows", () => {
+  const slots = [slot("s1", "2026-11-13T05:00:00Z")];
+
+  it("writes one row per current member, booker first, with shared slot data", () => {
+    const booker = {
+      ...student("s1", slots[0]!.starts_at, "Booker Ali", 1),
+      booking_id: groupBookingId,
+    };
+    const individual = {
+      ...student("s1", slots[0]!.starts_at, "Solo Student", 2),
+      booking_id: otherBookingId,
+    };
+    const plan = planBookingRows([booker, individual], slots, undefined, [
+      groupRoster(groupBookingId),
+    ]);
+    const rows = plan.filter((row) => row.kind === "booking");
+    expect(rows.map((row) => (row.kind === "booking" ? row.student : ""))).toEqual([
+      "Booker Ali",
+      "Amy Khan",
+      "Zoe Clark",
+      "Solo Student",
+    ]);
+    if (rows[0]!.kind !== "booking" || rows[3]!.kind !== "booking") return;
+    expect(rows[0].group).toBe("G1");
+    expect(rows.slice(0, 3).map((row) => (row.kind === "booking" ? row.group : ""))).toEqual([
+      "G1",
+      "",
+      "",
+    ]);
+    expect(rows.slice(0, 3).map((row) => (row.kind === "booking" ? row.rollNo : ""))).toEqual([
+      "l250637",
+      "l250638",
+      "l250636",
+    ]);
+    expect(rows.slice(0, 3).every((row) => row.kind === "booking" && row.seat === 1)).toBe(true);
+    expect(rows[3].group).toBe("");
+    expect(rows[3].rollNo).toBe("");
+  });
+
+  it("does not emit a member twice when that member also booked separately", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const first = {
+      ...student("s1", slots[0]!.starts_at, "Booker Ali", 1),
+      booking_id: groupBookingId,
+    };
+    const second = {
+      ...student("s1", slots[0]!.starts_at, "Amy Khan", 2),
+      booking_id: otherBookingId,
+    };
+    const plan = planBookingRows([first, second], slots, undefined, [
+      groupRoster(groupBookingId),
+      groupRoster(otherBookingId),
+    ]);
+    expect(plan.filter((row) => row.kind === "booking")).toHaveLength(3);
+    expect(warn).toHaveBeenCalledWith(
+      "[booking-export] duplicate group member booking skipped",
+      expect.objectContaining({ groupId: "G1", profileId: bookerId }),
+    );
+    warn.mockRestore();
+  });
+});
+
+describe("group sheet layout", () => {
+  const slots = [slot("s1", "2026-11-13T05:00:00Z")];
+
+  it("merges booking cells vertically and thickens the group's bottom border", () => {
+    const booker = {
+      ...student("s1", slots[0]!.starts_at, "Booker Ali", 1),
+      booking_id: groupBookingId,
+    };
+    const workbook = new ExcelJS.Workbook();
+    const sheet = addFormattedSheet(workbook, "Bookings", [booker], slots, undefined, [
+      groupRoster(groupBookingId),
+    ]);
+    expect(sheet.model.merges).toEqual(["A4:A6", "E4:E6", "F4:F6", "G4:G6", "H4:H6"]);
+    expect(sheet.getCell("A4").value).toBe("G1");
+    expect(sheet.getCell("B4").value).toBe("Booker Ali");
+    expect(sheet.getCell("B5").value).toBe("Amy Khan");
+    expect(sheet.getCell("C5").value).toBe("l250638");
+    expect(sheet.getCell("H4").value).toBe(1);
+    expect(sheet.getCell("I4").value).toBe("");
+    expect(sheet.getCell("J4").value).toBe("");
+  });
+
+  it("adds group member totals to the summary sheet", async () => {
+    const booker = {
+      ...student("s1", slots[0]!.starts_at, "Booker Ali", 1),
+      booking_id: groupBookingId,
+    };
+    const overview = {
+      period: {
+        id: "99999999-9999-4999-8999-999999999999",
+        title: "Evaluations",
+        offering_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        section_id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        starts_at: slots[0]!.starts_at,
+        ends_at: slots[0]!.ends_at,
+        cutoff_hours: 6,
+        offering_code: "CS",
+        course_code: "CS101",
+        section_code: "A",
+      },
+      can_manage: true,
+      evaluators: [],
+      slots,
+      students: [booker],
+    } satisfies PeriodBookingOverview;
+
+    const buffer = await buildBookingWorkbook(overview, {
+      includeEvaluatorSheets: false,
+      groups: [groupRoster(groupBookingId)],
+    });
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer);
+    const summary = workbook.getWorksheet("Summary");
+    expect(summary?.getCell("A6").value).toBe("Group members");
+    expect(summary?.getCell("B6").value).toBe(3);
+    expect(summary?.getCell("A7").value).toBe("G1 (group members)");
+    expect(summary?.getCell("B7").value).toBe(3);
   });
 });
 

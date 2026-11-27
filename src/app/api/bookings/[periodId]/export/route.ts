@@ -5,11 +5,13 @@ import {
   buildEvaluatorZip,
   evaluatorFileSlug,
 } from "@/features/booking/excel";
+import { loadBookingExportGroups } from "@/features/booking/export-groups";
 import { loadPeriodBookingOverview } from "@/features/booking/overview";
 
 /**
  * GET /api/bookings/{periodId}/export — staff-only .xlsx workbook of active
- * bookings: student, email, slot date/time (Asia/Karachi), evaluator and seat.
+ * bookings. Group bookings expand to one row per current group member with
+ * group, roll no, marks and remarks columns; individuals stay single rows.
  *
  * Query options:
  *   ?evaluator=<id>  one evaluator's bookings only
@@ -44,6 +46,16 @@ export async function GET(
   if (!overview) return new Response("Not found", { status: 404 });
   if (!overview.can_manage) return new Response("Forbidden", { status: 403 });
 
+  let groups: Awaited<ReturnType<typeof loadBookingExportGroups>>;
+  try {
+    groups = await loadBookingExportGroups(supabase, periodId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (/unauthenticated/i.test(message)) return new Response("Unauthenticated", { status: 401 });
+    if (/forbidden/i.test(message)) return new Response("Forbidden", { status: 403 });
+    throw error;
+  }
+
   const url = new URL(request.url);
   const requestedEvaluatorId = url.searchParams.get("evaluator") ?? "";
   const zipRequested = url.searchParams.get("zip") === "1";
@@ -75,7 +87,7 @@ export async function GET(
   const effectiveEvaluatorId = restrictedEvaluatorId ?? (requestedEvaluatorId || undefined);
 
   if (zipRequested) {
-    const buffer = await buildEvaluatorZip(overview, prefix);
+    const buffer = await buildEvaluatorZip(overview, prefix, groups);
     return new Response(buffer, {
       headers: {
         "Content-Type": "application/zip",
@@ -91,6 +103,7 @@ export async function GET(
     const buffer = await buildBookingWorkbook(overview, {
       evaluatorId: evaluator.id,
       includeEvaluatorSheets: false,
+      groups,
     });
     const fileName = `${prefix}-${evaluatorFileSlug(evaluator.name)}.xlsx`;
     return new Response(buffer, {
@@ -102,7 +115,7 @@ export async function GET(
     });
   }
 
-  const buffer = await buildBookingWorkbook(overview);
+  const buffer = await buildBookingWorkbook(overview, { groups });
   return new Response(buffer, {
     headers: {
       "Content-Type": XLSX_TYPE,
