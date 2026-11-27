@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { restructureDaySchema } from "./restructure";
 
 /**
  * Zod contracts for evaluation booking server boundaries (T-A006, features
@@ -104,6 +105,25 @@ export const redistributeInputSchema = z.object({
 export const deleteBookingInputSchema = z.object({
   periodId: z.string().uuid("periodRequired"),
   bookingId: z.string().uuid("bookingRequired"),
+});
+
+/** Admin slot restructure: the exact previewed plan is sent back for apply. */
+export const restructureApplyInputSchema = z.object({
+  periodId: z.string().uuid("periodRequired"),
+  slotMinutes: z.coerce.number().int().min(1).max(240),
+  capacity: z.coerce.number().int().min(1).max(500),
+  keepEvaluator: z.coerce.boolean(),
+  fillAfterLast: z.coerce.boolean(),
+  days: z.array(restructureDaySchema).min(1),
+  plan: z.array(
+    z.object({
+      dayKey: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      bookingId: z.string().uuid(),
+      newSlotKey: z.string().min(1),
+      newSeat: z.coerce.number().int().positive(),
+      evaluatorId: z.string().uuid().nullable(),
+    }),
+  ),
 });
 
 /** Success may carry a non-blocking warning (e.g. duplicate evaluator in a slot). */

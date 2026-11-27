@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { loadPeriodBookingOverview } from "@/features/booking/overview";
+import { canRestructurePeriod, loadPeriodSlotDefaults } from "@/features/booking/restructure";
 import { groupSlotsByDay, slotStatus, type SlotCardStatus } from "@/features/booking/slot-view";
 import { cancelState, remainingSeats } from "@/features/booking/rules";
 import {
@@ -19,6 +20,7 @@ import {
   SlotForm,
   SwitchButton,
 } from "@/features/booking/ui/forms";
+import { ExportControls } from "@/features/booking/ui/export-controls";
 import { EvaluatorSchedule, SeatSchedule } from "@/features/booking/ui/evaluator-schedule";
 import { PeriodBookingsTable } from "@/features/booking/ui/period-manage";
 import { deletePeriodAction, deleteSlotAction } from "@/features/booking/actions";
@@ -77,6 +79,8 @@ export default async function BookingPeriodPage({
 
   const overview = await loadPeriodBookingOverview(supabase, periodId);
   if (!overview) notFound();
+  const canRestructure = await canRestructurePeriod(supabase, periodId);
+  const slotDefaults = await loadPeriodSlotDefaults(supabase, periodId);
 
   const { period, can_manage: canManage, evaluators, slots, students } = overview;
   const hasBookingInPeriod = slots.some((slot) => slot.my_booking_id !== null);
@@ -124,16 +128,22 @@ export default async function BookingPeriodPage({
             </div>
           </div>
 
-          {canManage ? (
+          {canManage || canRestructure ? (
             <div className="flex flex-wrap items-center gap-2">
-              <a
-                href={`/api/bookings/${period.id}/export`}
-                download
-                className="inline-flex h-9 items-center rounded-lg border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
-                data-testid="download-bookings-csv"
-              >
-                {t("actions.downloadCsv")}
-              </a>
+              {canRestructure ? (
+                <Link
+                  href={`/app/bookings/${period.id}/restructure`}
+                  className="inline-flex h-9 items-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-ring"
+                  data-testid="restructure-slots-link"
+                >
+                  {t("actions.restructureSlots")}
+                </Link>
+              ) : null}
+              <ExportControls
+                periodId={period.id}
+                evaluators={evaluators}
+                mainTestId="download-bookings-csv"
+              />
               <ConfirmDeleteDialogButton
                 label={t("actions.deletePeriod")}
                 confirmMessage={t("confirm.deletePeriod", { title: period.title })}
@@ -594,7 +604,12 @@ export default async function BookingPeriodPage({
                 {t("bulk.title")}
               </h2>
               <p className="text-sm text-muted-foreground">{t("bulk.hint")}</p>
-              <BulkSlotForm periodId={period.id} evaluatorCount={evaluators.length} />
+              <BulkSlotForm
+                periodId={period.id}
+                evaluatorCount={evaluators.length}
+                defaultCapacity={String(slotDefaults.capacity)}
+                defaultSlotMinutes={String(slotDefaults.slotMinutes)}
+              />
             </div>
             <div className="grid min-w-0 gap-2 border-t border-white/15 pt-4 dark:border-white/10">
               <h3 className="text-base font-semibold">{t("addSlot")}</h3>

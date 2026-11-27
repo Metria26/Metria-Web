@@ -85,6 +85,16 @@ export function mapRpcError(message: string | null | undefined): string {
       return "tooManyEvaluators";
     case "evaluator_required":
       return "evaluatorRequired";
+    case "restructure_in_progress":
+      return "restructureInProgress";
+    case "restructure_stale":
+      return "restructureStale";
+    case "restructure_evaluator_conflict":
+      return "restructureEvaluatorConflict";
+    case "no_restructure_to_undo":
+      return "noRestructureToUndo";
+    case "restructure_has_new_bookings":
+      return "restructureHasNewBookings";
     case "forbidden":
     case "unauthenticated":
       return "notAuthorized";

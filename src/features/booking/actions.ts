@@ -15,6 +15,7 @@ import {
   reassignEvaluatorInputSchema,
   redistributeInputSchema,
   removeEvaluatorInputSchema,
+  restructureApplyInputSchema,
   slotCapacityInputSchema,
   slotInputSchema,
   switchBookingInputSchema,
@@ -191,6 +192,7 @@ function formUuid(formData: FormData, key: string): string | null {
 function revalidatePeriod(periodId: string): void {
   revalidatePath("/app/bookings");
   revalidatePath(`/app/bookings/${periodId}`);
+  revalidatePath(`/app/bookings/${periodId}/restructure`);
   revalidatePath("/app");
 }
 
@@ -500,6 +502,71 @@ export async function redistributeEvaluatorsAction(formData: FormData): Promise<
   if (!parsed.success) return { ok: false, error: "invalidInput" };
 
   const { error } = await rpcTransport(supabase).rpc("redistribute_booking_evaluators", {
+    p_period_id: parsed.data.periodId,
+  });
+  if (error) return { ok: false, error: mapRpcError(error.message) };
+
+  revalidatePeriod(parsed.data.periodId);
+  return { ok: true };
+}
+
+function parseJsonField(value: FormDataEntryValue | null): unknown {
+  if (typeof value !== "string" || value.length === 0) return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Admin/owner only: replace every slot in a period with the previewed 15-minute
+ * (or other) layout while keeping the already-booked students in order. The SQL
+ * RPC snapshots the old state, applies everything in one transaction and locks
+ * ordinary booking writes while it runs.
+ */
+export async function applySlotRestructureAction(formData: FormData): Promise<ActionResult> {
+  const { supabase, profile } = await callerProfile();
+  if (!profile) return { ok: false, error: "notAuthorized" };
+
+  const parsed = restructureApplyInputSchema.safeParse({
+    periodId: emptyToUndefined(formData.get("periodId")),
+    slotMinutes: emptyToUndefined(formData.get("slotMinutes")),
+    capacity: emptyToUndefined(formData.get("capacity")),
+    keepEvaluator: formData.get("keepEvaluator") === "true",
+    fillAfterLast: formData.get("fillAfterLast") === "true",
+    days: parseJsonField(formData.get("days")),
+    plan: parseJsonField(formData.get("plan")),
+  });
+  if (!parsed.success) return { ok: false, error: "invalidInput" };
+
+  const input = parsed.data;
+  const { error } = await rpcTransport(supabase).rpc("apply_slot_restructure", {
+    p_period_id: input.periodId,
+    p_slot_minutes: input.slotMinutes,
+    p_capacity: input.capacity,
+    p_days: input.days,
+    p_keep_evaluator: input.keepEvaluator,
+    p_fill_after_last: input.fillAfterLast,
+    p_plan: input.plan,
+  });
+  if (error) return { ok: false, error: mapRpcError(error.message) };
+
+  revalidatePeriod(input.periodId);
+  return { ok: true };
+}
+
+/** Admin/owner only: restore the last restructure if no bookings changed since. */
+export async function undoSlotRestructureAction(formData: FormData): Promise<ActionResult> {
+  const { supabase, profile } = await callerProfile();
+  if (!profile) return { ok: false, error: "notAuthorized" };
+
+  const parsed = restructureApplyInputSchema
+    .pick({ periodId: true })
+    .safeParse({ periodId: emptyToUndefined(formData.get("periodId")) });
+  if (!parsed.success) return { ok: false, error: "invalidInput" };
+
+  const { error } = await rpcTransport(supabase).rpc("undo_slot_restructure", {
     p_period_id: parsed.data.periodId,
   });
   if (error) return { ok: false, error: mapRpcError(error.message) };
