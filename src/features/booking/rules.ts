@@ -34,6 +34,14 @@ export function mapRpcError(message: string | null | undefined): string {
   // PostgREST reports a missing/stale RPC with a schema-cache message rather
   // than a stable code — make that actionable instead of a generic failure.
   if (/could not find the function|schema cache/i.test(normalized)) return "serviceUnavailable";
+  // Postgres constraint failures arrive as sentences, not our stable codes.
+  // Map the common ones so a TA sees what to fix instead of a generic error.
+  if (/duplicate key value violates unique constraint/i.test(normalized)) return "duplicate";
+  if (/violates foreign key constraint/i.test(normalized)) return "invalidReference";
+  if (/violates check constraint|violates not-null constraint/i.test(normalized))
+    return "invalidInput";
+  if (/permission denied|row-level security/i.test(normalized)) return "notAuthorized";
+  if (/deadlock detected/i.test(normalized)) return "serviceUnavailable";
   switch (normalized) {
     case "slot_full":
       return "slotFull";

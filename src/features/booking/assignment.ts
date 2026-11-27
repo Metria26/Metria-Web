@@ -145,11 +145,12 @@ export function redistributeUnbookedSeats(
 }
 
 /**
- * Workload balance for ACTIVE bookings: one global round-robin across the
- * period (slot order, then seat number). Counts differ by at most one, so no
- * evaluator is idle while another carries extra students. Cancelled/free seats
- * are deliberately excluded — they are filled by the seat rotation instead.
- * The SQL `private.balance_period_evaluators` implements the same walk.
+ * Workload balance for ACTIVE bookings. A single cursor walks every seat in
+ * slot/seat order; within one slot evaluators already used there are skipped,
+ * then the cursor continues into the next slot. This handles capacity < evaluator
+ * count (3 seats, 4 evaluators -> A,B,C | D,A,B | C,D,A) and redistributes
+ * previously booked seats too. The SQL `private.balance_period_evaluators`
+ * implements the same walk.
  */
 export function balanceBookedSeats(
   slots: readonly SlotRef[],
@@ -157,24 +158,38 @@ export function balanceBookedSeats(
   evaluators: readonly EvaluatorRef[],
 ): SeatAssignment[] {
   const evaluatorIds = orderedEvaluatorIds(evaluators);
-  const booked = seats.filter((seat) => seat.booked);
-  // Keep the SQL's slot ordering when slot references are available.
-  const slotOrder = new Map(orderedSlots(slots).map((slot, index) => [slot.id, index]));
-  booked.sort(
-    (a, b) =>
-      (slotOrder.get(a.slot_id) ?? Number.MAX_SAFE_INTEGER) -
-        (slotOrder.get(b.slot_id) ?? Number.MAX_SAFE_INTEGER) ||
-      a.seat_number - b.seat_number ||
-      compareText(a.id, b.id),
-  );
+  const assignments: SeatAssignment[] = [];
 
   if (evaluatorIds.length === 0) {
-    return booked.map((seat) => ({ seatId: seat.id, evaluatorId: null }));
+    return seats
+      .filter((seat) => seat.booked)
+      .map((seat) => ({ seatId: seat.id, evaluatorId: null }));
   }
-  return booked.map((seat, index) => ({
-    seatId: seat.id,
-    evaluatorId: evaluatorIds[index % evaluatorIds.length]!,
-  }));
+
+  let cursor = 0;
+  for (const slot of orderedSlots(slots)) {
+    const used = new Set<string>();
+    const slotSeats = seats
+      .filter((seat) => seat.slot_id === slot.id)
+      .sort((a, b) => a.seat_number - b.seat_number || compareText(a.id, b.id));
+
+    for (const seat of slotSeats) {
+      let index = -1;
+      for (let offset = 0; offset < evaluatorIds.length; offset += 1) {
+        const candidate = (cursor + offset) % evaluatorIds.length;
+        if (!used.has(evaluatorIds[candidate]!)) {
+          index = candidate;
+          break;
+        }
+      }
+      if (index === -1) index = cursor % evaluatorIds.length; // sharing unavoidable
+      const evaluatorId = evaluatorIds[index]!;
+      used.add(evaluatorId);
+      cursor = (cursor + 1) % evaluatorIds.length;
+      if (seat.booked) assignments.push({ seatId: seat.id, evaluatorId });
+    }
+  }
+  return assignments;
 }
 
 /** Merge assignments back into seat rows (keeps seat identity stable). */
