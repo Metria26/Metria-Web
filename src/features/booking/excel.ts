@@ -123,7 +123,12 @@ export function planBookingRows(
     const day = formatDayHeading(startsAt);
     if (previousDay !== null && day !== previousDay) plans.push({ kind: "gap" });
 
-    const shared = {
+    const shared: {
+      slotDate: string;
+      slotTime: string;
+      evaluator: string;
+      seat: number | "";
+    } = {
       slotDate: day,
       slotTime: slot ? formatSlotTimeRange(slot.starts_at, slot.ends_at) : formatSlotTime(startsAt),
       evaluator: safeText(student.evaluator_name ?? ""),
@@ -337,7 +342,7 @@ function addSummarySheet(
     ["Group members", [...groups.values()].reduce((sum, count) => sum + count, 0)],
     ...[...groups.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([group, count]) => [`${group} (group members)`, count]),
+      .map(([group, count]): [string, number] => [`${group} (group members)`, count]),
   ];
 
   let rowNumber = FIRST_DATA_ROW;
