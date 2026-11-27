@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import JSZip from "jszip";
 import { formatDayHeading, formatSlotTime, formatSlotTimeRange } from "@/lib/time-format";
 import { cleanStudentName } from "./name-cleaning";
+import type { ExportGroup } from "./export-groups";
 import type { BookingSlotOverview, BookingStudent, PeriodBookingOverview } from "./overview";
 
 export { cleanStudentName } from "./name-cleaning";
@@ -11,18 +12,34 @@ export { cleanStudentName } from "./name-cleaning";
  * One sheet builder is shared by the main workbook, the per-evaluator sheets
  * and the separate files in the ZIP so every export looks identical.
  *
+ * A booking made by one group member expands to one row per current group
+ * member. Group/slot/evaluator/seat cells are merged vertically across the
+ * member rows; student, roll no, email, marks and remarks stay per member.
+ *
  * All instants are formatted in Asia/Karachi (the university timezone). Cells
  * that start with a spreadsheet operator are prefixed with an apostrophe so
  * names/emails can never execute as formulas.
  */
 
 const COLUMNS: Partial<ExcelJS.Column>[] = [
+  { header: "Group", key: "group", width: 12 },
   { header: "Student", key: "student", width: 28 },
+  { header: "Roll no", key: "rollNo", width: 16 },
   { header: "Email", key: "email", width: 26 },
   { header: "Slot date", key: "slotDate", width: 24 },
   { header: "Slot time", key: "slotTime", width: 20 },
   { header: "Evaluator", key: "evaluator", width: 20 },
   { header: "Seat", key: "seat", width: 8 },
+  { header: "Marks", key: "marks", width: 12 },
+  { header: "Remarks", key: "remarks", width: 24 },
+];
+
+/** Columns that describe the booking, not the individual member. */
+const BOOKING_COLUMNS = [1, 5, 6, 7, 8] as const;
+
+const SUMMARY_COLUMNS: Partial<ExcelJS.Column>[] = [
+  { header: "Metric", key: "metric", width: 36 },
+  { header: "Count", key: "count", width: 12 },
 ];
 
 const HEADER_ROW = 3;
@@ -64,24 +81,36 @@ export type BookingRowPlan =
   | { kind: "gap" }
   | {
       kind: "booking";
+      /** Consecutive rows with the same id form one merged booking block. */
+      blockId: string;
+      group: string;
       student: string;
+      rollNo: string;
       email: string;
       slotDate: string;
       slotTime: string;
       evaluator: string;
       seat: number | "";
+      memberCount: number;
+      isGroup: boolean;
     };
 
 /**
- * Pure row plan: one gap row before the first booking of each new day, so the
- * sheet builder and the unit tests share exactly the same layout rule.
+ * Pure row plan: one gap row before the first booking of each new day. A group
+ * booking becomes one row per current member (booker first, then name order);
+ * individuals keep a single row. A member who also booked separately is not
+ * emitted twice — the first booking in sorted order wins and the duplicate is
+ * logged by the server.
  */
 export function planBookingRows(
   students: readonly BookingStudent[],
   slots: readonly BookingSlotOverview[],
   evaluatorId?: string,
+  groups: readonly ExportGroup[] = [],
 ): BookingRowPlan[] {
   const byId = new Map(slots.map((slot) => [slot.id, slot]));
+  const groupsByBooking = new Map(groups.map((group) => [group.bookingId, group]));
+  const seenProfileIds = new Set<string>();
   const ordered = sortBookingRows(students, slots).filter(
     (student) => !evaluatorId || student.evaluator_id === evaluatorId,
   );
@@ -93,15 +122,63 @@ export function planBookingRows(
     const startsAt = slot?.starts_at ?? student.slot_starts_at;
     const day = formatDayHeading(startsAt);
     if (previousDay !== null && day !== previousDay) plans.push({ kind: "gap" });
-    plans.push({
-      kind: "booking",
-      student: safeText(cleanStudentName(student.student_name)),
-      email: safeText(student.student_email ?? ""),
+
+    const shared = {
       slotDate: day,
       slotTime: slot ? formatSlotTimeRange(slot.starts_at, slot.ends_at) : formatSlotTime(startsAt),
       evaluator: safeText(student.evaluator_name ?? ""),
       seat: student.seat_number ?? "",
-    });
+    };
+    const bookingId = student.booking_id || `${student.slot_id}:${student.student_email}`;
+    const group = student.booking_id ? groupsByBooking.get(student.booking_id) : undefined;
+
+    if (group && group.members.length > 0) {
+      const members = [...group.members].sort((a, b) => {
+        if (a.isBooker !== b.isBooker) return a.isBooker ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+      const membersToWrite = members.filter((member) => {
+        if (!member.profileId) return true;
+        if (!seenProfileIds.has(member.profileId)) return true;
+        console.warn("[booking-export] duplicate group member booking skipped", {
+          bookingId,
+          groupId: group.groupId,
+          profileId: member.profileId,
+          name: member.name,
+        });
+        return false;
+      });
+      if (membersToWrite.length === 0) continue;
+      membersToWrite.forEach((member) => {
+        if (member.profileId) seenProfileIds.add(member.profileId);
+      });
+
+      membersToWrite.forEach((member, index) => {
+        plans.push({
+          kind: "booking",
+          blockId: bookingId,
+          group: index === 0 ? safeText(group.groupId) : "",
+          student: safeText(cleanStudentName(member.name)),
+          rollNo: safeText(member.rollNo ?? ""),
+          email: safeText(member.email ?? ""),
+          ...shared,
+          memberCount: group.memberCount || members.length,
+          isGroup: true,
+        });
+      });
+    } else {
+      plans.push({
+        kind: "booking",
+        blockId: bookingId,
+        group: "",
+        student: safeText(cleanStudentName(student.student_name)),
+        rollNo: "",
+        email: safeText(student.student_email ?? ""),
+        ...shared,
+        memberCount: 1,
+        isGroup: false,
+      });
+    }
     previousDay = day;
   }
   return plans;
@@ -126,10 +203,15 @@ export function evaluatorFileSlug(name: string): string {
   );
 }
 
-function styleRow(row: ExcelJS.Row, isHeader: boolean): void {
+function styleRow(
+  row: ExcelJS.Row,
+  isHeader: boolean,
+  columnCount = COLUMNS.length,
+  centerColumn = 8,
+): void {
   row.height = isHeader ? HEADER_ROW_HEIGHT : DATA_ROW_HEIGHT;
   row.alignment = { vertical: "middle", wrapText: false };
-  row.eachCell((cell, columnNumber) => {
+  row.eachCell({ includeEmpty: false }, (cell, columnNumber) => {
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: WHITE } };
     cell.border = {
       top: { style: "thin", color: { argb: BORDER_COLOR } },
@@ -139,10 +221,11 @@ function styleRow(row: ExcelJS.Row, isHeader: boolean): void {
     };
     cell.alignment = {
       vertical: "middle",
-      horizontal: columnNumber === COLUMNS.length && !isHeader ? "center" : "left",
+      horizontal: !isHeader && columnNumber === centerColumn ? "center" : "left",
       wrapText: false,
     };
     if (isHeader) cell.font = { bold: true, color: { argb: "FF1E293B" } };
+    if (columnNumber > columnCount) cell.value = null;
   });
 }
 
@@ -153,6 +236,7 @@ export function addFormattedSheet(
   students: readonly BookingStudent[],
   slots: readonly BookingSlotOverview[],
   evaluatorId?: string,
+  groups: readonly ExportGroup[] = [],
 ): ExcelJS.Worksheet {
   const sheet = workbook.addWorksheet(sheetName);
   sheet.columns = COLUMNS;
@@ -162,28 +246,108 @@ export function addFormattedSheet(
   header.values = COLUMNS.map((column) => String(column.header ?? ""));
   styleRow(header, true);
 
+  const plans = planBookingRows(students, slots, evaluatorId, groups);
   let rowNumber = FIRST_DATA_ROW;
-  for (const plan of planBookingRows(students, slots, evaluatorId)) {
+  let blockId: string | null = null;
+  let blockStart = 0;
+  let blockEnd = 0;
+
+  const closeBlock = () => {
+    if (blockId === null || blockEnd <= blockStart) return;
+    for (const column of BOOKING_COLUMNS) {
+      sheet.getRow(blockStart).getCell(column).alignment = {
+        vertical: "middle",
+        horizontal: "center",
+        wrapText: true,
+      };
+      sheet.mergeCells(blockStart, column, blockEnd, column);
+    }
+    sheet.getRow(blockEnd).eachCell({ includeEmpty: false }, (cell) => {
+      cell.border = {
+        ...cell.border,
+        bottom: { style: "medium", color: { argb: BORDER_COLOR } },
+      };
+    });
+  };
+
+  for (const plan of plans) {
     if (plan.kind === "gap") {
+      closeBlock();
+      blockId = null;
       // Untouched row: no values, no fill, no border.
       rowNumber += 1;
       continue;
     }
+    if (plan.blockId !== blockId) {
+      closeBlock();
+      blockId = plan.blockId;
+      blockStart = rowNumber;
+    }
     const row = sheet.getRow(rowNumber);
     row.values = [
+      plan.group,
       plan.student,
+      plan.rollNo,
       plan.email,
       plan.slotDate,
       plan.slotTime,
       plan.evaluator,
       plan.seat,
+      "",
+      "",
     ];
     styleRow(row, false);
+    blockEnd = rowNumber;
     rowNumber += 1;
   }
+  closeBlock();
 
   sheet.views = [{ state: "frozen", ySplit: HEADER_ROW, xSplit: 0 }];
   return sheet;
+}
+
+/** Small summary sheet: totals plus one line per group found in this file. */
+function addSummarySheet(
+  workbook: ExcelJS.Workbook,
+  plans: readonly BookingRowPlan[],
+  sheetName: string,
+): void {
+  const sheet = workbook.addWorksheet(sheetName);
+  sheet.columns = SUMMARY_COLUMNS;
+  const header = sheet.getRow(HEADER_ROW);
+  header.values = SUMMARY_COLUMNS.map((column) => String(column.header ?? ""));
+  styleRow(header, true, SUMMARY_COLUMNS.length, 2);
+
+  const bookingRows = plans.filter(
+    (plan): plan is Extract<BookingRowPlan, { kind: "booking" }> => plan.kind === "booking",
+  );
+  const blocks = new Map<string, Extract<BookingRowPlan, { kind: "booking" }>>();
+  for (const plan of bookingRows) if (!blocks.has(plan.blockId)) blocks.set(plan.blockId, plan);
+
+  const groups = new Map<string, number>();
+  for (const block of blocks.values()) {
+    if (block.isGroup && block.group) {
+      groups.set(block.group, Math.max(groups.get(block.group) ?? 0, block.memberCount));
+    }
+  }
+
+  const rows: Array<[string, string | number]> = [
+    ["Bookings", blocks.size],
+    ["Students listed", bookingRows.length],
+    ["Group members", [...groups.values()].reduce((sum, count) => sum + count, 0)],
+    ...[...groups.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([group, count]) => [`${group} (group members)`, count]),
+  ];
+
+  let rowNumber = FIRST_DATA_ROW;
+  for (const [metric, count] of rows) {
+    const row = sheet.getRow(rowNumber);
+    row.values = [safeText(metric), count];
+    styleRow(row, false, SUMMARY_COLUMNS.length, 2);
+    rowNumber += 1;
+  }
+  sheet.views = [{ state: "frozen", ySplit: HEADER_ROW, xSplit: 0 }];
 }
 
 function newWorkbook(): ExcelJS.Workbook {
@@ -203,6 +367,8 @@ export type BookingWorkbookOptions = {
   evaluatorId?: string;
   /** Default true for the all-evaluators file. */
   includeEvaluatorSheets?: boolean;
+  /** Current project-group rosters keyed by booking id. */
+  groups?: readonly ExportGroup[];
 };
 
 export async function buildBookingWorkbook(
@@ -210,10 +376,18 @@ export async function buildBookingWorkbook(
   options: BookingWorkbookOptions = {},
 ): Promise<ArrayBuffer> {
   const workbook = newWorkbook();
-  addFormattedSheet(workbook, "Bookings", overview.students, overview.slots, options.evaluatorId);
+  const groups = options.groups ?? [];
+  addFormattedSheet(
+    workbook,
+    "Bookings",
+    overview.students,
+    overview.slots,
+    options.evaluatorId,
+    groups,
+  );
 
+  const usedNames = new Set(["Bookings", "Summary"]);
   if (!options.evaluatorId && options.includeEvaluatorSheets !== false) {
-    const usedNames = new Set(["Bookings"]);
     for (const evaluator of overview.evaluators) {
       const base = sanitizeSheetName(evaluator.name);
       let name = base;
@@ -224,9 +398,15 @@ export async function buildBookingWorkbook(
         suffix += 1;
       }
       usedNames.add(name);
-      addFormattedSheet(workbook, name, overview.students, overview.slots, evaluator.id);
+      addFormattedSheet(workbook, name, overview.students, overview.slots, evaluator.id, groups);
     }
   }
+
+  addSummarySheet(
+    workbook,
+    planBookingRows(overview.students, overview.slots, options.evaluatorId, groups),
+    "Summary",
+  );
   return toBuffer(workbook);
 }
 
@@ -234,11 +414,24 @@ export async function buildBookingWorkbook(
 export async function buildEvaluatorZip(
   overview: PeriodBookingOverview,
   filePrefix: string,
+  groups: readonly ExportGroup[] = [],
 ): Promise<ArrayBuffer> {
   const zip = new JSZip();
   for (const evaluator of overview.evaluators) {
     const workbook = newWorkbook();
-    addFormattedSheet(workbook, "Bookings", overview.students, overview.slots, evaluator.id);
+    addFormattedSheet(
+      workbook,
+      "Bookings",
+      overview.students,
+      overview.slots,
+      evaluator.id,
+      groups,
+    );
+    addSummarySheet(
+      workbook,
+      planBookingRows(overview.students, overview.slots, evaluator.id, groups),
+      "Summary",
+    );
     const buffer = await toBuffer(workbook);
     zip.file(`${filePrefix}-${evaluatorFileSlug(evaluator.name)}.xlsx`, buffer);
   }
