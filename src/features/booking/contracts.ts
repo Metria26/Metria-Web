@@ -127,4 +127,5 @@ export const restructureApplyInputSchema = z.object({
 });
 
 /** Success may carry a non-blocking warning (e.g. duplicate evaluator in a slot). */
-export type ActionResult = { ok: true; warning?: string } | { ok: false; error: string };
+export type ActionResult =
+  { ok: true; warning?: string } | { ok: false; error: string; detail?: string };

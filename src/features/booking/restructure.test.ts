@@ -1,7 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { rpcFailure } from "./action-errors";
+import { restructureApplyInputSchema } from "./contracts";
 import {
   defaultDayInputs,
   previewRestructure,
+  restructureRpcPayload,
   undoBookingGuard,
   type RestructureData,
   type RestructureOptions,
@@ -247,6 +250,60 @@ describe("previewRestructure", () => {
     expect(preview.days[0]!.error).toMatch(/at least 4 evaluators/i);
     expect(preview.canApply).toBe(false);
   });
+
+  it("applies the exact 30 Nov / 2 Dec scenario with a valid RPC payload", () => {
+    const data = fixture();
+    data.students = [
+      ...data.students.filter((student) => student.bookingId.startsWith("aaaaaaaa")),
+      ...data.students.filter((student) => student.bookingId.startsWith("cccccccc")).slice(0, 4),
+    ];
+    data.students[0] = {
+      ...data.students[0]!,
+      studentName: "Shabi Ul Hassan BS(CS) 2025 FAST NU LHR",
+      rollNo: null,
+      email: "l250636@student.example.com",
+    };
+    const opts = options({ slotMinutes: 15, capacity: 4, fillAfterLast: true });
+    opts.days = opts.days.map((day) =>
+      day.key === MONDAY
+        ? { ...day, start: "13:10", end: "14:10" }
+        : { ...day, start: "13:00", end: "13:30" },
+    );
+
+    const preview = previewRestructure(data, opts);
+    const monday = preview.days.find((day) => day.input.key === MONDAY)!;
+    const wednesday = preview.days.find((day) => day.input.key === WEDNESDAY)!;
+    const allRows = preview.days.flatMap((day) => day.rows);
+
+    expect(preview.canApply).toBe(true);
+    expect(monday.rows).toHaveLength(13);
+    expect(wednesday.rows).toHaveLength(4);
+    expect(monday.newSlots).toHaveLength(4);
+    expect(wednesday.newSlots).toHaveLength(2);
+    expect(wednesday.emptySlots).toBe(1);
+    expect(preview.slotsAfter).toBe(6);
+    expect(monday.rows[0]!.studentName).toBe("Shabi Ul Hassan");
+    expect(monday.rows[0]!.rollNo).toBe("l250636");
+    expect(preview.studentsMoved).toBe(allRows.filter((row) => row.changed).length);
+    expect(preview.timeChangedCount).toBe(allRows.filter((row) => row.timeChanged).length);
+    expect(preview.seatChangedCount).toBe(allRows.filter((row) => row.seatChanged).length);
+
+    const payload = restructureRpcPayload(preview, opts);
+    const parsed = restructureApplyInputSchema.safeParse({
+      periodId: data.period.id,
+      slotMinutes: opts.slotMinutes,
+      capacity: opts.capacity,
+      keepEvaluator: opts.keepEvaluator,
+      fillAfterLast: opts.fillAfterLast,
+      days: payload.days,
+      plan: payload.plan,
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.plan).toHaveLength(17);
+      expect(parsed.data.days.find((day) => day.key === WEDNESDAY)?.newSlots).toHaveLength(2);
+    }
+  });
 });
 
 describe("undoBookingGuard", () => {
@@ -256,5 +313,41 @@ describe("undoBookingGuard", () => {
       ok: false,
       code: "restructure_has_new_bookings",
     });
+  });
+});
+
+describe("rpcFailure", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("logs the full DB diagnostic and surfaces unmapped messages", () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const result = rpcFailure(
+      "applySlotRestructure",
+      { periodId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee" },
+      {
+        message: 'duplicate key value violates unique constraint "slot_seats_slot_number_key"',
+        code: "23505",
+        details: "Key (university_id, slot_id, seat_number)=(...) already exists.",
+        hint: null,
+      },
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toBe("duplicate");
+      expect(result.detail).toBeUndefined();
+    }
+    expect(log).toHaveBeenCalledWith(
+      "[applySlotRestructure] RPC failed",
+      expect.objectContaining({
+        code: "23505",
+        details: expect.stringContaining("already exists"),
+        message: expect.stringContaining("slot_seats_slot_number_key"),
+      }),
+    );
+
+    const unknown = rpcFailure("applySlotRestructure", {}, { message: "sqlstate 42P01" });
+    expect(unknown.ok).toBe(false);
+    if (!unknown.ok) expect(unknown.detail).toBe("sqlstate 42P01");
   });
 });

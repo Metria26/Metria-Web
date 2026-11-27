@@ -22,6 +22,7 @@ import {
   type ActionResult,
   type EvaluatorInput,
 } from "./contracts";
+import { rpcFailure } from "./action-errors";
 import { bulkSlotsInputSchema, planBulkSlots } from "./bulk-slots";
 import { loadPeriodBookingOverview } from "./overview";
 import { mapRpcError } from "./rules";
@@ -550,7 +551,21 @@ export async function applySlotRestructureAction(formData: FormData): Promise<Ac
     p_fill_after_last: input.fillAfterLast,
     p_plan: input.plan,
   });
-  if (error) return { ok: false, error: mapRpcError(error.message) };
+  if (error) {
+    return rpcFailure(
+      "applySlotRestructure",
+      {
+        periodId: input.periodId,
+        slotMinutes: input.slotMinutes,
+        capacity: input.capacity,
+        keepEvaluator: input.keepEvaluator,
+        fillAfterLast: input.fillAfterLast,
+        days: input.days.map((day) => ({ key: day.key, newSlots: day.newSlots?.length ?? 0 })),
+        planRows: input.plan.length,
+      },
+      error,
+    );
+  }
 
   revalidatePeriod(input.periodId);
   return { ok: true };
@@ -569,7 +584,9 @@ export async function undoSlotRestructureAction(formData: FormData): Promise<Act
   const { error } = await rpcTransport(supabase).rpc("undo_slot_restructure", {
     p_period_id: parsed.data.periodId,
   });
-  if (error) return { ok: false, error: mapRpcError(error.message) };
+  if (error) {
+    return rpcFailure("undoSlotRestructure", { periodId: parsed.data.periodId }, error);
+  }
 
   revalidatePeriod(parsed.data.periodId);
   return { ok: true };
