@@ -96,6 +96,11 @@ export const removeEvaluatorInputSchema = z.object({
   replacementId: z.string().uuid().optional(),
 });
 
+/** Staff: rebalance every active booking across the whole evaluator roster. */
+export const redistributeInputSchema = z.object({
+  periodId: z.string().uuid("periodRequired"),
+});
+
 export const deleteBookingInputSchema = z.object({
   periodId: z.string().uuid("periodRequired"),
   bookingId: z.string().uuid("bookingRequired"),

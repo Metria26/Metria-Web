@@ -11,6 +11,7 @@ import {
   createPeriodAction,
   createSlotAction,
   generateSlotsAction,
+  redistributeEvaluatorsAction,
   removeEvaluatorAction,
   reassignEvaluatorAction,
   saveEvaluatorsAction,
@@ -1041,6 +1042,50 @@ export function ReassignForm({
       {state?.ok && !state.warning ? (
         <span className="text-xs text-muted-foreground">{t("reassign.success")}</span>
       ) : null}
+    </form>
+  );
+}
+
+/** Staff: spread every active booking evenly across the entire evaluator roster. */
+export function RedistributeEvaluatorsForm({
+  periodId,
+  disabled = false,
+}: {
+  periodId: string;
+  disabled?: boolean;
+}) {
+  const t = useTranslations("Booking");
+  const router = useRouter();
+  const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
+    async (_prev, formData) => redistributeEvaluatorsAction(formData),
+    null,
+  );
+  useEffect(() => {
+    if (state?.ok) router.refresh();
+  }, [state, router]);
+
+  return (
+    <form action={formAction} className="grid max-w-md gap-3" data-testid="redistribute-form">
+      <input type="hidden" name="periodId" value={periodId} />
+      <p className="text-sm text-muted-foreground">{t("reassign.redistributeHint")}</p>
+      <FormError state={state} testId="redistribute-error" />
+      {state?.ok ? (
+        <p
+          role="status"
+          className="text-sm font-medium text-success"
+          data-testid="redistribute-success"
+        >
+          {t("reassign.redistributed")}
+        </p>
+      ) : null}
+      <button
+        type="submit"
+        disabled={pending || disabled}
+        className="inline-flex h-9 w-fit items-center rounded-lg border border-primary/40 bg-primary/5 px-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50"
+        data-testid="redistribute-submit"
+      >
+        {pending ? t("saving") : t("actions.redistribute")}
+      </button>
     </form>
   );
 }

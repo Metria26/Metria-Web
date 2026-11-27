@@ -14,6 +14,7 @@ import {
   CancelButton,
   CapacityForm,
   EvaluatorManageForm,
+  RedistributeEvaluatorsForm,
   RemoveEvaluatorForm,
   SlotForm,
   SwitchButton,
@@ -515,13 +516,39 @@ export default async function BookingPeriodPage({
             />
           </section>
 
-          {/* Staff: reassignment + deletion with explicit replacement. */}
+          {/* Staff: redistribute, targeted reassignments and removal. */}
           <section className={`${glassCard} grid gap-6 p-6`} aria-labelledby="reassign-heading">
             <div className="grid gap-2">
               <h2 id="reassign-heading" className="text-lg font-semibold">
                 {t("reassign.title")}
               </h2>
               <p className="text-sm text-muted-foreground">{t("reassign.hint")}</p>
+            </div>
+
+            {/* Whole-period balance, with the live workload visible to the TA. */}
+            <div className="grid min-w-0 gap-3 rounded-xl border border-white/15 bg-white/5 p-4 dark:border-white/10">
+              <h3 className="text-base font-semibold">{t("reassign.redistributeTitle")}</h3>
+              <div className="flex flex-wrap gap-2" data-testid="evaluator-load">
+                {evaluators.map((evaluator) => {
+                  const count = students.filter(
+                    (student) => student.evaluator_id === evaluator.id,
+                  ).length;
+                  return (
+                    <span
+                      key={evaluator.id}
+                      className="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-white/20 bg-background/60 px-2.5 py-1 text-xs"
+                    >
+                      <span className="min-w-0 truncate font-medium">{evaluator.name}</span>
+                      <span className="shrink-0 tabular-nums text-muted-foreground">{count}</span>
+                    </span>
+                  );
+                })}
+              </div>
+              <RedistributeEvaluatorsForm periodId={period.id} disabled={evaluators.length === 0} />
+            </div>
+
+            <div className="grid min-w-0 gap-2 border-t border-white/15 pt-4 dark:border-white/10">
+              <h3 className="text-base font-semibold">{t("reassign.bulkTitle")}</h3>
               <BulkReassignForm periodId={period.id} evaluators={evaluators} />
             </div>
             <div className="grid min-w-0 gap-2 border-t border-white/15 pt-4 dark:border-white/10">
