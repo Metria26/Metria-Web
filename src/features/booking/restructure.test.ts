@@ -185,6 +185,40 @@ describe("previewRestructure", () => {
     expect(preview.canApply).toBe(false);
   });
 
+  it("keeps an overflowing preview renderable when students have evaluators", () => {
+    const data = fixture();
+    data.students = data.students.map((student) => ({
+      ...student,
+      evaluatorId: "ffffffff-ffff-4fff-8fff-ffffffffffff",
+      evaluatorName: "A",
+    }));
+    const opts = options();
+    opts.days = opts.days.map((day) => (day.key === MONDAY ? { ...day, end: "13:11" } : day));
+
+    expect(() => previewRestructure(data, opts)).not.toThrow();
+    const preview = previewRestructure(data, opts);
+    const monday = preview.days.find((day) => day.input.key === MONDAY)!;
+    expect(monday.error).toMatch(/slot\(s\) fit/);
+    expect(monday.newSlots).toHaveLength(0);
+    expect(monday.rows[0]!.newSlotLabel).toBe("—");
+    expect(preview.canApply).toBe(false);
+  });
+
+  it("keeps the preview renderable with an empty capacity input", () => {
+    const data = fixture();
+    data.students = data.students.map((student) => ({
+      ...student,
+      evaluatorId: "ffffffff-ffff-4fff-8fff-ffffffffffff",
+      evaluatorName: "A",
+    }));
+
+    expect(() => previewRestructure(data, options({ capacity: 0 }))).not.toThrow();
+    const preview = previewRestructure(data, options({ capacity: 0 }));
+    expect(preview.days[0]!.error).toMatch(/at least 1/i);
+    expect(preview.days[0]!.newSlots).toHaveLength(0);
+    expect(preview.canApply).toBe(false);
+  });
+
   it("keeps evaluators unique within a slot when rebalancing", () => {
     const data = fixture();
     data.evaluators = ["A", "B", "C", "D"].map((name, index) => ({
