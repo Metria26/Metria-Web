@@ -1,7 +1,10 @@
 import ExcelJS from "exceljs";
 import JSZip from "jszip";
 import { formatDayHeading, formatSlotTime, formatSlotTimeRange } from "@/lib/time-format";
+import { cleanStudentName } from "./name-cleaning";
 import type { BookingSlotOverview, BookingStudent, PeriodBookingOverview } from "./overview";
+
+export { cleanStudentName } from "./name-cleaning";
 
 /**
  * Staff-only booking export as a real, formatted .xlsx workbook (never CSV).
@@ -28,13 +31,6 @@ const DATA_ROW_HEIGHT = 24;
 const HEADER_ROW_HEIGHT = 28;
 const WHITE = "FFFFFFFF";
 const BORDER_COLOR = "FFD9D9D9";
-
-/** Strip program / batch / campus suffixes from a display name (export only). */
-const PROGRAM_SUFFIX = /\s+BS\s*\(?\s*[A-Z]{2,3}\s*\)?(?:\s|$).*$/i;
-
-export function cleanStudentName(value: string): string {
-  return value.replace(PROGRAM_SUFFIX, "").trim();
-}
 
 function safeText(value: string | number | null | undefined): string {
   const text = value == null ? "" : String(value);

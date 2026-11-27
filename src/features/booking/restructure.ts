@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { rpcTransport } from "@/lib/supabase/rpc";
 import { formatSlotTime, karachiDateKey, toUniversityDateTimeInput } from "@/lib/time-format";
+import { cleanStudentName } from "./name-cleaning";
 import { groupSlotsByDay } from "./slot-view";
 
 /**
@@ -106,12 +107,14 @@ export type RestructureRow = {
   evaluatorName: string | null;
   changed: boolean;
   timeChanged: boolean;
+  seatChanged: boolean;
 };
 
 export type RestructureDayPreview = {
   input: RestructureDayInput;
   rows: RestructureRow[];
   newSlots: RestructureNewSlot[];
+  emptySlots: number;
   error: string | null;
 };
 
@@ -120,6 +123,8 @@ export type RestructurePreview = {
   slotsBefore: number;
   slotsAfter: number;
   studentsMoved: number;
+  timeChangedCount: number;
+  seatChangedCount: number;
   canApply: boolean;
 };
 
@@ -254,6 +259,8 @@ export function previewRestructure(
   let evaluatorCursor = 0;
   let slotsAfter = 0;
   let studentsMoved = 0;
+  let timeChangedCount = 0;
+  let seatChangedCount = 0;
 
   for (const input of options.days) {
     const dayStudents = studentsByDay.get(input.key) ?? [];
@@ -331,13 +338,16 @@ export function previewRestructure(
       const timeChanged = slot
         ? slot.startsAt !== new Date(student.slotStartsAt).toISOString()
         : true;
-      const changed = timeChanged || student.seatNumber !== seat;
+      const seatChanged = student.seatNumber !== seat;
+      const changed = timeChanged || seatChanged;
       if (changed) studentsMoved += 1;
+      if (timeChanged) timeChangedCount += 1;
+      if (seatChanged) seatChangedCount += 1;
       return {
         dayKey: input.key,
         bookingId: student.bookingId,
-        studentName: student.studentName,
-        rollNo: student.rollNo,
+        studentName: cleanStudentName(student.studentName),
+        rollNo: student.rollNo?.trim() || student.email?.split("@")[0]?.trim() || null,
         email: student.email,
         oldStartsAt: student.slotStartsAt,
         oldSlotLabel: formatSlotTime(student.slotStartsAt),
@@ -353,11 +363,18 @@ export function previewRestructure(
           : null,
         changed,
         timeChanged,
+        seatChanged,
       };
     });
 
     slotsAfter += newSlots.length;
-    dayPreviews.push({ input, rows, newSlots, error });
+    dayPreviews.push({
+      input,
+      rows,
+      newSlots,
+      emptySlots: Math.max(newSlots.length - neededSlots, 0),
+      error,
+    });
   }
 
   for (const student of data.students) {
@@ -374,6 +391,7 @@ export function previewRestructure(
         },
         rows: [],
         newSlots: [],
+        emptySlots: 0,
         error: "This day is missing from the plan.",
       });
     }
@@ -384,6 +402,8 @@ export function previewRestructure(
     slotsBefore: data.slots.length,
     slotsAfter,
     studentsMoved,
+    timeChangedCount,
+    seatChangedCount,
     canApply: dayPreviews.length > 0 && dayPreviews.every((day) => day.error === null),
   };
 }

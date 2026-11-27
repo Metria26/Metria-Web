@@ -57,6 +57,8 @@ export function mapRpcError(message: string | null | undefined): string {
       return "noActiveBooking";
     case "not_found":
       return "notFound";
+    case "migration_missing":
+      return "serviceUnavailable";
     case "invalid_input":
       return "invalidInput";
     case "slot_overlap":

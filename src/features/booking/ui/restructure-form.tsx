@@ -32,8 +32,13 @@ function ActionError({ state, testId }: { state: ActionResult | null; testId: st
   const t = useTranslations("Booking");
   if (!state || state.ok) return null;
   return (
-    <p role="alert" data-testid={testId} className="text-sm text-destructive">
-      {t(`errors.${state.error}`)}
+    <p role="alert" data-testid={testId} className="grid gap-1 text-sm text-destructive">
+      <span>{t(`errors.${state.error}`)}</span>
+      {state.detail ? (
+        <span className="text-xs font-mono opacity-80" data-testid={`${testId}-detail`}>
+          {state.detail}
+        </span>
+      ) : null}
     </p>
   );
 }
@@ -202,11 +207,18 @@ export function RestructureForm({
                       }
                     />
                   </label>
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    {t("slotCount", {
-                      before: dayPreview?.newSlots.length ?? 0,
-                      students: dayPreview?.rows.length ?? 0,
-                    })}
+                  <span className="ml-auto grid gap-0.5 text-xs text-muted-foreground">
+                    <span>
+                      {t("slotCount", {
+                        slots: dayPreview?.newSlots.length ?? 0,
+                        students: dayPreview?.rows.length ?? 0,
+                      })}
+                    </span>
+                    {dayPreview?.emptySlots ? (
+                      <span data-testid={`restructure-empty-slots-${day.key}`}>
+                        {t("emptySlots", { count: dayPreview.emptySlots })}
+                      </span>
+                    ) : null}
                   </span>
                 </div>
 
@@ -264,6 +276,12 @@ export function RestructureForm({
             {t("slotsAfter", { count: preview.slotsAfter })}
           </span>
           <span className="text-sm">{t("studentsMoved", { count: preview.studentsMoved })}</span>
+          <span className="text-sm text-muted-foreground">
+            {t("changeBreakdown", {
+              time: preview.timeChangedCount,
+              seat: preview.seatChangedCount,
+            })}
+          </span>
           <ActionError state={applyState} testId="restructure-apply-error" />
           <Dialog>
             <DialogTrigger
