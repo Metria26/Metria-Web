@@ -170,6 +170,42 @@ describe("redistribution after adding an evaluator", () => {
   });
 });
 
+describe("manual reassignment inside a slot survives new bookings", () => {
+  it("keeps seat 1 -> C and seat 3 -> A when seat 2 is booked next", () => {
+    const slots = generateSlots(1, 4);
+    const evaluators = [...ABC, evaluator("D", 3)];
+    const created = generateSeats(slots);
+    const initial = applyAssignments(created, assignEvaluators(slots, created, evaluators));
+    expect(initial.map((current) => current.evaluator_id)).toEqual(["A", "B", "C", "D"]);
+
+    const booked = initial.map((current, index) => ({
+      ...current,
+      booked: index === 0 || index === 2,
+    }));
+    const firstSwap = reassignSeatEvaluator(booked, "slot-1-seat-1", "C").seats;
+    const swapped = reassignSeatEvaluator(firstSwap, "slot-1-seat-3", "A").seats;
+    const withNewBooking = swapped.map((current, index) => ({
+      ...current,
+      booked: index <= 2,
+    }));
+
+    // Adding a student only redistributes free seats; booked seats keep the
+    // evaluators staff chose, so the slot stays C, B, A, D.
+    const afterBooking = applyAssignments(
+      withNewBooking,
+      redistributeUnbookedSeats(slots, withNewBooking, evaluators),
+    );
+    expect(afterBooking.map((current) => current.evaluator_id)).toEqual(["C", "B", "A", "D"]);
+
+    // Only the explicit Redistribute action rebalances booked seats.
+    const afterRedistribute = applyAssignments(
+      withNewBooking,
+      balanceBookedSeats(slots, withNewBooking, evaluators),
+    );
+    expect(afterRedistribute.map((current) => current.evaluator_id)).toEqual(["A", "B", "C", "D"]);
+  });
+});
+
 describe("balanced workload after bookings and cancellations", () => {
   it("spreads active bookings so counts differ by at most one", () => {
     const slots = generateSlots(3, 3);
