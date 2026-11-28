@@ -5,6 +5,10 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { GroupsTable, type GroupRow } from "@/features/projects/ui/groups-table";
+import {
+  PendingRequestsDropdown,
+  type PendingRequestItem,
+} from "@/features/projects/ui/pending-requests-dropdown";
 import { DashboardStatusBadge } from "@/features/projects/ui/status-badge";
 
 export const metadata: Metadata = {
@@ -12,6 +16,14 @@ export const metadata: Metadata = {
 };
 
 export const instant = false;
+
+type MemberRequestRow = {
+  id: string;
+  group_id: string;
+  request_type: string;
+  payload: Record<string, unknown> | null;
+  created_at: string;
+};
 
 export default async function ProjectGroupsPage({
   params,
@@ -57,7 +69,10 @@ export default async function ProjectGroupsPage({
       .is("deleted_at", null)
       .order("group_id"),
     supabase.from("project_group_members").select("id, group_id, name, reg_no").order("position"),
-    supabase.from("project_member_requests").select("id, group_id, status").eq("status", "pending"),
+    supabase
+      .from("project_member_requests")
+      .select("id, group_id, request_type, payload, created_at")
+      .eq("status", "pending"),
   ]);
 
   const groupRows = (groupsRes.data ?? []) as {
@@ -76,9 +91,44 @@ export default async function ProjectGroupsPage({
     name: string;
     reg_no: string;
   }[];
-  const pendingByGroup = new Set(
-    ((requestsRes.data ?? []) as { group_id: string }[]).map((row) => row.group_id),
-  );
+  const requests = (requestsRes.data ?? []) as MemberRequestRow[];
+  const requestsByGroup = new Map<string, MemberRequestRow[]>();
+  for (const request of requests) {
+    const groupRequests = requestsByGroup.get(request.group_id) ?? [];
+    groupRequests.push(request);
+    requestsByGroup.set(request.group_id, groupRequests);
+  }
+  const pendingItems: PendingRequestItem[] = groupRows.flatMap((group) => {
+    const groupRequests = requestsByGroup.get(group.id) ?? [];
+    if (groupRequests.length === 0) return [];
+    return [
+      {
+        id: group.id,
+        primary: t("hub.pendingProject", { project: dashboard.title }),
+        secondary: [
+          t("hub.pendingGroup", { group: group.group_id }),
+          group.project_title,
+          t("hub.pendingRequestCount", { count: groupRequests.length }),
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        count: groupRequests.length,
+        href: `/app/projects/${dashboard.id}/groups/${group.id}`,
+        changes: groupRequests.map((request) => {
+          if (request.request_type !== "add") return t("requests.remove");
+          const payload = request.payload ?? {};
+          const name = typeof payload.name === "string" ? payload.name : "";
+          const regNo =
+            typeof payload.reg_no === "string"
+              ? payload.reg_no
+              : typeof payload.regNo === "string"
+                ? payload.regNo
+                : "";
+          return `${t("requests.add")}: ${[name, regNo].filter(Boolean).join(" ")}`.trim();
+        }),
+      },
+    ];
+  });
 
   const rows: GroupRow[] = groupRows.map((group) => {
     const members = memberRows.filter((member) => member.group_id === group.id);
@@ -128,15 +178,18 @@ export default async function ProjectGroupsPage({
         </div>
       </header>
 
+      <PendingRequestsDropdown
+        title={t("hub.pendingRequests", {
+          count: pendingItems.reduce((sum, item) => sum + item.count, 0),
+        })}
+        hint={t("hub.pendingRequestsHint")}
+        reviewLabel={t("hub.pendingReview")}
+        items={pendingItems}
+      />
+
       <section className="mt-6">
         <GroupsTable dashboardId={dashboard.id} groups={rows} />
       </section>
-
-      {pendingByGroup.size > 0 ? (
-        <p className="mt-4 rounded-lg border border-warning/40 bg-warning/5 px-3 py-2 text-sm text-warning-foreground">
-          {t("hub.pendingRequests", { count: pendingByGroup.size })} — {t("groups.reviewInDetail")}
-        </p>
-      ) : null}
     </main>
   );
 }

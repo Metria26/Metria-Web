@@ -4,6 +4,10 @@ import { connection } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardStatusBadge, GroupStatusBadge } from "@/features/projects/ui/status-badge";
+import {
+  PendingRequestsDropdown,
+  type PendingRequestItem,
+} from "@/features/projects/ui/pending-requests-dropdown";
 import { formatDateTime } from "@/lib/time-format";
 
 export const metadata: Metadata = {
@@ -32,6 +36,14 @@ type GroupRow = {
   project_title: string;
   status: string;
   submission_status: string;
+};
+
+type MemberRequestRow = {
+  id: string;
+  group_id: string;
+  request_type: string;
+  payload: Record<string, unknown> | null;
+  created_at: string;
 };
 
 export default async function ProjectsHubPage() {
@@ -122,10 +134,13 @@ export default async function ProjectsHubPage() {
           .in("dashboard_id", dashboardIds)
           .is("deleted_at", null)
       : Promise.resolve({ data: [] as unknown[] }),
-    supabase.from("project_member_requests").select("id, group_id, status").eq("status", "pending"),
+    supabase
+      .from("project_member_requests")
+      .select("id, group_id, request_type, payload, created_at")
+      .eq("status", "pending"),
   ]);
   const groups = (groupsRes.data ?? []) as GroupRow[];
-  const requests = (requestsRes.data ?? []) as { id: string; group_id: string; status: string }[];
+  const requests = (requestsRes.data ?? []) as MemberRequestRow[];
 
   // Students: their own group (if any) per dashboard.
   const { data: myGroupRows } =
@@ -143,8 +158,42 @@ export default async function ProjectsHubPage() {
   const myGroupByDashboard = new Map(myGroups.map((group) => [group.dashboard_id, group]));
 
   if (isStaff) {
-    const pendingRequestIds = new Set(requests.map((request) => request.group_id));
-    const pendingGroups = groups.filter((group) => pendingRequestIds.has(group.id));
+    const requestsByGroup = new Map<string, MemberRequestRow[]>();
+    for (const request of requests) {
+      const groupRequests = requestsByGroup.get(request.group_id) ?? [];
+      groupRequests.push(request);
+      requestsByGroup.set(request.group_id, groupRequests);
+    }
+    const pendingItems: PendingRequestItem[] = groups.flatMap((group) => {
+      const groupRequests = requestsByGroup.get(group.id) ?? [];
+      if (groupRequests.length === 0) return [];
+      const dashboard = dashboards.find((row) => row.id === group.dashboard_id);
+      return [
+        {
+          id: group.id,
+          primary: dashboard?.title ?? t("groups.title"),
+          secondary: [
+            t("hub.pendingGroup", { group: group.group_id }),
+            t("hub.pendingProject", { project: group.project_title || "—" }),
+            t("hub.pendingRequestCount", { count: groupRequests.length }),
+          ].join(" · "),
+          count: groupRequests.length,
+          href: `/app/projects/${group.dashboard_id}/groups/${group.id}`,
+          changes: groupRequests.map((request) => {
+            if (request.request_type !== "add") return t("requests.remove");
+            const payload = request.payload ?? {};
+            const name = typeof payload.name === "string" ? payload.name : "";
+            const regNo =
+              typeof payload.reg_no === "string"
+                ? payload.reg_no
+                : typeof payload.regNo === "string"
+                  ? payload.regNo
+                  : "";
+            return `${t("requests.add")}: ${[name, regNo].filter(Boolean).join(" ")}`.trim();
+          }),
+        },
+      ];
+    });
     const awaitingReview = groups.filter(
       (group) => group.status === "submitted" || group.status === "under_review",
     );
@@ -181,11 +230,14 @@ export default async function ProjectsHubPage() {
           />
           <Stat label={t("stats.awaitingReview")} value={awaitingReview.length} />
         </dl>
-        {pendingGroups.length > 0 ? (
-          <p className="mt-3 rounded-lg border border-warning/40 bg-warning/5 px-3 py-2 text-sm text-warning-foreground">
-            {t("hub.pendingRequests", { count: pendingGroups.length })}
-          </p>
-        ) : null}
+        <PendingRequestsDropdown
+          title={t("hub.pendingRequests", {
+            count: pendingItems.reduce((sum, item) => sum + item.count, 0),
+          })}
+          hint={t("hub.pendingRequestsHint")}
+          reviewLabel={t("hub.pendingReview")}
+          items={pendingItems}
+        />
 
         <section className="mt-8 grid gap-3">
           <h2 className="text-lg font-semibold">{t("hub.dashboardsHeading")}</h2>
